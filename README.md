@@ -37,6 +37,11 @@ Bvision/
 │       ├── services/                   # Comunicação com a API backend e chamadas HTTP
 │       ├── styles/                     # Folhas de estilo (CSS) e design system
 │       └── utils/                      # Geolocalização, formatação de datas e validações locais
+├── supabase/                            # Banco de dados PostgreSQL (Supabase): migrações, sementes e RLS
+│   ├── migrations/                     # Scripts DDL de criação de tabelas, índices e triggers
+│   ├── seed.sql                        # Carga de dados iniciais (Agências BB e Checklists padrão)
+│   ├── config.toml                     # Configuração do Supabase CLI local
+│   └── README.md                       # Instruções de configuração do banco de dados
 │
 └── docs/                               # Documentação técnica, requisitos e diagramas
 ```
@@ -47,6 +52,7 @@ Bvision/
 
 | Pasta | Premissas Atendidas | Justificativa |
 | :--- | :--- | :--- |
+| `supabase/` | 1, 4, 5, 6, 8, 14, 20 | Banco relacional PostgreSQL hospedado no Supabase para integridade de dados, geofencing, metadados invioláveis e trilha de auditoria. |
 | `frontend/src/pages/campo` | 2, 3, 7, 10, 15, 16, 19 | Interface mobile responsiva para uso no canteiro de obras. Garante abertura por link único inviolável. |
 | `frontend/src/pages/gestao`| 2, 3, 18, 21, 22 | Painel desktop para engenheiros do BB com Dashboard analítico e visualização de relatórios. |
 | `frontend/src/components/camera` | 4, 5, 7, 17, 23 | Bloqueia galeria do celular; força uso da câmera em tempo real com preview e descarte automático de capturas anteriores. |
