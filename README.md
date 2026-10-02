@@ -1,4 +1,4 @@
-# BVision - Solução de Engenharia para Fiscalização de Obras (Banco do Brasil)
+# BBVision - Solução de Engenharia para Fiscalização de Obras (Banco do Brasil)
 
 Sistema inteligente de fiscalização de obras para o **Banco do Brasil**, desenvolvido no âmbito do desafio de Residência Tecnológica.
 
