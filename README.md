@@ -61,3 +61,12 @@ Bvision/
 | `backend/src/middlewares` | 6, 7, 19, 20 | Proteção de uso único do token do relatório e validação de integridade. |
 | `backend/uploads/evidencias` | 4, 6, 22 | Armazenamento com metadados invioláveis das fotos e pequenos vídeos. |
 | `docs/` | 1, 9, 12, 17 | Manuais de checklist, modelos de orientação visual (plantas) e guias da solução. |
+
+---
+
+## 📖 Especificação Oficial e Regras de Negócio
+
+Todo o projeto segue rigorosamente a **Entrega Parcial TakeOff | Residência em Software & IA** (Porto Digital / Banco do Brasil):
+- 📄 [Documento de Entrega Oficial (TakeOff)](file:///c:/xampp/htdocs/Bvision/docs/TAKEOFF_DOCUMENTO_ENTREGA.md)
+- 📌 Regras de IA, critérios de aceite, prompts homologados e contratos de endpoints definidos no documento base.
+

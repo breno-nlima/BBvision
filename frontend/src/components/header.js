@@ -1,0 +1,59 @@
+/**
+ * BVision App Header Component
+ * Cabeçalho unificado seguindo o design do sistema
+ */
+
+import { Icons } from '../assets/icons.js';
+import { state } from '../services/state.js';
+
+export function renderHeader(type = 'default') {
+  const isObrasPage = state.currentPage === 'obras';
+  const userName = state.user?.nome || 'usuário';
+
+  const brandContent = isObrasPage
+    ? `
+      <div class="header-brand-logo">
+        ${Icons.logoBVision(30)}
+      </div>
+      <h1 class="header-title">BBVision</h1>
+    `
+    : `
+      <div class="header-brand-logo">
+        ${Icons.logoBVision(30)}
+      </div>
+      <h1 class="header-title">Olá, ${userName.toLowerCase()}!</h1>
+    `;
+
+  return `
+    <header class="app-header">
+      <div class="header-brand">
+        ${brandContent}
+      </div>
+      
+      <div class="header-actions">
+        <button class="btn-pill-yellow" id="btnHeaderNovaObra" title="Cadastrar Nova Obra">
+          Nova Obra
+        </button>
+        <button class="user-avatar-btn" id="btnHeaderAvatar" title="Ver Perfil">
+          <img src="${state.user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}" alt="Avatar">
+        </button>
+      </div>
+    </header>
+  `;
+}
+
+export function bindHeaderEvents() {
+  const btnNovaObra = document.getElementById('btnHeaderNovaObra');
+  if (btnNovaObra) {
+    btnNovaObra.addEventListener('click', () => {
+      state.navigate('obras');
+    });
+  }
+
+  const btnAvatar = document.getElementById('btnHeaderAvatar');
+  if (btnAvatar) {
+    btnAvatar.addEventListener('click', () => {
+      state.navigate('perfil', 'perfil');
+    });
+  }
+}

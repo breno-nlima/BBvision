@@ -20,8 +20,12 @@ lerna-debug.log*
 # Uploads (permitindo .gitkeep)
 backend/uploads/evidencias/*
 !backend/uploads/evidencias/.gitkeep
+backend/uploads/relatorios/*
+!backend/uploads/relatorios/.gitkeep
 backend/uploads/temp/*
 !backend/uploads/temp/.gitkeep
+
+backend/.env
 
 # OS and IDE files
 .DS_Store

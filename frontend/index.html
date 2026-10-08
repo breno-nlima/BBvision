@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>BBVision - Fiscalização Inteligente de Obras | Banco do Brasil</title>
+  
+  <!-- Favicon com o logo BBVision -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23FED304'/><circle cx='50' cy='50' r='18' fill='%23002D62'/></svg>">
+  
+  <!-- Tipografia Oficial: Plus Jakarta Sans (Google Fonts) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Folhas de Estilo do Design System BVision -->
+  <link rel="stylesheet" href="src/styles/variables.css">
+  <link rel="stylesheet" href="src/styles/base.css">
+  <link rel="stylesheet" href="src/styles/components.css">
+  <link rel="stylesheet" href="src/styles/screens.css">
+
+  <style>
+    /* Barra de Navegação Rápida Superior Externa (Apenas no Desktop para apresentação das telas da entrega) */
+    .desktop-demo-bar {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 45, 98, 0.95);
+      backdrop-filter: blur(8px);
+      padding: 6px 16px;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 10px 25px rgba(0, 45, 98, 0.3);
+      z-index: 1000;
+      color: #FFFFFF;
+      font-size: 12px;
+    }
+
+    .demo-btn-chip {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #FFFFFF;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      transition: all 0.15s ease;
+    }
+
+    .demo-btn-chip:hover, .demo-btn-chip.active {
+      background: #FED304;
+      color: #002D62;
+      border-color: #FED304;
+    }
+
+    @media (max-width: 600px) {
+      .desktop-demo-bar {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Barra de Demonstração Rápida no Desktop para navegar nas telas solicitadas -->
+  <header class="desktop-demo-bar">
+    <span style="font-weight: 700; color: #FED304;">BVision TakeOff:</span>
+    <button class="demo-btn-chip" onclick="window.setDemoScreen('login')">1. Tela Login</button>
+    <button class="demo-btn-chip active" onclick="window.setDemoScreen('inicio')">2. Tela Início</button>
+    <button class="demo-btn-chip" onclick="window.setDemoScreen('obras')">3. Tela Obras</button>
+    <button class="demo-btn-chip" onclick="window.setDemoScreen('vistoria')">4. Vistoria (Câmera & IA)</button>
+  </header>
+
+  <!-- Container de Visualização do Dispositivo Móvel -->
+  <main class="app-viewport-wrapper">
+    <div class="mobile-device-shell">
+      
+      <!-- Barra de Status do Sistema Operacional (iOS / Android) -->
+      <div class="device-status-bar">
+        <span id="deviceTime">09:41</span>
+        <div class="status-bar-icons">
+          <!-- Sinal de Rede Celular -->
+          <svg width="14" height="12" viewBox="0 0 16 12" fill="currentColor">
+            <rect x="0" y="8" width="2.5" height="4" rx="0.5"/>
+            <rect x="4" y="5.5" width="2.5" height="6.5" rx="0.5"/>
+            <rect x="8" y="3" width="2.5" height="9" rx="0.5"/>
+            <rect x="12" y="0.5" width="2.5" height="11.5" rx="0.5"/>
+          </svg>
+          <!-- Wi-Fi -->
+          <svg width="14" height="12" viewBox="0 0 16 12" fill="currentColor">
+            <path d="M8 10a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/>
+            <path d="M4.5 6a5 5 0 017 0 .8.8 0 001.1-1.1 6.5 6.5 0 00-9.2 0 .8.8 0 001.1 1.1z"/>
+            <path d="M2 3.5a8.5 8.5 0 0112 0 .8.8 0 001.1-1.1 10 10 0 00-14.2 0 .8.8 0 001.1 1.1z"/>
+          </svg>
+          <!-- Bateria -->
+          <svg width="18" height="11" viewBox="0 0 20 12" fill="currentColor">
+            <rect x="0" y="1" width="16" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="2" y="3" width="12" height="6" rx="1"/>
+            <path d="M17 4.5v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Área de Scroll de Conteúdo das Telas da Aplicação -->
+      <div class="app-screen-container" id="appScreenContainer">
+        <!-- Telas injetadas dinamicamente via app.js -->
+      </div>
+
+      <!-- Slot para a Barra Inferior de Navegação (Tabs) -->
+      <div id="bottomNavSlot"></div>
+
+      <!-- Barra Home Inferior do Dispositivo -->
+      <div class="device-home-indicator"></div>
+
+    </div>
+  </main>
+
+  <!-- Script da Aplicação -->
+  <script type="module" src="src/app.js"></script>
+
+  <!-- Auxiliar de demonstração -->
+  <script type="module">
+    import { state } from './src/services/state.js';
+    window.setDemoScreen = (screen) => {
+      document.querySelectorAll('.demo-btn-chip').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = Array.from(document.querySelectorAll('.demo-btn-chip')).find(b => b.innerText.toLowerCase().includes(screen));
+      if (activeBtn) activeBtn.classList.add('active');
+
+      if (screen === 'login') {
+        state.navigate('login');
+      } else if (screen === 'inicio') {
+        state.navigate('inicio', 'inicio');
+      } else if (screen === 'obras') {
+        state.navigate('obras', 'obras');
+      } else if (screen === 'vistoria') {
+        state.navigate('vistoria');
+      }
+    };
+  </script>
+</body>
+</html>

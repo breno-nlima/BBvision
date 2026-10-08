@@ -1,0 +1,36 @@
+{
+  "name": "bbvision",
+  "version": "1.0.0",
+  "description": "BBVision - Solução de Fiscalização Remota de Obras para o Banco do Brasil (TakeOff | Residência em Software & IA)",
+  "main": "frontend/server.js",
+  "scripts": {
+    "start": "node backend/src/server.js",
+    "dev": "node backend/src/server.js",
+    "backend": "node backend/src/server.js",
+    "frontend": "node frontend/server.js",
+    "test": "node backend/tests/test_backend.js",
+    "test:db": "node backend/tests/test_database.js"
+  },
+  "keywords": [
+    "bbvision",
+    "banco-do-brasil",
+    "fiscalizacao-obras",
+    "gemini",
+    "takeoff"
+  ],
+  "author": "Equipe TakeOff",
+  "license": "ISC",
+  "dependencies": {
+    "@google/genai": "^2.28.0",
+    "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.117.3",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.6",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.4.0",
+    "nodemailer": "^10.0.16",
+    "pdfkit": "^0.20.2"
+  }
+}
