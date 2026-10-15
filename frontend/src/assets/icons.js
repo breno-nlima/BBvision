@@ -184,5 +184,108 @@ export const Icons = {
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
       <circle cx="12" cy="7" r="4"></circle>
     </svg>
+  `,
+
+  // Logo Oficial do Banco do Brasil (Símbolo Losango Amarelo e Azul)
+  logoBBOficial: (size = 32) => `
+    <svg width="${size}" height="${size}" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="40" height="40" rx="9" fill="#FED304"/>
+      <!-- Símbolo geométrico emblemático BB em azul marinho -->
+      <path d="M20 7L31 18L20 29L9 18L20 7Z" stroke="#002D62" stroke-width="3.2" stroke-linejoin="round" fill="none"/>
+      <path d="M20 12L26 18L20 24L14 18L20 12Z" fill="#002D62"/>
+      <circle cx="20" cy="18" r="2.2" fill="#FED304"/>
+    </svg>
+  `,
+
+  // Logo BVision Compacto Horizontal
+  logoBVisionBadge: (size = 28) => `
+    <div style="display: inline-flex; align-items: center; gap: 8px;">
+      <svg width="${size}" height="${size}" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="36" height="36" rx="8" fill="#FED304"/>
+        <path d="M7 18Q18 9 29 18Q18 27 7 18Z" fill="#FFFFFF" stroke="#002D62" stroke-width="2.2" stroke-linejoin="round"/>
+        <circle cx="18" cy="18" r="6" fill="#002D62"/>
+        <circle cx="19" cy="17" r="2" fill="#FFFFFF"/>
+      </svg>
+      <span style="font-weight: 800; font-size: 18px; color: #002D62; letter-spacing: -0.5px;">BVision</span>
+    </div>
+  `,
+
+  // Ícone Agência Bancária (Fachada, colunas clássicas)
+  iconAgencia: (size = 32, color = "#002D62") => `
+    <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="12 2 2 7 22 7 12 2"/>
+      <line x1="5" y1="10" x2="5" y2="18"/>
+      <line x1="9" y1="10" x2="9" y2="18"/>
+      <line x1="15" y1="10" x2="15" y2="18"/>
+      <line x1="19" y1="10" x2="19" y2="18"/>
+      <rect x="2" y="18" width="20" height="3" rx="0.5"/>
+    </svg>
+  `,
+
+  // Ícone Caixa Eletrônico (Documento / Tela de ATM)
+  iconAtm: (size = 32, color = "#FFFFFF") => `
+    <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+      <line x1="7" y1="8" x2="17" y2="8"/>
+      <line x1="7" y1="12" x2="13" y2="12"/>
+      <circle cx="15.5" cy="14.5" r="2.5" fill="#FED304" stroke="${color}" stroke-width="1.5"/>
+    </svg>
+  `,
+
+  // Ícone Área Externa (Maleta com cruz médica / segurança)
+  iconAreaExterna: (size = 32, color = "#FFFFFF") => `
+    <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="6" width="18" height="15" rx="3"/>
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      <line x1="12" y1="10" x2="12" y2="16" stroke="#FED304" stroke-width="2.5"/>
+      <line x1="9" y1="13" x2="15" y2="13" stroke="#FED304" stroke-width="2.5"/>
+    </svg>
+  `,
+
+  // Ícone Prédio Administrativo (Prancheta / Checklist de Gestão)
+  iconPredioAdmin: (size = 32, color = "#FFFFFF") => `
+    <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+      <rect x="8" y="2" width="8" height="4" rx="1"/>
+      <path d="M9 14l2 2 4-4" stroke="#FED304" stroke-width="2.5"/>
+    </svg>
+  `,
+
+  // Cadeado Amarelo Inviolável (Imagem Protegida)
+  lockShieldGold: (size = 72) => `
+    <svg width="${size}" height="${size}" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="lockGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#FED304" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="#002D62" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <rect width="80" height="80" rx="18" fill="#001B3D"/>
+      <circle cx="40" cy="40" r="30" fill="url(#lockGlow)"/>
+      <!-- Arco do cadeado -->
+      <path d="M28 35V26C28 19.37 33.37 14 40 14C46.63 14 52 19.37 52 26V35" stroke="#FED304" stroke-width="5" stroke-linecap="round"/>
+      <!-- Corpo do cadeado -->
+      <rect x="22" y="34" width="36" height="30" rx="6" fill="#FED304"/>
+      <!-- Fechadura -->
+      <circle cx="40" cy="46" r="3.5" fill="#002D62"/>
+      <path d="M38.5 48L37.5 56H42.5L41.5 48Z" fill="#002D62"/>
+    </svg>
+  `,
+
+  // Caixa 3D Laranja/Dourada (Relatório Bloqueado)
+  boxLocked3D: (size = 80) => `
+    <svg width="${size}" height="${size}" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Face Superior -->
+      <polygon points="45,15 75,32 45,48 15,32" fill="#FFAF1A"/>
+      <!-- Face Esquerda -->
+      <polygon points="15,32 45,48 45,78 15,62" fill="#E68A00"/>
+      <!-- Face Direita -->
+      <polygon points="45,48 75,32 75,62 45,78" fill="#FFC043"/>
+      <!-- Pequena fechadura / etiqueta na caixa -->
+      <rect x="49" y="47" width="10" height="12" rx="2" fill="#FFFFFF" opacity="0.9"/>
+      <circle cx="54" cy="51" r="1.5" fill="#002D62"/>
+      <line x1="54" y1="52.5" x2="54" y2="56" stroke="#002D62" stroke-width="1.2"/>
+    </svg>
   `
 };
+

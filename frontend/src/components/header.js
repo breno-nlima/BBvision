@@ -24,6 +24,11 @@ export function renderHeader(type = 'default') {
       <h1 class="header-title">Olá, ${userName.toLowerCase()}!</h1>
     `;
 
+  const isFiscal = state.user?.cargo === 'fiscal';
+  const actionButton = isFiscal
+    ? `<button class="btn-pill-navy" id="btnHeaderAction" title="Painel de Auditoria">Auditoria</button>`
+    : `<button class="btn-pill-yellow" id="btnHeaderAction" title="Cadastrar ou Listar Obras">Nova Obra</button>`;
+
   return `
     <header class="app-header">
       <div class="header-brand">
@@ -31,9 +36,7 @@ export function renderHeader(type = 'default') {
       </div>
       
       <div class="header-actions">
-        <button class="btn-pill-yellow" id="btnHeaderNovaObra" title="Cadastrar Nova Obra">
-          Nova Obra
-        </button>
+        ${actionButton}
         <button class="user-avatar-btn" id="btnHeaderAvatar" title="Ver Perfil">
           <img src="${state.user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}" alt="Avatar">
         </button>
@@ -43,10 +46,14 @@ export function renderHeader(type = 'default') {
 }
 
 export function bindHeaderEvents() {
-  const btnNovaObra = document.getElementById('btnHeaderNovaObra');
-  if (btnNovaObra) {
-    btnNovaObra.addEventListener('click', () => {
-      state.navigate('obras');
+  const btnAction = document.getElementById('btnHeaderAction');
+  if (btnAction) {
+    btnAction.addEventListener('click', () => {
+      if (state.user?.cargo === 'fiscal') {
+        state.navigate('fiscal-auditoria', 'fiscal-auditoria');
+      } else {
+        state.navigate('obras', 'obras');
+      }
     });
   }
 

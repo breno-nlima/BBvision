@@ -5,7 +5,7 @@
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const repository = require('../models/repository');
+const mockData = require('../mockData');
 const { JWT_SECRET } = require('../middlewares/authMiddleware');
 
 const authController = {
@@ -23,7 +23,7 @@ const authController = {
         return res.status(400).json({ erro: 'E-mail e senha são obrigatórios para autenticação.' });
       }
 
-      const user = await repository.findUserByEmail(email);
+      const user = mockData.findUserByEmail(email);
       if (!user) {
         return res.status(401).json({ erro: 'Credenciais inválidas' });
       }

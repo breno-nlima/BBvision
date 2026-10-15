@@ -5,7 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const relatoriosController = require('../controllers/relatoriosController');
-const { optionalAuth } = require('../middlewares/authMiddleware');
+const { optionalAuth, requireAuth, requireRole } = require('../middlewares/authMiddleware');
 const { upload } = require('../middlewares/uploadMiddleware');
 
 // Criação e listagem
@@ -22,7 +22,7 @@ router.post('/:id/fotos', optionalAuth, upload.single('foto'), relatoriosControl
 router.post('/:id/finalizar', optionalAuth, relatoriosController.finalizar);
 router.get('/:id/pdf', relatoriosController.downloadPdf);
 
-// Auditoria do Fiscal / Engenheiro Mariana
-router.patch('/:id/status', optionalAuth, relatoriosController.atualizarStatusFiscal);
+// Auditoria do Fiscal / Engenheiro Mariana (Acesso restrito ao perfil fiscal do Banco do Brasil)
+router.patch('/:id/status', requireAuth, requireRole(['fiscal', 'engenheiro']), relatoriosController.atualizarStatusFiscal);
 
 module.exports = router;

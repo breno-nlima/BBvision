@@ -1,6 +1,6 @@
 /**
  * BVision Perfil Screen
- * Gestão de Perfil e Alternância de Personas (Rodrigo vs Mariana)
+ * Gestão de Perfil e Alternância de Personas com RBAC (Rodrigo vs Mariana)
  */
 
 import { Icons } from '../assets/icons.js';
@@ -20,15 +20,37 @@ export function renderPerfil() {
         </div>
         <h2 class="profile-name">${state.user?.nome || 'Usuário'}</h2>
         <span class="profile-role-badge ${isEmpreiteira ? 'empreiteira' : 'fiscal'}">
-          ${isEmpreiteira ? 'Empreiteira (Campo)' : 'Fiscal de Serviço (Engenharia BB)'}
+          ${isEmpreiteira ? '👷‍♂️ Empreiteira (Campo & Vistorias)' : '👩‍💼 Fiscal de Serviço (Engenharia BB)'}
         </span>
         <span class="profile-email">${state.user?.email}</span>
       </div>
 
+      <!-- Resumo das Permissões do Perfil Ativo -->
+      <div class="profile-permissions-card">
+        <h4 class="perm-card-title">Permissões do Perfil Ativo:</h4>
+        ${isEmpreiteira ? `
+          <ul class="perm-list">
+            <li>✓ Acesso ao fluxo de captura e câmera com IA (inviolável)</li>
+            <li>✓ Preenchimento de checklists dinâmicos com Gemini</li>
+            <li>✓ Assinatura digital com fé pública</li>
+            <li>✓ Emissão e bloqueio de relatórios</li>
+            <li class="restricted">✕ Bloqueado para homologação/julgamento de obras (Exclusivo BB)</li>
+          </ul>
+        ` : `
+          <ul class="perm-list">
+            <li>✓ Acesso ao Centro de Controle do Banco do Brasil</li>
+            <li>✓ Auditoria de evidências com hashes SHA-256 e códigos únicos</li>
+            <li>✓ Download e análise de PDFs oficiais compilados</li>
+            <li>✓ Julgamento técnico com Fé Pública: Aprovar (Regular) ou Reprovar (Pendente)</li>
+            <li class="restricted">✕ Captura in-loco desabilitada (Função das empreiteiras de campo)</li>
+          </ul>
+        `}
+      </div>
+
       <!-- Alternador de Personas para Demonstração da Residência TakeOff -->
       <div class="persona-switch-box">
-        <h4>Simular Persona do Projeto</h4>
-        <p>Alterne entre a visão de campo da empreiteira e a auditoria do fiscal do Banco do Brasil:</p>
+        <h4>Alternar Tipo de Acesso (Personas TakeOff):</h4>
+        <p>Troque instantaneamente entre o fluxo de campo e a governança de auditoria do Banco do Brasil:</p>
         
         <div class="persona-buttons-row">
           <button class="btn-persona ${isEmpreiteira ? 'active' : ''}" id="btnSwitchRodrigo">
@@ -40,7 +62,7 @@ export function renderPerfil() {
         </div>
       </div>
 
-      <!-- Informações do Sistema -->
+      <!-- Informações do Sistema e Governança -->
       <div class="system-info-box">
         <div class="info-row">
           <span>Programa:</span>
@@ -48,17 +70,21 @@ export function renderPerfil() {
         </div>
         <div class="info-row">
           <span>Desafio:</span>
-          <strong>Fiscalização Remota de Obras (BB)</strong>
+          <strong>Fiscalização Remota de Obras (Banco do Brasil)</strong>
         </div>
         <div class="info-row">
-          <span>Versão da IA:</span>
-          <strong>Google Gemini 1.5 Flash (SLA &lt; 15s)</strong>
+          <span>Modelo de IA:</span>
+          <strong>Google Gemini 1.5 Flash (SLA &le; 15s)</strong>
+        </div>
+        <div class="info-row">
+          <span>Criptografia:</span>
+          <strong>SHA-256 + Código Hex 16 Dígitos</strong>
         </div>
       </div>
 
       <div class="logout-container">
         <button class="btn-logout" id="btnLogout">
-          Sair da Conta
+          Sair da Conta (Logout)
         </button>
       </div>
     </div>
@@ -70,17 +96,15 @@ export function bindPerfilEvents() {
 
   const btnRodrigo = document.getElementById('btnSwitchRodrigo');
   if (btnRodrigo) {
-    btnRodrigo.addEventListener('click', () => {
-      state.login('rodrigo@empreiteira.com', '123456');
-      state.navigate('perfil', 'perfil');
+    btnRodrigo.addEventListener('click', async () => {
+      await state.login('rodrigo@empreiteira.com', '123456');
     });
   }
 
   const btnMariana = document.getElementById('btnSwitchMariana');
   if (btnMariana) {
-    btnMariana.addEventListener('click', () => {
-      state.login('mariana@bb.com.br', '123456');
-      state.navigate('perfil', 'perfil');
+    btnMariana.addEventListener('click', async () => {
+      await state.login('mariana@bb.com.br', '123456');
     });
   }
 

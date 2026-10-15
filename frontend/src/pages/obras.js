@@ -116,7 +116,7 @@ export function bindObrasEvents() {
       e.stopPropagation();
       const obraId = btn.getAttribute('data-action-id');
       state.selectObra(obraId);
-      state.navigate('vistoria');
+      state.navigate('obra-detalhe');
     });
   });
 
@@ -127,7 +127,8 @@ export function bindObrasEvents() {
       e.stopPropagation();
       const obraId = btn.getAttribute('data-view-id');
       state.selectObra(obraId);
-      state.navigate('vistoria');
+      state.navigate('obra-detalhe');
     });
   });
 }
+

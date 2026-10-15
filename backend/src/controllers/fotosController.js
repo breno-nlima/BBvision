@@ -6,7 +6,6 @@
 const fs = require('fs');
 const path = require('path');
 const geminiService = require('../services/geminiService');
-const repository = require('../models/repository');
 const { generateSha256 } = require('../utils/cryptoUtils');
 const { EVIDENCIAS_DIR } = require('../middlewares/uploadMiddleware');
 
@@ -53,24 +52,6 @@ const fotosController = {
 
       // 3. Avaliação Multimodal com Google Gemini (com SLA de 15s e fallback gracioso)
       const resultadoIA = await geminiService.avaliarQualidadeFoto(imageBuffer, mimeType);
-
-      // 4. Gravação na Trilha de Auditoria no Banco de Dados (Seção 4.1)
-      try {
-        await repository.registrarAuditoriaIa({
-          relatorio_id: req.body.relatorio_id || null,
-          usuario_id: req.user ? req.user.id : null,
-          modelo: resultadoIA.modelo || 'gemini-1.5-flash',
-          prompt_tipo: 'P1_QUALIDADE',
-          duracao_ms: resultadoIA.duracaoMs || 0,
-          sla_cumprido: (resultadoIA.duracaoMs || 0) <= 15000,
-          resultado_status: resultadoIA.status,
-          confianca: resultadoIA.confianca,
-          motivo: resultadoIA.motivo,
-          hash_imagem: hashIntegridade,
-        });
-      } catch (auditErr) {
-        console.warn('[Fotos Controller] Falha ao registrar log de auditoria:', auditErr.message);
-      }
 
       return res.status(200).json({
         status: resultadoIA.status,

@@ -4,7 +4,7 @@
  */
 
 const jwt = require('jsonwebtoken');
-const repository = require('../models/repository');
+const mockData = require('../mockData');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'bbvision_takeoff_secret_key_2026_jwt_token_bancodobrasil';
 
@@ -22,7 +22,7 @@ async function requireAuth(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await repository.findUserById(decoded.id);
+    const user = mockData.findUserById(decoded.id);
 
     if (!user) {
       return res.status(401).json({ erro: 'Usuário associado ao token não encontrado.' });

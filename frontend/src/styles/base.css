@@ -24,16 +24,18 @@ html, body {
 .app-viewport-wrapper {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 16px;
-  background: radial-gradient(circle at 50% 20%, #F1F5F9 0%, #E2E8F0 100%);
+  padding: 76px 16px 20px 16px;
+  background: radial-gradient(circle at 50% 25%, #F8FAFC 0%, #E2E8F0 100%);
 }
 
 .mobile-device-shell {
   width: 100%;
   max-width: 412px;
-  height: 860px;
+  height: min(860px, calc(100vh - 96px));
+  max-height: 860px;
   background-color: var(--bg-app);
   border-radius: 40px;
   box-shadow: 0 25px 60px -15px rgba(0, 45, 98, 0.22),
@@ -43,6 +45,13 @@ html, body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  margin: auto;
+}
+
+@media (max-width: 900px) {
+  .app-viewport-wrapper {
+    padding: 16px;
+  }
 }
 
 /* Quando visualizado diretamente no celular real */
@@ -57,6 +66,7 @@ html, body {
     border-radius: 0;
     box-shadow: none;
     border: none;
+    margin: 0;
   }
 }
 

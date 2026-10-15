@@ -1,6 +1,6 @@
 /**
  * BBVision - Roteador Central da API
- * Agrega e expõe todos os módulos de rotas sob o prefixo /api
+ * Básico e desacoplado de banco de dados
  */
 
 const express = require('express');
@@ -10,45 +10,45 @@ const authRoutes = require('./authRoutes');
 const obrasRoutes = require('./obrasRoutes');
 const relatoriosRoutes = require('./relatoriosRoutes');
 const fotosRoutes = require('./fotosRoutes');
+const mockData = require('../mockData');
 
-// Rotas principais
+// Rotas de domínio
 router.use('/auth', authRoutes);
 router.use('/obras', obrasRoutes);
 router.use('/relatorios', relatoriosRoutes);
 router.use('/fotos', fotosRoutes);
-router.use('/ia', fotosRoutes); // Alias para facilidade de integração
+router.use('/ia', fotosRoutes);
 
-const repository = require('../models/repository');
+// Validador público simples de autenticidade (código único ou hash)
+router.get('/validador/:codigoOuHash', (req, res) => {
+  const { codigoOuHash } = req.params;
+  const termo = (codigoOuHash || '').trim().toUpperCase();
 
-// Rotas de Checklists Normativos e Modelos Padronizados BB
-router.get('/checklists', async (req, res, next) => {
-  try {
-    const { categoria } = req.query;
-    const checklists = await repository.listChecklistsModelo(categoria);
-    return res.status(200).json(checklists);
-  } catch (err) {
-    next(err);
+  const relatorio = mockData.relatorios.find(r => 
+    (r.codigo_unico && r.codigo_unico.toUpperCase() === termo) ||
+    (r.hash_integridade && r.hash_integridade.toUpperCase() === termo)
+  );
+
+  if (!relatorio) {
+    return res.status(404).json({
+      autentico: false,
+      mensagem: 'Documento ou código não encontrado.',
+    });
   }
+
+  return res.status(200).json({
+    autentico: true,
+    relatorio: mockData.formatRelatorio(relatorio),
+  });
 });
 
-// Relatório Gerencial de Governança e Métricas de SLA da IA
-router.get('/metricas-ia', async (req, res, next) => {
-  try {
-    const metricas = await repository.getMetricasIa();
-    return res.status(200).json(metricas);
-  } catch (err) {
-    next(err);
-  }
-});
-
-// Rota de Health Check e status da API
+// Health check simples
 router.get('/health', (req, res) => {
   res.status(200).json({
     status: 'online',
-    sistema: 'BBVision Backend API',
-    orgao: 'Banco do Brasil',
-    programa: 'Residência TakeOff',
+    sistema: 'BBVision Backend (Básico)',
     versao: '1.0.0',
+    bancoDados: 'Desacoplado (Camada em memória)',
     timestamp: new Date().toISOString(),
   });
 });

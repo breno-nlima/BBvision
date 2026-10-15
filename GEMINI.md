@@ -9,7 +9,7 @@ Todo desenvolvimento neste repositório DEVE rigorosamente respeitar o documento
 1. **Stack Tecnológica**:
    - **Frontend**: HTML5, CSS3 moderno e Vanilla JavaScript (sem React/Next a menos que pedido expressamente).
    - **Backend**: Node.js com Express.
-   - **Banco**: Supabase (PostgreSQL).
+   - **Banco**: Desacoplado no backend local (um membro da equipe ficará responsável pelo banco).
    - **IA**: Google Gemini (gemini-1.5-flash) com SLA <= 15s e limiar de confiança de 75%.
    - **PDF**: PDFKit no backend.
    - **E-mail**: Resend (via Nodemailer).

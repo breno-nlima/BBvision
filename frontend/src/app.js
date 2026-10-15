@@ -12,6 +12,19 @@ import { renderRelatorios, bindRelatoriosEvents } from './pages/relatorios.js';
 import { renderPerfil, bindPerfilEvents } from './pages/perfil.js';
 import { renderBottomNav, bindBottomNavEvents } from './components/bottomNav.js';
 
+// Novas Telas Conforme Prints dos Mockups Oficiais
+import { renderObraDetalhe, bindObraDetalheEvents } from './pages/obraDetalhe.js';
+import { renderTipoLocal, bindTipoLocalEvents } from './pages/tipoLocal.js';
+import { renderCameraIa, bindCameraIaEvents } from './pages/cameraIa.js';
+import { renderImagemProtegida, bindImagemProtegidaEvents } from './pages/imagemProtegida.js';
+import { renderChecklistPergunta, bindChecklistPerguntaEvents } from './pages/checklistPergunta.js';
+import { renderChecklistDinamico, bindChecklistDinamicoEvents } from './pages/checklistDinamico.js';
+import { renderChecklistVerificacao, bindChecklistVerificacaoEvents } from './pages/checklistVerificacao.js';
+import { renderAssinaturaResponsavel, bindAssinaturaResponsavelEvents } from './pages/assinaturaResponsavel.js';
+import { renderRelatorioBloqueado, bindRelatorioBloqueadoEvents } from './pages/relatorioBloqueado.js';
+import { renderFiscalAuditoria, bindFiscalAuditoriaEvents } from './pages/fiscalAuditoria.js';
+import { renderValidadorPublico, bindValidadorPublicoEvents } from './pages/validadorPublico.js';
+
 class BVisionApp {
   constructor() {
     this.screenContainer = document.getElementById('appScreenContainer');
@@ -31,6 +44,26 @@ class BVisionApp {
 
   render() {
     const page = state.currentPage;
+    const userRole = state.user?.cargo || 'empreiteira';
+
+    // Regra de Autenticação Real: Redireciona para login se não autenticado
+    if (!state.user && page !== 'login' && page !== 'validador-publico') {
+      state.currentPage = 'login';
+      this.screenContainer.innerHTML = renderLogin();
+      bindLoginEvents();
+      this.bottomNavSlot.innerHTML = '';
+      this.screenContainer.style.paddingBottom = '0px';
+      this.updateClock();
+      return;
+    }
+
+    // Regra de Controle de Acesso por Persona (RBAC):
+    // Rodrigo (empreiteira) não pode acessar o painel de auditoria e julgamento exclusivo do Banco do Brasil
+    if (page === 'fiscal-auditoria' && userRole === 'empreiteira') {
+      alert('⚠️ Acesso Restrito: O Painel de Auditoria e Julgamento é exclusivo do corpo técnico e engenharia do Banco do Brasil (Fiscal Mariana).');
+      state.navigate('inicio', 'inicio');
+      return;
+    }
 
     // 1. Renderiza o conteúdo da tela ativa
     switch (page) {
@@ -49,6 +82,56 @@ class BVisionApp {
         bindObrasEvents();
         break;
 
+      case 'obra-detalhe':
+        this.screenContainer.innerHTML = renderObraDetalhe();
+        bindObraDetalheEvents();
+        break;
+
+      case 'tipo-local':
+        this.screenContainer.innerHTML = renderTipoLocal();
+        bindTipoLocalEvents();
+        break;
+
+      case 'camera-ia':
+        this.screenContainer.innerHTML = renderCameraIa();
+        bindCameraIaEvents();
+        break;
+
+      case 'imagem-protegida':
+        this.screenContainer.innerHTML = renderImagemProtegida();
+        bindImagemProtegidaEvents();
+        break;
+
+      case 'checklist-pergunta':
+        this.screenContainer.innerHTML = renderChecklistPergunta();
+        bindChecklistPerguntaEvents();
+        break;
+
+      case 'checklist-dinamico':
+        this.screenContainer.innerHTML = renderChecklistDinamico();
+        bindChecklistDinamicoEvents();
+        break;
+
+      case 'checklist-verificacao':
+        this.screenContainer.innerHTML = renderChecklistVerificacao();
+        bindChecklistVerificacaoEvents();
+        break;
+
+      case 'assinatura-responsavel':
+        this.screenContainer.innerHTML = renderAssinaturaResponsavel();
+        bindAssinaturaResponsavelEvents();
+        break;
+
+      case 'relatorio-bloqueado':
+        this.screenContainer.innerHTML = renderRelatorioBloqueado();
+        bindRelatorioBloqueadoEvents();
+        break;
+
+      case 'fiscal-auditoria':
+        this.screenContainer.innerHTML = renderFiscalAuditoria();
+        bindFiscalAuditoriaEvents();
+        break;
+
       case 'vistoria':
         this.screenContainer.innerHTML = renderVistoria();
         bindVistoriaEvents();
@@ -64,6 +147,11 @@ class BVisionApp {
         bindPerfilEvents();
         break;
 
+      case 'validador-publico':
+        this.screenContainer.innerHTML = renderValidadorPublico();
+        bindValidadorPublicoEvents();
+        break;
+
       default:
         this.screenContainer.innerHTML = renderInicio();
         bindInicioEvents();
@@ -73,8 +161,9 @@ class BVisionApp {
     // Scroll para o topo ao trocar de tela
     this.screenContainer.scrollTop = 0;
 
-    // 2. Renderiza a barra inferior de navegação (exceto na tela de login)
-    if (page === 'login') {
+    // 2. Renderiza a barra inferior de navegação (exceto login, câmera e assinatura digital)
+    const semBottomNav = ['login', 'camera-ia', 'assinatura-responsavel'];
+    if (semBottomNav.includes(page)) {
       this.bottomNavSlot.innerHTML = '';
       this.screenContainer.style.paddingBottom = '0px';
     } else {
@@ -102,3 +191,4 @@ class BVisionApp {
 document.addEventListener('DOMContentLoaded', () => {
   new BVisionApp();
 });
+

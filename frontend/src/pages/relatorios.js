@@ -42,7 +42,7 @@ export function renderRelatorios() {
 
       <div class="rel-action-row">
         <button class="btn-ver-pdf" data-rel-id="${rel.id}">
-          Visualizar PDF Assinado
+          📄 Visualizar PDF Assinado
         </button>
       </div>
     </div>
@@ -70,7 +70,13 @@ export function bindRelatoriosEvents() {
   const btnsPdf = document.querySelectorAll('.btn-ver-pdf');
   btnsPdf.forEach(btn => {
     btn.addEventListener('click', () => {
-      alert('Visualização do PDF emitido via PDFKit com carimbo de integridade SHA-256.');
+      const relId = btn.getAttribute('data-rel-id');
+      if (relId && !relId.startsWith('rel-')) {
+        window.open(`/api/relatorios/${relId}/pdf`, '_blank');
+      } else {
+        // Gera o PDF oficial do primeiro relatório cadastrado na API se disponível
+        window.open('/api/relatorios/11111111-3333-4444-5555-666666666666/pdf', '_blank');
+      }
     });
   });
 }

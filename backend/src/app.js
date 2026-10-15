@@ -1,6 +1,6 @@
 /**
- * BBVision - Aplicação Principal Express
- * Sistema de Monitoramento e Fiscalização Remota de Obras (Banco do Brasil)
+ * BBVision - Aplicação Básica Express
+ * Servidor simplificado para suporte ao frontend e IA Gemini
  */
 
 const express = require('express');
@@ -8,7 +8,7 @@ const cors = require('cors');
 const path = require('path');
 const dotenv = require('dotenv');
 
-// Carrega variáveis de ambiente do backend/.env e da raiz se existirem
+// Carrega variáveis de ambiente
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 dotenv.config();
 
@@ -17,35 +17,28 @@ const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
 
-// ------------------------------------------------------------------------------
-// MIDDLEWARES DE SEGURANÇA E PARSING
-// ------------------------------------------------------------------------------
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-}));
-
-// Suporte a payloads maiores para transferências de imagens base64 da câmera
+// Middlewares básicos
+app.use(cors());
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
-// Servir arquivos estáticos de uploads (evidências fotográficas e relatórios PDF)
+// Servir arquivos de uploads
 const uploadsPath = path.join(__dirname, '..', 'uploads');
 app.use('/uploads', express.static(uploadsPath));
 
-// ------------------------------------------------------------------------------
-// ROTAS DA API
-// ------------------------------------------------------------------------------
+// Servir frontend
+const frontendPath = path.join(__dirname, '..', '..', 'frontend');
+app.use(express.static(frontendPath));
+
+// Rotas da API
 app.use('/api', apiRoutes);
 
-// Rota raiz de boas-vindas / status
-app.get('/', (req, res) => {
+// Informações básicas da API
+app.get('/api-info', (req, res) => {
   res.json({
     projeto: 'BBVision',
-    descricao: 'API Backend de Fiscalização Remota de Obras para o Banco do Brasil',
+    descricao: 'API Backend Básica (TakeOff)',
     versao: '1.0.0',
-    documentacao: '/docs/TAKEOFF_DOCUMENTO_ENTREGA.md',
     endpoints: {
       auth: '/api/auth/login',
       obras: '/api/obras',
@@ -53,12 +46,11 @@ app.get('/', (req, res) => {
       fotos: '/api/fotos/avaliar',
       health: '/api/health',
     },
+    timestamp: new Date().toISOString(),
   });
 });
 
-// ------------------------------------------------------------------------------
-// TRATAMENTO DE ERROS
-// ------------------------------------------------------------------------------
+// Tratamento de erros
 app.use(errorHandler);
 
 module.exports = app;

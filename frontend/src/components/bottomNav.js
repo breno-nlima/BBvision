@@ -1,6 +1,6 @@
 /**
  * BVision Bottom Navigation Bar Component
- * Barra inferior flutuante com indicador ativo em pílula amarela
+ * Barra inferior adaptativa com base no perfil de acesso da Persona (Rodrigo vs Mariana)
  */
 
 import { Icons } from '../assets/icons.js';
@@ -8,7 +8,44 @@ import { state } from '../services/state.js';
 
 export function renderBottomNav() {
   const current = state.activeNav;
+  const isFiscal = state.user?.cargo === 'fiscal';
 
+  if (isFiscal) {
+    // Barra de Navegação Exclusiva para a Fiscal Mariana
+    return `
+      <nav class="bottom-nav-bar fiscal-theme" id="bottomNav">
+        <button class="nav-item-btn ${current === 'inicio' ? 'active' : ''}" data-nav="inicio" id="navItemInicio">
+          <div class="nav-icon-container">
+            ${Icons.navInicio(20)}
+          </div>
+          <span class="nav-item-label">Controle</span>
+        </button>
+
+        <button class="nav-item-btn ${current === 'fiscal-auditoria' ? 'active' : ''}" data-nav="fiscal-auditoria" id="navItemAuditoria">
+          <div class="nav-icon-container">
+            ${Icons.shieldYellow(20)}
+          </div>
+          <span class="nav-item-label">Auditoria</span>
+        </button>
+
+        <button class="nav-item-btn ${current === 'obras' ? 'active' : ''}" data-nav="obras" id="navItemObras">
+          <div class="nav-icon-container">
+            ${Icons.navObras(20)}
+          </div>
+          <span class="nav-item-label">Obras BB</span>
+        </button>
+
+        <button class="nav-item-btn ${current === 'perfil' ? 'active' : ''}" data-nav="perfil" id="navItemPerfil">
+          <div class="nav-icon-container">
+            ${Icons.navPerfil(20)}
+          </div>
+          <span class="nav-item-label">Perfil BB</span>
+        </button>
+      </nav>
+    `;
+  }
+
+  // Barra de Navegação Exclusiva para a Empreiteira Rodrigo
   return `
     <nav class="bottom-nav-bar" id="bottomNav">
       <button class="nav-item-btn ${current === 'inicio' ? 'active' : ''}" data-nav="inicio" id="navItemInicio">

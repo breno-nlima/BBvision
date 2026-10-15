@@ -2,8 +2,7 @@
  * BBVision - Controller de Obras
  * Em conformidade com a Seção 8.2 do Documento de Entrega TakeOff
  */
-
-const repository = require('../models/repository');
+const mockData = require('../mockData');
 
 const obrasController = {
   /**
@@ -13,7 +12,7 @@ const obrasController = {
    */
   async listar(req, res, next) {
     try {
-      const obras = await repository.listObras();
+      const obras = mockData.listObras();
       return res.status(200).json(obras);
     } catch (err) {
       next(err);
@@ -27,14 +26,14 @@ const obrasController = {
   async obterPorId(req, res, next) {
     try {
       const { id } = req.params;
-      const obra = await repository.findObraById(id);
+      const obra = mockData.findObraById(id);
 
       if (!obra) {
         return res.status(404).json({ erro: 'Obra não encontrada.' });
       }
 
       // Busca relatórios vinculados a esta obra
-      const relatorios = await repository.listRelatorios({ obra_id: id });
+      const relatorios = mockData.listRelatorios({ obra_id: id });
 
       return res.status(200).json({
         ...obra,
@@ -57,10 +56,10 @@ const obrasController = {
         return res.status(400).json({ erro: 'Nome e endereço são obrigatórios para cadastrar uma obra.' });
       }
 
-      const novaObra = await repository.createObra({
+      const novaObra = mockData.createObra({
         nome,
         endereco,
-        responsavel: responsavel || req.user.nome || 'Responsável Técnico',
+        responsavel: responsavel || (req.user && req.user.nome) || 'Responsável Técnico',
         status: status || 'REGULAR',
       });
 
