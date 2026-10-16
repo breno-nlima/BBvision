@@ -1,69 +1,75 @@
-# BBVision - Backend API Básico (Node.js & Express)
+# BBVision - Backend API RESTful (Node.js & Express)
 
 API RESTful desenvolvida para o sistema de **Fiscalização e Monitoramento Remoto de Obras do Banco do Brasil**, no âmbito do programa **Residência em Software & IA (Porto Digital / TakeOff)**.
 
-> **Nota de Divisão da Squad:**
-> A parte de banco de dados foi desacoplada deste repositório para ser gerenciada diretamente pelo membro da equipe responsável pelo banco. O backend atual encontra-se em formato básico e enxuto com persistência em memória, permitindo execução ágil e servindo as integrações do frontend e da IA Google Gemini.
+[![Status](https://img.shields.io/badge/Status-Produção%20Online-green)](https://antiquewhite-dolphin-779579.hostingersite.com/api/health)
+[![Versão](https://img.shields.io/badge/Versão-1.1.0-blue)](https://antiquewhite-dolphin-779579.hostingersite.com/api-info)
+
+---
+
+## 🌐 Produção (Hostinger)
+
+- **URL Base:** `https://antiquewhite-dolphin-779579.hostingersite.com`
+- **Healthcheck:** `https://antiquewhite-dolphin-779579.hostingersite.com/api/health`
+- **API Info:** `https://antiquewhite-dolphin-779579.hostingersite.com/api-info`
 
 ---
 
 ## 🛠️ Stack Tecnológica
 
-- **Linguagem & Runtime:** Node.js (v18+)
-- **Framework Web:** Express.js com CORS
-- **Camada de Dados:** Desacoplada (Mock em memória para testes e desenvolvimento do frontend)
-- **Inteligência Artificial:** Google Gemini (`gemini-1.5-flash`) via `@google/generative-ai`
-- **Compilação de Relatórios:** PDFKit (PDFs com carimbo digital, código único e hashes)
-- **Autenticação & Segurança:** JWT (JSON Web Tokens), bcryptjs e módulo nativo `crypto`
+- **Linguagem & Runtime:** Node.js (v18, v20, v22+)
+- **Framework Web:** Express.js 5.x com CORS e middlewares de segurança
+- **Camada de Dados:** Desacoplada e resiliente com persistência em memória e integração Supabase
+- **Inteligência Artificial:** Google Gemini (`gemini-1.5-flash`) via SDK oficial `@google/generative-ai`
+- **Geração de Documentos:** PDFKit (Laudos com carimbo institucional, código de autenticação e hash)
+- **Criptografia & Inviolabilidade:** SHA-256 (`crypto`), tokens JWT e senhas com bcryptjs
+- **E-mails Transacionais:** Resend / Nodemailer para envio automático após homologação
 
 ---
 
-## 📋 Estrutura de Pastas
+## 📋 Estrutura da Camada Backend
 
 ```text
 backend/
 ├── src/
-│   ├── config/                 # Gemini e E-mail
-│   │   ├── email.js
-│   │   └── gemini.js
-│   ├── controllers/            # Controladores das rotas
-│   │   ├── authController.js
-│   │   ├── fotosController.js
-│   │   ├── obrasController.js
-│   │   └── relatoriosController.js
+│   ├── config/                 # Configurações de IA Gemini, e-mail e Supabase
+│   ├── controllers/            # Controladores das rotas de negócio
+│   │   ├── authController.js   # Login, registro de novos usuários e JWT
+│   │   ├── fotosController.js  # Análise via IA Gemini e upload de evidências
+│   │   ├── obrasController.js  # Catálogo e detalhamento de obras do Banco do Brasil
+│   │   └── relatoriosController.js # Finalização, julgamento técnico e emissão de laudo PDF
 │   ├── middlewares/            # Autenticação JWT, Upload Multer e ErrorHandler
-│   │   ├── authMiddleware.js
-│   │   ├── errorHandler.js
-│   │   └── uploadMiddleware.js
 │   ├── routes/                 # Roteamento dos endpoints oficiais (/api/*)
-│   │   ├── authRoutes.js
-│   │   ├── fotosRoutes.js
-│   │   ├── obrasRoutes.js
-│   │   ├── relatoriosRoutes.js
-│   │   └── index.js
-│   ├── services/               # IA Gemini, PDF e E-mail
-│   │   ├── emailService.js
-│   │   ├── geminiService.js
-│   │   └── pdfService.js
-│   ├── utils/                  # Inviolabilidade e hashes criptográficos
-│   │   └── cryptoUtils.js
-│   ├── mockData.js             # Base básica em memória (Usuários, Obras, Relatórios)
-│   ├── app.js                  # Configuração do Express
-│   └── server.js               # Servidor HTTP
-├── tests/                      # Bateria de testes automatizados
-│   └── test_backend.js
-├── uploads/                    # Diretório de evidências fotográficas e PDFs
+│   ├── services/               # IA Gemini (gemini-1.5-flash), PDF e E-mail
+│   ├── utils/                  # Inviolabilidade e hashes criptográficos SHA-256
+│   ├── mockData.js             # Base desacoplada em memória para desenvolvimento ágil
+│   ├── app.js                  # Configuração do Express e fallback SPA
+│   └── server.js               # Servidor HTTP com detecção de IP de rede
+├── tests/                      # Bateria de testes automatizados da API
+├── uploads/                    # Diretório local de evidências fotográficas e PDFs
 └── .env                        # Variáveis de ambiente locais
 ```
 
 ---
 
-## 🚀 Como Executar
+## 🚀 Como Executar Localmente
 
 ```bash
-# Iniciar o backend (porta 3000 por padrão)
+# Iniciar a API com o servidor completo
+npm start
+
+# Modo de desenvolvimento
 npm run dev
 
 # Executar bateria de testes automatizados
 npm test
 ```
+
+A API estará disponível em `http://localhost:3000/api`.
+
+---
+
+## 🛡️ Contas Padrão de Homologação
+
+- **Rodrigo (Empreiteira):** `rodrigo@empreiteira.com` | `123456`
+- **Mariana (Fiscalização BB):** `mariana@bb.com.br` | `123456`

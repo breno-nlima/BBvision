@@ -47,7 +47,7 @@ router.get('/health', (req, res) => {
   res.status(200).json({
     status: 'online',
     sistema: 'BBVision Backend (Básico)',
-    versao: '1.0.0',
+    versao: '1.1.0',
     bancoDados: 'Desacoplado (Camada em memória)',
     timestamp: new Date().toISOString(),
   });

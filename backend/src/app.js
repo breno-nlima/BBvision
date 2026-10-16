@@ -38,7 +38,7 @@ app.get('/api-info', (req, res) => {
   res.json({
     projeto: 'BBVision',
     descricao: 'API Backend Básica (TakeOff)',
-    versao: '1.0.0',
+    versao: '1.1.0',
     endpoints: {
       auth: '/api/auth/login',
       obras: '/api/obras',

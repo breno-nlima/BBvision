@@ -1,6 +1,6 @@
 {
   "name": "bbvision",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "BBVision - Solução de Fiscalização Remota de Obras para o Banco do Brasil (TakeOff | Residência em Software & IA)",
   "main": "server.js",
   "scripts": {

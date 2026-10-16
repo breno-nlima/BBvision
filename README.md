@@ -1,128 +1,150 @@
-# BBVision - Solução de Engenharia para Fiscalização de Obras (Banco do Brasil)
+# BBVision - Solução de Fiscalização Remota de Obras (Banco do Brasil)
 
-Sistema inteligente de fiscalização de obras para o **Banco do Brasil**, desenvolvido no âmbito do desafio de Residência Tecnológica.
+[![Hostinger Deploy](https://img.shields.io/badge/Deploy-Hostinger%20Produção-green?style=for-the-badge&logo=hostinger)](https://antiquewhite-dolphin-779579.hostingersite.com/)
+[![Node.js](https://img.shields.io/badge/Node.js-22.x-339933?style=for-the-badge&logo=nodedotjs)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/Express-5.x-000000?style=for-the-badge&logo=express)](https://expressjs.com/)
+[![Google Gemini](https://img.shields.io/badge/Google%20Gemini-1.5%20Flash-4285F4?style=for-the-badge&logo=google)](https://ai.google.dev/)
+[![Banco do Brasil](https://img.shields.io/badge/Banco%20do%20Brasil-TakeOff%202026-FEE000?style=for-the-badge&logo=banco-do-brasil&logoColor=003399)](https://www.bb.com.br)
+
+Plataforma inteligente de monitoramento, auditoria e fiscalização remota de obras para o **Banco do Brasil**, desenvolvida pela equipe no âmbito do programa **Residência Tecnológica em Software & IA (Porto Digital / TakeOff)**.
+
+---
+
+## 🌐 Acesso Público em Produção
+
+A aplicação completa (Frontend + Backend API + Validador) encontra-se implantada e operacional na nuvem Hostinger:
+
+👉 **Link Público Oficial:** [https://antiquewhite-dolphin-779579.hostingersite.com/](https://antiquewhite-dolphin-779579.hostingersite.com/)
+
+### 🔑 Credenciais para Demonstração e Homologação
+
+Você pode utilizar os botões de **Acesso Rápido** na tela de login ou inserir os acessos oficiais:
+
+| Perfil | E-mail Oficial | Senha | Função / Permissões |
+| :--- | :--- | :--- | :--- |
+| **👷 Rodrigo Silva (Empreiteira)** | `rodrigo@empreiteira.com` | `123456` | Acesso de campo, câmera obrigatória sem galeria, sugestões de IA, checklist e finalização de laudo com bloqueio imediato. |
+| **👩‍💼 Engª Mariana (Fiscalização BB)** | `mariana@bb.com.br` | `123456` | Painel de Auditoria e Julgamento com Fé Pública, verificação forense de hash SHA-256 e emissão de laudo homologado. |
+| **🛡️ Validador Público de Fé Pública** | *Sem login (Acesso livre)* | — | Consulta instantânea da autenticidade e validade de laudos via Código Único ou Hash SHA-256 no rodapé da página. |
 
 ---
 
 ## 📁 Estrutura de Pastas do Projeto
 
-O projeto foi estruturado no modelo **Fullstack desacoplado (Node.js / JavaScript)**, focado em simplicidade, manutenibilidade e padrão profissional:
+O projeto adota uma arquitetura **Fullstack desacoplada e unificada**, operando com servidor Express integrado para servir simultaneamente a API RESTful e os arquivos estáticos do frontend:
 
 ```text
-Bvision/
-├── backend/                             # Servidor da API REST em Node.js (Básico e desacoplado)
+BBvision/
+├── server.js                           # Entrypoint raiz universal para Node.js (Hostinger / PM2 / Cloud)
+├── package.json                        # Dependências gerais, metadados e scripts de execução (v1.1.0)
+│
+├── backend/                            # Servidor da API REST em Node.js (Express)
 │   ├── src/
 │   │   ├── config/                     # Configurações de IA Gemini, e-mail e ambiente
-│   │   ├── controllers/                # Camada de controle de requisições e respostas
-│   │   ├── middlewares/                # Autenticação JWT e upload seguro Multer
-│   │   ├── routes/                     # Definição e roteamento das rotas da API
-│   │   ├── services/                   # Regras de negócio (IA Gemini, PDF, e-mail)
+│   │   ├── controllers/                # Controladores de rotas (Auth, Obras, Relatórios, Fotos/IA)
+│   │   ├── middlewares/                # Autenticação JWT, Upload Multer e ErrorHandler
+│   │   ├── routes/                     # Roteamento dos endpoints oficiais (/api/*)
+│   │   ├── services/                   # Regras de negócio (IA Gemini, PDFKit, E-mail Resend)
 │   │   ├── utils/                      # Criptografia, hashes SHA-256 e códigos únicos
-│   │   └── mockData.js                 # Armazenamento em memória desacoplado de banco
-│   └── uploads/
-│       ├── evidencias/                 # Fotos capturadas da câmera
-│       └── relatorios/                 # PDFs gerados
+│   │   ├── mockData.js                 # Camada de persistência desacoplada em memória
+│   │   ├── app.js                      # Inicialização do Express, middlewares e rotas SPA
+│   │   └── server.js                   # Servidor HTTP resiliente
+│   ├── tests/                          # Bateria de testes automatizados da API
+│   ├── uploads/                        # Armazenamento de evidências fotográficas e PDFs
+│   └── .env                            # Variáveis de ambiente
 │
-├── frontend/                            # Aplicação cliente (Interface do Usuário em JavaScript)
-│   ├── public/                         # Arquivos públicos e estáticos
+├── frontend/                           # Aplicação cliente (Vanilla JavaScript / HTML5 / CSS3)
+│   ├── server.js                       # Servidor unificado para execução direta da pasta frontend
+│   ├── index.html                      # Ponto de entrada SPA com design system Banco do Brasil
 │   └── src/
-│       ├── assets/                     # Ícones, logotipos do BB e ilustrações
-│       ├── components/                 # Componentes de interface modulares e reutilizáveis
-│       ├── pages/                      # Telas separadas por fluxo e Persona
-│       ├── services/                   # Comunicação com a API backend e chamadas HTTP
-│       ├── styles/                     # Folhas de estilo (CSS) e design system
-│       └── utils/                      # Formatações e validações
+│       ├── assets/                     # Logotipo oficial BBVision, ícones SVG e ilustrações
+│       ├── components/                 # Componentes modulares (Navbar, Toast, Câmera, BottomNav)
+│       ├── pages/                      # Telas completas organizadas pelo fluxo das Personas
+│       ├── services/                   # Cliente API fetch same-origin, estado reativo e fila offline (HU05)
+│       ├── styles/                     # Design system corporativo BB (cores, tipografia, componentes)
+│       └── utils/                      # Utilitários de criptografia Web Crypto API e formatação
 │
-└── docs/                               # Documentação técnica, requisitos e diagramas
+└── docs/                               # Documentação técnica oficial e especificações de entrega
+    └── TAKEOFF_DOCUMENTO_ENTREGA.md    # Documento de entrega oficial do desafio
 ```
 
 ---
 
-## 🎯 Correspondência das Pastas com as Premissas do BB
+## 🎯 Correspondência com as Premissas e Critérios do BB
 
-| Pasta | Premissas Atendidas | Justificativa |
+| Pasta / Componente | Premissas Atendidas | Justificativa Técnica |
 | :--- | :--- | :--- |
-| `frontend/src/pages/` | 2, 3, 7, 10, 15, 16, 19 | Interface mobile responsiva para uso no canteiro de obras e painel do fiscal. |
-| `frontend/src/components/` | 4, 5, 7, 16, 17, 23 | Bloqueia galeria do celular; força câmera em tempo real, visualização e navegação. |
-| `backend/src/services` | 5, 6, 8, 11, 13, 20, 21 | Avaliação de fotos com Gemini, hashes anti-adulteração SHA-256 e emissão de PDF com carimbo. |
-| `backend/src/middlewares` | 6, 7, 19, 20 | Proteção de rotas com JWT e validação de arquivos. |
-| `backend/uploads/evidencias` | 4, 6, 22 | Armazenamento de evidências fotográficas in-loco. |
-| `docs/` | 1, 9, 12, 17 | Manuais de checklist, modelos de orientação visual e documentação de entrega. |
+| `frontend/src/pages/` | 2, 3, 7, 10, 15, 16, 19 | Interface mobile-first fluida para uso em campo pelo encarregado e painel de governança da fiscal. |
+| `frontend/src/components/camera.js` | 4, 5, 7, 16, 17, 23 | Inviolabilidade de captura: bloqueio absoluto de upload via galeria; disparo obrigatório por câmera ao vivo. |
+| `backend/src/services/geminiService.js` | 5, 6, 8, 11, 13, 20 | Análise de nitidez, enquadramento e contexto via Google Gemini 1.5 Flash com SLA &le; 15s e limiar &ge; 75%. |
+| `backend/src/utils/cryptoUtils.js` | 6, 7, 19, 20 | Geração de Código Único hexadecimal de 16 dígitos e hash criptográfico SHA-256 anti-adulteração. |
+| `backend/src/services/pdfService.js` | 13, 14, 21 | Emissão de Laudo Técnico oficial em PDF com carimbo de autenticidade, QR Code e Fé Pública. |
+| `frontend/src/services/state.js` | HU05 (Resiliência) | Modo offline de contingência com cache local e fila sincronizável caso ocorra oscilação de sinal 4G/5G. |
 
 ---
 
-## 🚀 Execução e Deploy em Produção
+## 🔍 Endpoints da API em Produção
+
+Os endpoints abaixo estão ativos no domínio de produção:
+
+- **Healthcheck Geral**: `GET https://antiquewhite-dolphin-779579.hostingersite.com/api/health`
+- **Metadados da API**: `GET https://antiquewhite-dolphin-779579.hostingersite.com/api-info`
+- **Autenticação**: `POST https://antiquewhite-dolphin-779579.hostingersite.com/api/auth/login`
+- **Catálogo de Obras**: `GET https://antiquewhite-dolphin-779579.hostingersite.com/api/obras`
+- **Histórico de Relatórios**: `GET https://antiquewhite-dolphin-779579.hostingersite.com/api/relatorios`
+- **Análise de Imagem (IA)**: `POST https://antiquewhite-dolphin-779579.hostingersite.com/api/fotos/avaliar`
+- **Validação de Fé Pública**: `GET https://antiquewhite-dolphin-779579.hostingersite.com/api/relatorios/validar/:termo`
+
+---
+
+## 🚀 Como Executar Localmente
 
 ### 1. Pré-requisitos
-- Node.js (v18 ou superior)
-- NPM
+- **Node.js** (versão 18, 20 ou 22 recomendada)
+- **NPM**
 
-### 2. Execução Local
+### 2. Instalação e Execução
 ```bash
-# Instalar dependências
+# Clone o repositório
+git clone https://github.com/breno-nlima/BBvision.git
+cd BBvision
+
+# Instale as dependências
 npm install
 
-# Iniciar servidor completo (API + Frontend)
+# Inicie a aplicação unificada (API + Frontend)
 npm start
-# ou
+# ou para desenvolvimento
 npm run dev
 ```
-Acesse a aplicação em: `http://localhost:3000`
 
-### 3. Deploy em Produção (Hostinger / VPS / Cloud / PM2)
-O sistema BBVision foi estruturado no padrão monolítico híbrido: o backend Express serve simultaneamente a API RESTful (`/api/...`) e todos os arquivos estáticos do frontend Vanilla JS.
+Acesse o sistema localmente em: [http://localhost:3000](http://localhost:3000)
 
-1. **Variáveis de Ambiente**:
-   Copie `backend/.env.example` para `.env` e configure:
-   - `PORT`: Porta do servidor (padrão `3000` ou atribuída pela hospedagem).
-   - `JWT_SECRET`: Chave secreta forte para assinatura de tokens.
-   - `GEMINI_API_KEY`: Chave da API Google Gemini para análise de fotos in-loco.
-   - `RESEND_API_KEY`: Chave para envio transacional de relatórios por e-mail.
-
-2. **Gerenciador de Processos (PM2 / Hostinger Node.js)**:
-   ```bash
-   pm2 start backend/src/server.js --name bbvision
-   pm2 save
-   ```
-
-3. **Proxy Reverso (Nginx / Apache)**:
-   Se estiver utilizando Apache (ex: XAMPP / cPanel / Hostinger), aponte as requisições para a porta do Node.js através de `mod_proxy`:
-   ```apache
-   ProxyPreserveHost On
-   ProxyPass / http://127.0.0.1:3000/
-   ProxyPassReverse / http://127.0.0.1:3000/
-   ```
+### 3. Testes Automatizados
+```bash
+npm test
+```
 
 ---
 
-## 👥 Perfis de Acesso Externo
+## ☁️ Arquitetura de Deploy (Hostinger Node.js)
 
-A plataforma conta com fluxo aberto de cadastro e autenticação real com JWT:
-
-1. **👷 Empreiteira de Obra (Campo)**:
-   - Cadastro e login para empresas de engenharia e encarregados técnicos.
-   - Captura inviolável de evidências fotográficas exclusivamente por câmera ao vivo.
-   - Pré-validação instantânea por visão computacional (Google Gemini 1.5 Flash).
-   - Preenchimento de checklists normativos com sugestões dinâmicas de IA.
-   - Assinatura digital técnica de responsabilidade e encerramento do relatório.
-   - Geração de código hexadecimal único de 16 caracteres e hash criptográfico SHA-256.
-
-2. **👩‍💼 Fiscal de Obra (Banco do Brasil / Auditoria)**:
-   - Centro de controle e governança de engenharia do Banco do Brasil.
-   - Auditoria forense de integridade de hashes e dados das vistorias.
-   - Visualização e download de laudos em PDF compilados com carimbo oficial.
-   - Julgamento técnico com Fé Pública: Aprovar (Obra Regular) ou Solicitar Ajuste (Pendente de Ajuste).
-
-3. **🛡️ Validador Público de Fé Pública**:
-   - Disponível para qualquer cidadão, cartório ou órgão auditor externo, sem necessidade de autenticação.
-   - Consulta instantânea da autenticidade e validade de laudos via Código Único ou Hash SHA-256.
+1. **Runtime:** Node.js v22 (Express).
+2. **Entrypoint:** `server.js` na raiz do projeto.
+3. **Variáveis de Ambiente Configuradas:**
+   - `PORT`: Gerenciada dinamicamente pelo processo da Hostinger.
+   - `NODE_ENV`: `production`
+   - `JWT_SECRET`: Chave criptográfica de alta entropia.
+   - `SUPABASE_URL` / `SUPABASE_ANON_KEY`: Integração com camada de nuvem Supabase.
+   - `GEMINI_MODEL`: `gemini-1.5-flash`
+   - `GEMINI_TIMEOUT_MS`: `15000`
+   - `GEMINI_CONFIDENCE_THRESHOLD`: `0.75`
+   - `EMAIL_FROM`: `bbvision-notificacoes@bancodobrasil.com.br`
+   - `FISCAL_EMAIL_PADRAO`: `mariana.fiscal@bb.com.br`
+   - `UPLOAD_DIR`: `uploads`
 
 ---
 
-## 📖 Especificação Oficial e Regras de Negócio
+## 👥 Integrantes e Residência Tecnológica
 
-Todo o projeto segue rigorosamente a **Entrega Oficial TakeOff | Banco do Brasil**:
-- 📄 [Documento de Entrega Oficial (TakeOff)](file:///c:/xampp/htdocs/BBvision/docs/TAKEOFF_DOCUMENTO_ENTREGA.md)
-- 📌 Regras de IA, SLA &le; 15s, limiar de confiança &ge; 75%, inviolabilidade e Fé Pública.
-
-
+Projeto concebido para a **Residência em Software & IA (Porto Digital / TakeOff)** em parceria com o **Banco do Brasil**.
+Documentação completa de entrega: [docs/TAKEOFF_DOCUMENTO_ENTREGA.md](file:///c:/xampp/htdocs/BBvision/docs/TAKEOFF_DOCUMENTO_ENTREGA.md).
