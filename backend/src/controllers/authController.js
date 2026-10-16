@@ -52,6 +52,8 @@ const authController = {
           nome: user.nome,
           email: user.email,
           cargo: user.cargo,
+          empresa: user.empresa || '',
+          registro_profissional: user.registro_profissional || '',
         },
       });
     } catch (err) {
