@@ -39,7 +39,7 @@ export function renderLogin() {
 
         <!-- Formulário 1: Login -->
         <div class="auth-form-body ${abaAtiva === 'login' ? '' : 'hidden'}" id="loginFormSection">
-          <form id="formLogin" onsubmit="event.preventDefault();">
+          <form id="formLogin">
             <div class="auth-field-group">
               <label for="loginEmail" class="auth-field-label">E-mail corporativo ou institucional</label>
               <input 
@@ -87,7 +87,7 @@ export function renderLogin() {
 
         <!-- Formulário 2: Cadastro de Novo Usuário -->
         <div class="auth-form-body ${abaAtiva === 'cadastro' ? '' : 'hidden'}" id="cadastroFormSection">
-          <form id="formCadastro" onsubmit="event.preventDefault();">
+          <form id="formCadastro">
             
             <div class="auth-field-group">
               <label class="auth-field-label">Selecione o seu perfil de atuação:</label>
@@ -230,16 +230,27 @@ export function bindLoginEvents() {
     }
   }
 
+  function dispararLogin() {
+    const email = document.getElementById('loginEmail')?.value.trim();
+    const senha = document.getElementById('loginSenha')?.value;
+    if (!email || !senha) {
+      toast.warning('Atenção', 'Preencha o e-mail e a senha.');
+      return;
+    }
+    processarLogin(email, senha);
+  }
+
   if (formLogin) {
     formLogin.addEventListener('submit', (e) => {
       e.preventDefault();
-      const email = document.getElementById('loginEmail')?.value.trim();
-      const senha = document.getElementById('loginSenha')?.value;
-      if (!email || !senha) {
-        toast.warning('Atenção', 'Preencha o e-mail e a senha.');
-        return;
-      }
-      processarLogin(email, senha);
+      dispararLogin();
+    });
+  }
+
+  if (btnSubmitLogin) {
+    btnSubmitLogin.addEventListener('click', (e) => {
+      e.preventDefault();
+      dispararLogin();
     });
   }
 
@@ -251,16 +262,28 @@ export function bindLoginEvents() {
 
   if (btnDemoEmp) {
     btnDemoEmp.addEventListener('click', () => {
-      if (inputEmail) inputEmail.value = 'rodrigo@empreiteira.com';
-      if (inputSenha) inputSenha.value = '123456';
+      if (inputEmail) {
+        inputEmail.value = 'rodrigo@empreiteira.com';
+        inputEmail.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      if (inputSenha) {
+        inputSenha.value = '123456';
+        inputSenha.dispatchEvent(new Event('input', { bubbles: true }));
+      }
       toast.info('Credenciais Carregadas', 'Conta: Rodrigo Silva (Empreiteira)');
     });
   }
 
   if (btnDemoFisc) {
     btnDemoFisc.addEventListener('click', () => {
-      if (inputEmail) inputEmail.value = 'mariana@bb.com.br';
-      if (inputSenha) inputSenha.value = '123456';
+      if (inputEmail) {
+        inputEmail.value = 'mariana@bb.com.br';
+        inputEmail.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      if (inputSenha) {
+        inputSenha.value = '123456';
+        inputSenha.dispatchEvent(new Event('input', { bubbles: true }));
+      }
       toast.info('Credenciais Carregadas', 'Conta: Engª Mariana Vasconcelos (Fiscal BB)');
     });
   }
