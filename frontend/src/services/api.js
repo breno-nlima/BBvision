@@ -4,7 +4,35 @@
  * Suporte a Fila Local Offline (HU05)
  */
 
-const API_BASE_URL = window.location.port === '3000' ? '' : 'http://127.0.0.1:3000';
+function resolveApiBaseUrl() {
+  if (typeof window === 'undefined') return 'http://127.0.0.1:3000';
+
+  // 1. Permite override manual salvo no navegador caso necessário
+  const custom = localStorage.getItem('bbvision_api_url');
+  if (custom) return custom.replace(/\/$/, '');
+
+  const { protocol, hostname, port } = window.location;
+
+  // 2. Se a aplicação já estiver sendo servida pelo Node.js na porta 3000
+  if (port === '3000') {
+    return '';
+  }
+
+  // 3. Se estiver acessando via HTTPS (produção, Hostinger com SSL, túnel ngrok/Cloudflare)
+  if (protocol === 'https:') {
+    return window.location.origin;
+  }
+
+  // 4. Se estiver no próprio computador acessando via outro servidor local (Live Server :5500, etc.)
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://127.0.0.1:3000';
+  }
+
+  // 5. Se for acessado pelo celular ou outro dispositivo na rede local (ex: http://192.168.50.85/...)
+  return `http://${hostname}:3000`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 class BBVisionApiClient {
   constructor() {
@@ -35,9 +63,23 @@ class BBVisionApiClient {
     const url = `${API_BASE_URL}${endpoint}`;
     try {
       const response = await fetch(url, options);
-      const data = await response.json();
+      
+      let data = null;
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        data = await response.json().catch(() => null);
+      } else {
+        const text = await response.text().catch(() => '');
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = { erro: text && text.length < 120 ? text : `Erro no servidor (HTTP ${response.status})` };
+        }
+      }
+
       if (!response.ok) {
-        throw new Error(data.erro || `Erro HTTP ${response.status}`);
+        const msg = (data && (data.erro || data.mensagem || data.message)) || `Erro HTTP ${response.status}`;
+        throw new Error(msg);
       }
       return data;
     } catch (err) {

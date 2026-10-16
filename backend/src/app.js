@@ -50,7 +50,16 @@ app.get('/api-info', (req, res) => {
   });
 });
 
+// Fallback SPA para o frontend (serve index.html em rotas de tela que não sejam /api ou /uploads)
+app.use((req, res, next) => {
+  if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+    return res.sendFile(path.join(frontendPath, 'index.html'));
+  }
+  next();
+});
+
 // Tratamento de erros
 app.use(errorHandler);
 
 module.exports = app;
+
