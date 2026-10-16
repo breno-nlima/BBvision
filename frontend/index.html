@@ -2,176 +2,146 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BBVision - Fiscalização Remota de Obras | Banco do Brasil</title>
   
-  <!-- Favicon com o logo BBVision -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23FED304'/><circle cx='50' cy='50' r='18' fill='%23002D62'/></svg>">
+  <!-- Favicon Oficial BBVision -->
+  <link rel="icon" type="image/png" href="src/assets/logo.png">
   
   <!-- Tipografia Oficial: Plus Jakarta Sans (Google Fonts) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Folhas de Estilo do Design System BVision -->
-  <link rel="stylesheet" href="src/styles/variables.css">
-  <link rel="stylesheet" href="src/styles/base.css">
-  <link rel="stylesheet" href="src/styles/components.css">
-  <link rel="stylesheet" href="src/styles/screens.css">
-
+  <!-- Folhas de Estilo do Design System BBVision (v2.0 Produção) -->
+  <link rel="stylesheet" href="src/styles/variables.css?v=2.0">
+  <link rel="stylesheet" href="src/styles/base.css?v=2.0">
+  <link rel="stylesheet" href="src/styles/components.css?v=2.0">
+  <link rel="stylesheet" href="src/styles/screens.css?v=2.0">
 </head>
 <body>
 
-  <!-- Barra Superior do Portal Corporativo Banco do Brasil (Exibida em telas Desktop) -->
-  <header class="bb-enterprise-portal-header" id="portalHeader">
-    <div class="portal-left-brand">
-      <div class="portal-logo-wrap">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="34" height="34">
-          <rect width="100" height="100" rx="20" fill="#FED304"/>
-          <circle cx="50" cy="50" r="18" fill="#002D62"/>
-        </svg>
+  <!-- Barra Superior Corporativa Oficial (Banco do Brasil) -->
+  <header class="bb-navbar" id="appNavbar">
+    <div class="bb-navbar-brand" id="navBrandLogo">
+      <div class="bb-navbar-logo-wrap">
+        <img src="src/assets/logo.png" alt="BBVision" class="bb-navbar-logo">
       </div>
-      <div class="portal-brand-text">
-        <div class="portal-title-row">
-          <span class="portal-system-title">BBVision</span>
-          <span class="portal-badge-gov">Fiscalização Remota</span>
-        </div>
-        <span class="portal-system-sub">Banco do Brasil S.A. • Residência em Software & IA</span>
+      <div class="bb-navbar-titles">
+        <span class="bb-navbar-title">BBVision</span>
+        <span class="bb-navbar-sub">Banco do Brasil S.A. • Fiscalização de Obras</span>
       </div>
     </div>
 
-    <div class="portal-center-status">
-      <div class="portal-status-pill">
-        <span class="status-pulse-dot"></span>
-        <span id="portalApiStatusText">Ambiente Homologado • SLA ≤ 15s • SHA-256</span>
-      </div>
-    </div>
-
-    <div class="portal-right-actions">
-      <button class="portal-action-btn btn-gov" id="portalBtnValidador" title="Validar fé pública de documento">
-        🛡️ Validar Fé Pública
+    <!-- Navegação Central da Aplicação -->
+    <nav class="bb-navbar-nav" id="mainNavigationLinks">
+      <button class="bb-nav-link" id="navLinkInicio">
+        <span>📊</span> Visão Geral
       </button>
-      <a href="/api/docs" target="_blank" class="portal-action-btn btn-docs" title="Ver Documentação OpenAPI 3.0">
-        ⚡ Swagger Docs
-      </a>
-
-      <div class="portal-user-chip" id="portalUserCard" title="Ver Perfil">
-        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" id="portalUserImg" alt="Avatar" class="portal-avatar">
-        <div class="portal-user-meta">
-          <span class="portal-user-nome" id="portalUserName">Rodrigo Silva</span>
-          <span class="portal-user-cargo" id="portalUserRole">👷 Empreiteira</span>
-        </div>
-      </div>
-
-      <button class="portal-btn-switch" id="portalBtnSwitch" title="Alternar perfil de acesso ou sair">
-        Trocar Perfil / Sair
+      <button class="bb-nav-link" id="navLinkObras">
+        <span>📁</span> Obras
       </button>
+      <button class="bb-nav-link" id="navLinkRelatorios">
+        <span>📑</span> Relatórios
+      </button>
+      <button class="bb-nav-link highlight-gov" id="navLinkValidador">
+        <span>🛡️</span> Validar Fé Pública
+      </button>
+    </nav>
+
+    <!-- Área de Usuário / Acesso à Direita -->
+    <div class="bb-navbar-user-area" id="navbarUserArea">
+      <!-- Injetado dinamicamente via script de autenticação -->
     </div>
   </header>
 
-  <!-- Container de Visualização do Dispositivo Móvel -->
-  <main class="app-viewport-wrapper">
-    <div class="mobile-device-shell">
-      
-      <!-- Barra de Status do Sistema Operacional (iOS / Android) -->
-      <div class="device-status-bar">
-        <span id="deviceTime">09:41</span>
-        <div class="status-bar-icons">
-          <!-- Sinal de Rede Celular -->
-          <svg width="14" height="12" viewBox="0 0 16 12" fill="currentColor">
-            <rect x="0" y="8" width="2.5" height="4" rx="0.5"/>
-            <rect x="4" y="5.5" width="2.5" height="6.5" rx="0.5"/>
-            <rect x="8" y="3" width="2.5" height="9" rx="0.5"/>
-            <rect x="12" y="0.5" width="2.5" height="11.5" rx="0.5"/>
-          </svg>
-          <!-- Wi-Fi -->
-          <svg width="14" height="12" viewBox="0 0 16 12" fill="currentColor">
-            <path d="M8 10a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/>
-            <path d="M4.5 6a5 5 0 017 0 .8.8 0 001.1-1.1 6.5 6.5 0 00-9.2 0 .8.8 0 001.1 1.1z"/>
-            <path d="M2 3.5a8.5 8.5 0 0112 0 .8.8 0 001.1-1.1 10 10 0 00-14.2 0 .8.8 0 001.1 1.1z"/>
-          </svg>
-          <!-- Bateria -->
-          <svg width="18" height="11" viewBox="0 0 20 12" fill="currentColor">
-            <rect x="0" y="1" width="16" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
-            <rect x="2" y="3" width="12" height="6" rx="1"/>
-            <path d="M17 4.5v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-        </div>
-      </div>
-
-      <!-- Área de Scroll de Conteúdo das Telas da Aplicação -->
-      <div class="app-screen-container" id="appScreenContainer">
-        <!-- Telas injetadas dinamicamente via app.js -->
-      </div>
-
-      <!-- Slot para a Barra Inferior de Navegação (Tabs) -->
-      <div id="bottomNavSlot"></div>
-
-      <!-- Barra Home Inferior do Dispositivo -->
-      <div class="device-home-indicator"></div>
-
+  <!-- Viewport Principal da Aplicação -->
+  <main class="bb-app-main">
+    <div class="app-screen-container" id="appScreenContainer">
+      <!-- Telas injetadas dinamicamente via app.js -->
     </div>
+
+    <!-- Barra Inferior de Navegação Móvel (Mobile Only) -->
+    <div id="bottomNavSlot"></div>
   </main>
 
   <!-- Script Principal da Aplicação -->
   <script type="module" src="src/app.js"></script>
 
-  <!-- Sincronização do Header Corporativo do Portal -->
+  <!-- Sincronização da Navbar com o Estado de Autenticação -->
   <script type="module">
     import { state } from './src/services/state.js';
 
-    function sincronizarPortalHeader(s) {
+    function sincronizarNavbar(s) {
       const user = s.user;
-      const userNameElem = document.getElementById('portalUserName');
-      const userRoleElem = document.getElementById('portalUserRole');
-      const userImgElem = document.getElementById('portalUserImg');
-      const userCardElem = document.getElementById('portalUserCard');
-      const switchBtn = document.getElementById('portalBtnSwitch');
+      const userArea = document.getElementById('navbarUserArea');
+      const navLinks = document.getElementById('mainNavigationLinks');
+      const page = s.currentPage;
+
+      // Atualiza links ativos
+      document.querySelectorAll('.bb-nav-link').forEach(btn => btn.classList.remove('active'));
+      if (page === 'inicio') document.getElementById('navLinkInicio')?.classList.add('active');
+      if (page === 'obras' || page === 'obra-detalhe') document.getElementById('navLinkObras')?.classList.add('active');
+      if (page === 'relatorios' || page === 'relatorio-bloqueado') document.getElementById('navLinkRelatorios')?.classList.add('active');
+      if (page === 'validador-publico') document.getElementById('navLinkValidador')?.classList.add('active');
 
       if (user) {
-        if (userNameElem) userNameElem.innerText = user.nome || 'Usuário';
-        if (userRoleElem) {
-          userRoleElem.innerText = user.cargo === 'fiscal' ? '👩‍💼 Fiscalização BB' : '👷 Empreiteira (Campo)';
-          userRoleElem.style.color = user.cargo === 'fiscal' ? '#93C5FD' : '#FED304';
-        }
-        if (userImgElem && user.avatar) userImgElem.src = user.avatar;
-        if (userCardElem) userCardElem.style.display = 'flex';
-        if (switchBtn) switchBtn.innerText = 'Trocar Perfil / Sair';
+        if (navLinks) navLinks.style.display = 'flex';
+        const isFiscal = user.cargo === 'fiscal';
+        
+        userArea.innerHTML = `
+          <div class="bb-user-profile-badge" id="btnIrPerfil" title="Ver meu perfil">
+            <img src="${user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}" alt="${user.nome}" class="bb-user-avatar">
+            <div class="bb-user-info">
+              <span class="bb-user-name">${user.nome}</span>
+              <span class="bb-user-role ${user.cargo}">${isFiscal ? '👩‍💼 Fiscal de Obra' : '👷 Empreiteira'}</span>
+            </div>
+          </div>
+          <button class="bb-btn-logout" id="btnNavbarLogout" title="Encerrar sessão">
+            Sair
+          </button>
+        `;
+
+        document.getElementById('btnIrPerfil')?.addEventListener('click', () => {
+          state.navigate('perfil', 'perfil');
+        });
+
+        document.getElementById('btnNavbarLogout')?.addEventListener('click', () => {
+          state.logout();
+        });
+
       } else {
-        if (userNameElem) userNameElem.innerText = 'Não autenticado';
-        if (userRoleElem) userRoleElem.innerText = 'Acesso Restrito';
-        if (switchBtn) switchBtn.innerText = 'Entrar';
+        // Deslogado
+        if (navLinks) navLinks.style.display = page === 'validador-publico' ? 'flex' : 'none';
+        userArea.innerHTML = '';
       }
     }
 
-    // Inicializa sincronização
-    state.subscribe(sincronizarPortalHeader);
-    sincronizarPortalHeader(state);
+    // Eventos de Navegação dos Links
+    document.getElementById('navBrandLogo')?.addEventListener('click', () => {
+      if (state.user) state.navigate('inicio', 'inicio');
+      else state.navigate('login');
+    });
 
-    // Eventos do Portal Corporativo
-    document.getElementById('portalBtnValidador')?.addEventListener('click', () => {
+    document.getElementById('navLinkInicio')?.addEventListener('click', () => {
+      state.navigate('inicio', 'inicio');
+    });
+
+    document.getElementById('navLinkObras')?.addEventListener('click', () => {
+      state.navigate('obras', 'obras');
+    });
+
+    document.getElementById('navLinkRelatorios')?.addEventListener('click', () => {
+      state.navigate('relatorios', 'relatorios');
+    });
+
+    document.getElementById('navLinkValidador')?.addEventListener('click', () => {
       state.navigate('validador-publico');
     });
 
-    document.getElementById('portalUserCard')?.addEventListener('click', () => {
-      if (state.user) {
-        state.navigate('perfil', 'perfil');
-      } else {
-        state.navigate('login');
-      }
-    });
-
-    document.getElementById('portalBtnSwitch')?.addEventListener('click', async () => {
-      if (!state.user) {
-        state.navigate('login');
-        return;
-      }
-      if (state.user.cargo === 'empreiteira') {
-        await state.login('mariana@bb.com.br', '123456');
-      } else {
-        await state.login('rodrigo@empreiteira.com', '123456');
-      }
-    });
+    // Inicia sincronização
+    state.subscribe(sincronizarNavbar);
+    sincronizarNavbar(state);
   </script>
 </body>
 </html>

@@ -4,57 +4,9 @@
  */
 
 export const Icons = {
-  // Logo Principal BVision (Edifício em planta com olho e grid de engenharia)
+  // Logo Principal BBVision Oficial
   logoBVision: (size = 80) => `
-    <svg width="${size}" height="${size}" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <!-- Padrão de Grade / Blueprint -->
-        <pattern id="blueprintGrid" width="10" height="10" patternUnits="userSpaceOnUse">
-          <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="0.7"/>
-        </pattern>
-        <!-- Clip do quadrado com cantos suaves -->
-        <clipPath id="logoClip">
-          <rect width="100" height="100" rx="14" fill="white"/>
-        </clipPath>
-      </defs>
-
-      <g clip-path="url(#logoClip)">
-        <!-- Fundo Amarelo BB -->
-        <rect width="100" height="100" fill="#FED304"/>
-        <rect width="100" height="100" fill="url(#blueprintGrid)"/>
-
-        <!-- Círculos concêntricos de radar/visão computacional -->
-        <circle cx="50" cy="50" r="42" stroke="rgba(0, 45, 98, 0.2)" stroke-width="0.8" fill="none"/>
-        <circle cx="50" cy="50" r="32" stroke="rgba(0, 45, 98, 0.25)" stroke-width="0.8" fill="none"/>
-        <circle cx="50" cy="50" r="22" stroke="rgba(0, 45, 98, 0.3)" stroke-width="0.8" fill="none"/>
-
-        <!-- Estrutura do Edifício / Isométrico (Parte Esquerda Branca) -->
-        <path d="M50 22 L24 38 V82 L50 82 Z" fill="#FFFFFF"/>
-        
-        <!-- Estrutura do Edifício / Isométrico (Parte Direita Azul Marinho com Janelas) -->
-        <path d="M50 22 L76 38 V82 L50 82 Z" fill="#002D62"/>
-        
-        <!-- Janelas Amarelas no Edifício Direito -->
-        <rect x="54" y="32" width="4" height="6" fill="#FED304"/>
-        <rect x="62" y="36" width="4" height="6" fill="#FED304"/>
-        <rect x="70" y="40" width="4" height="6" fill="#FED304"/>
-        
-        <circle cx="64" cy="62" r="14" stroke="rgba(255, 255, 255, 0.25)" stroke-width="0.8" fill="none"/>
-        <circle cx="64" cy="62" r="22" stroke="rgba(255, 255, 255, 0.2)" stroke-width="0.8" fill="none"/>
-
-        <!-- Olho Central (BVision AI) -->
-        <!-- Contorno externo do olho -->
-        <path d="M 22 50 Q 50 26 78 50 Q 50 74 22 50 Z" fill="#FFFFFF" stroke="#002D62" stroke-width="3" stroke-linejoin="round"/>
-        
-        <!-- Íris Azul Marinho -->
-        <circle cx="50" cy="50" r="14" fill="#002D62"/>
-        
-        <!-- Pupila e Brilho da Câmera -->
-        <circle cx="50" cy="50" r="7" fill="#FFFFFF"/>
-        <circle cx="51.5" cy="48.5" r="4.5" fill="#002D62"/>
-        <circle cx="53" cy="47" r="1.8" fill="#FFFFFF"/>
-      </g>
-    </svg>
+    <img src="src/assets/logo.png" width="${size}" height="${size}" alt="BBVision" style="width: ${size}px; height: ${size}px; border-radius: ${Math.max(4, Math.round(size * 0.18))}px; object-fit: cover; display: inline-block; vertical-align: middle; box-shadow: 0 2px 8px rgba(0,0,0,0.15);" />
   `,
 
   // Ilustração de Casa Arquitetônica 1 (Fachada com Telhado e Chaminé - CAD Style)
@@ -200,13 +152,8 @@ export const Icons = {
   // Logo BVision Compacto Horizontal
   logoBVisionBadge: (size = 28) => `
     <div style="display: inline-flex; align-items: center; gap: 8px;">
-      <svg width="${size}" height="${size}" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="36" height="36" rx="8" fill="#FED304"/>
-        <path d="M7 18Q18 9 29 18Q18 27 7 18Z" fill="#FFFFFF" stroke="#002D62" stroke-width="2.2" stroke-linejoin="round"/>
-        <circle cx="18" cy="18" r="6" fill="#002D62"/>
-        <circle cx="19" cy="17" r="2" fill="#FFFFFF"/>
-      </svg>
-      <span style="font-weight: 800; font-size: 18px; color: #002D62; letter-spacing: -0.5px;">BVision</span>
+      <img src="src/assets/logo.png" width="${size}" height="${size}" alt="BBVision" style="width: ${size}px; height: ${size}px; border-radius: ${Math.max(4, Math.round(size * 0.2))}px; object-fit: cover; display: inline-block; vertical-align: middle; box-shadow: 0 1px 4px rgba(0,0,0,0.15);" />
+      <span style="font-weight: 800; font-size: 18px; color: #002D62; letter-spacing: -0.5px;">BBVision</span>
     </div>
   `,
 

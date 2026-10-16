@@ -60,6 +60,54 @@ const authController = {
   },
 
   /**
+   * POST /api/auth/register
+   * Body: { nome, email, senha, cargo, registro_profissional, empresa, telefone }
+   * Cria novo usuário (Empreiteira ou Fiscal)
+   */
+  async register(req, res, next) {
+    try {
+      const { nome, email, senha, cargo, registro_profissional, empresa, telefone } = req.body;
+
+      if (!nome || !email || !senha || !cargo) {
+        return res.status(400).json({ erro: 'Nome, e-mail, senha e tipo de perfil são obrigatórios.' });
+      }
+
+      const cargoNormalizado = cargo === 'fiscal' ? 'fiscal' : 'empreiteira';
+
+      const novoUsuario = mockData.createUser({
+        nome: nome.trim(),
+        email: email.trim(),
+        senha,
+        cargo: cargoNormalizado,
+        registro_profissional: (registro_profissional || '').trim(),
+        empresa: (empresa || '').trim(),
+        telefone: (telefone || '').trim(),
+      });
+
+      // Gera token JWT de login imediato
+      const payload = {
+        id: novoUsuario.id,
+        nome: novoUsuario.nome,
+        email: novoUsuario.email,
+        cargo: novoUsuario.cargo,
+      };
+
+      const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
+
+      return res.status(201).json({
+        mensagem: 'Usuário cadastrado com sucesso!',
+        token,
+        usuario: novoUsuario,
+      });
+    } catch (err) {
+      if (err.status) {
+        return res.status(err.status).json({ erro: err.message });
+      }
+      next(err);
+    }
+  },
+
+  /**
    * GET /api/auth/me
    * Retorna os dados do usuário autenticado a partir do token
    */

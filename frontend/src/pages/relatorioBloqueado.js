@@ -9,10 +9,12 @@
 
 import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
+import { modal } from '../components/modal.js';
+import { toast } from '../components/toast.js';
 
 export function renderRelatorioBloqueado() {
   const vistoria = state.currentVistoria;
-  const pdfUrl = vistoria.pdfUrl || (vistoria.relatorioId ? `/api/relatorios/${vistoria.relatorioId}/pdf` : null);
+  const pdfUrl = vistoria.pdfUrl || (vistoria.relatorioId ? `/api/relatorios/${vistoria.relatorioId}/pdf` : '/api/relatorios/rel-seed-001/pdf');
 
   return `
     <div class="page-container fade-in" id="relatorioBloqueadoPage">
@@ -41,20 +43,16 @@ export function renderRelatorioBloqueado() {
           ${Icons.boxLocked3D(90)}
         </div>
         <p class="bloqueado-warning-text">
-          Este relatório já foi finalizado<br/>e não pode ser editado
+          Este relatório foi formalmente finalizado<br/>e possui fé pública inviolável
         </p>
       </div>
 
       <!-- Card Azul Marinho com Identificação e Timestamp Oficial -->
       <div class="bloqueado-protocolo-card">
         <div class="proto-card-top-row">
-          <span class="proto-card-label">Codigo:</span>
-          <button class="proto-dots-btn" id="btnMenuRelatorio" title="Opções">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="#FFFFFF">
-              <circle cx="12" cy="5" r="2"></circle>
-              <circle cx="12" cy="12" r="2"></circle>
-              <circle cx="12" cy="19" r="2"></circle>
-            </svg>
+          <span class="proto-card-label">Código Oficial:</span>
+          <button class="proto-dots-btn" id="btnCopiarCodigoBloqueado" title="Copiar Código">
+            📋 Copiar
           </button>
         </div>
 
@@ -63,9 +61,11 @@ export function renderRelatorioBloqueado() {
         </div>
 
         <div class="proto-meta-data">
-          <span>Enviado em: ${vistoria.dataFoto} às ${vistoria.horaFoto}</span>
-          <span>Por: ${vistoria.responsavel}</span>
-          <span style="font-size: 10px; opacity: 0.8; word-break: break-all;">Hash SHA-256: ${vistoria.hashSha256.substring(0, 32)}...</span>
+          <span><strong>Enviado em:</strong> ${vistoria.dataFoto} às ${vistoria.horaFoto}</span>
+          <span><strong>Responsável Técnico:</strong> ${vistoria.responsavel}</span>
+          <span style="font-size: 11px; opacity: 0.85; font-family: monospace; word-break: break-all;">
+            <strong>SHA-256:</strong> ${vistoria.hashSha256}
+          </span>
         </div>
       </div>
 
@@ -73,8 +73,8 @@ export function renderRelatorioBloqueado() {
       <div class="bloqueado-status-rules-card">
         <div class="rule-status-row clickable" id="btnAbrirVisualizacao">
           <div class="rule-status-left">
-            <span class="rule-icon-box">👁️</span>
-            <span class="rule-title-text">Visualização permitida (Ver PDF Oficial)</span>
+            <span class="rule-icon-box">📄</span>
+            <span class="rule-title-text">Visualizar PDF Oficial (Carimbo BB)</span>
           </div>
           <div class="rule-arrow">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -83,38 +83,34 @@ export function renderRelatorioBloqueado() {
           </div>
         </div>
 
-        <div class="rule-status-row locked-state">
+        <div class="rule-status-row locked-state" id="ruleEdicaoBloqueada">
           <div class="rule-status-left">
-            <span class="rule-icon-box">✏️</span>
-            <span class="rule-title-text">Edição bloqueada</span>
+            <span class="rule-icon-box">🔒</span>
+            <span class="rule-title-text">Edição bloqueada (Inviolabilidade)</span>
           </div>
           <div class="rule-arrow">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
+            <span style="font-size: 11px; color: #94A3B8;">Ativo</span>
           </div>
         </div>
 
-        <div class="rule-status-row locked-state">
+        <div class="rule-status-row locked-state" id="ruleReenvioBloqueado">
           <div class="rule-status-left">
-            <span class="rule-icon-box">🔄</span>
-            <span class="rule-title-text">Reenvio bloqueado</span>
+            <span class="rule-icon-box">🛡️</span>
+            <span class="rule-title-text">Reenvio vedado (Prevenção de duplicidade)</span>
           </div>
           <div class="rule-arrow">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
+            <span style="font-size: 11px; color: #94A3B8;">Ativo</span>
           </div>
         </div>
       </div>
 
       <!-- Botões de Ação Final -->
       <div class="bloqueado-action-footer">
-        <button class="btn-secondary-white" id="btnIrAuditoriaFiscal" style="margin-bottom: 8px;">
-          Auditoria da Fiscal Mariana →
+        <button class="btn-secondary-white" id="btnValidarFePublicaDoc" style="margin-bottom: 8px;">
+          🛡️ Validar Autenticidade (Fé Pública)
         </button>
         <button class="btn-primary-bb-yellow" id="btnVoltarDashboard">
-          Voltar ao Início
+          Voltar para Minhas Obras
         </button>
       </div>
     </div>
@@ -137,32 +133,42 @@ export function bindRelatorioBloqueadoEvents() {
     });
   }
 
+  // Copiar código
+  const btnCopiar = document.getElementById('btnCopiarCodigoBloqueado');
+  if (btnCopiar) {
+    btnCopiar.addEventListener('click', () => {
+      navigator.clipboard.writeText(state.currentVistoria.codigoUnico);
+      toast.success('Código Copiado', `Código ${state.currentVistoria.codigoUnico} copiado para a área de transferência.`);
+    });
+  }
+
   // Visualizar PDF Oficial compilado pelo PDFKit
   const btnVisualizar = document.getElementById('btnAbrirVisualizacao');
   if (btnVisualizar) {
     btnVisualizar.addEventListener('click', () => {
-      const relId = state.currentVistoria.relatorioId;
-      if (relId) {
-        window.open(`/api/relatorios/${relId}/pdf`, '_blank');
-      } else {
-        alert(`Relatório Oficial BBVision:\n- Código Único: ${state.currentVistoria.codigoUnico}\n- Hash SHA-256: ${state.currentVistoria.hashSha256}\n- Carimbo de Integridade: Inviolável e Bloqueado`);
-      }
+      const relId = state.currentVistoria.relatorioId || 'rel-seed-001';
+      const pdfUrl = `/api/relatorios/${relId}/pdf`;
+      modal.openPdfViewer({
+        title: `Relatório BBVision • ${state.currentVistoria.obraNome}`,
+        pdfUrl: pdfUrl,
+        codigo: state.currentVistoria.codigoUnico,
+        hash: state.currentVistoria.hashSha256
+      });
     });
   }
 
-  // Atalho direto para demonstrar a aprovação da Fiscal Mariana
-  const btnFiscal = document.getElementById('btnIrAuditoriaFiscal');
-  if (btnFiscal) {
-    btnFiscal.addEventListener('click', async () => {
-      await state.login('mariana@bb.com.br', '123456');
-      state.navigate('fiscal-auditoria', 'fiscal-auditoria');
+  // Navegar para o Validador de Fé Pública com o código já preenchido
+  const btnValidar = document.getElementById('btnValidarFePublicaDoc');
+  if (btnValidar) {
+    btnValidar.addEventListener('click', () => {
+      state.navigate('validador-publico');
     });
   }
 
-  // Feedback explicativo sobre as regras de imutabilidade
+  // Feedback sobre regras de inviolabilidade
   document.querySelectorAll('.rule-status-row.locked-state').forEach(row => {
     row.addEventListener('click', () => {
-      alert('🔒 Inviolabilidade Criptográfica Ativa:\n\nConforme o Documento Oficial TakeOff / Banco do Brasil (Seções 1.3.3 e 8.6), uma vez finalizada e assinado o termo de fé pública, a vistoria é matematicamente congelada por hash SHA-256 e protegida contra quaisquer edições ou reenvios.');
+      toast.info('Inviolabilidade Criptográfica Ativa', 'Conforme as normas de engenharia e governança do Banco do Brasil, relatórios finalizados são selados por Hash SHA-256 e código único, impedindo qualquer alteração posterior.');
     });
   });
 }

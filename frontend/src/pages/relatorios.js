@@ -1,52 +1,57 @@
 /**
  * BVision Relatórios Screen
- * Visualização e Auditoria dos Relatórios Gerados
+ * Visualização e Auditoria dos Relatórios Gerados com Fé Pública
  */
 
 import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { renderHeader, bindHeaderEvents } from '../components/header.js';
+import { modal } from '../components/modal.js';
+import { toast } from '../components/toast.js';
 
 export function renderRelatorios() {
-  const itemsHtml = state.relatorios.map(rel => `
-    <div class="relatorio-card-item">
-      <div class="rel-top-row">
-        <div>
-          <h4 class="rel-title">${rel.obraNome}</h4>
-          <span class="rel-sub">${rel.subtitulo} • ${rel.data}</span>
+  const itemsHtml = state.relatorios.map(rel => {
+    const isAprovado = rel.statusRaw === 'APROVADO';
+    return `
+      <div class="relatorio-card-item">
+        <div class="rel-top-row">
+          <div>
+            <h4 class="rel-title">${rel.obraNome}</h4>
+            <span class="rel-sub">${rel.subtitulo} • Emitido em ${rel.data}</span>
+          </div>
+          <span class="status-badge-chip ${isAprovado ? 'concluido' : (rel.status === 'Concluído' ? 'concluido' : 'andamento')}">
+            ${isAprovado ? '✓ Homologado' : rel.status}
+          </span>
         </div>
-        <span class="status-badge-chip ${rel.status === 'Concluído' ? 'concluido' : 'andamento'}">
-          ${rel.status}
-        </span>
-      </div>
 
-      <div class="rel-audit-grid">
-        <div class="audit-field">
-          <span class="af-label">Código Único:</span>
-          <span class="af-code">${rel.codigoUnico}</span>
-        </div>
-        ${rel.confiancaIA ? `
+        <div class="rel-audit-grid">
           <div class="audit-field">
-            <span class="af-label">Confiança Gemini:</span>
-            <span class="af-val">${(rel.confiancaIA * 100).toFixed(0)}%</span>
+            <span class="af-label">Código Único Oficial:</span>
+            <span class="af-code">${rel.codigoUnico}</span>
+          </div>
+          ${rel.confiancaIA ? `
+            <div class="audit-field">
+              <span class="af-label">Auditoria IA (Gemini):</span>
+              <span class="af-val">${(rel.confiancaIA * 100).toFixed(0)}% Confiança</span>
+            </div>
+          ` : ''}
+        </div>
+
+        ${rel.hash ? `
+          <div class="rel-hash-row">
+            <span class="af-label">Hash SHA-256 Inviolável:</span>
+            <code class="af-hash">${rel.hash.substring(0, 32)}...</code>
           </div>
         ` : ''}
-      </div>
 
-      ${rel.hash ? `
-        <div class="rel-hash-row">
-          <span class="af-label">Hash SHA-256:</span>
-          <code class="af-hash">${rel.hash.substring(0, 24)}...</code>
+        <div class="rel-action-row">
+          <button class="btn-ver-pdf" data-rel-id="${rel.id}" data-obra-nome="${rel.obraNome}" data-codigo="${rel.codigoUnico}" data-hash="${rel.hash || ''}">
+            📄 Visualizar Relatório em PDF (Carimbo BB)
+          </button>
         </div>
-      ` : ''}
-
-      <div class="rel-action-row">
-        <button class="btn-ver-pdf" data-rel-id="${rel.id}">
-          📄 Visualizar PDF Assinado
-        </button>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 
   return `
     <div class="page-container fade-in" id="relatoriosPage">
@@ -54,11 +59,11 @@ export function renderRelatorios() {
 
       <div class="relatorios-intro-header">
         <h2 class="section-title">Relatórios & Auditoria</h2>
-        <p class="section-subtitle">Documentos emitidos com inviolabilidade e carimbo digital.</p>
+        <p class="section-subtitle">Documentos oficiais com inviolabilidade matemática, carimbo temporal e fé pública do Banco do Brasil.</p>
       </div>
 
       <div class="relatorios-list-container">
-        ${itemsHtml}
+        ${itemsHtml.length > 0 ? itemsHtml : '<div class="resultado-empty-hint">Nenhum relatório finalizado até o momento.</div>'}
       </div>
     </div>
   `;
@@ -71,12 +76,19 @@ export function bindRelatoriosEvents() {
   btnsPdf.forEach(btn => {
     btn.addEventListener('click', () => {
       const relId = btn.getAttribute('data-rel-id');
-      if (relId && !relId.startsWith('rel-')) {
-        window.open(`/api/relatorios/${relId}/pdf`, '_blank');
-      } else {
-        // Gera o PDF oficial do primeiro relatório cadastrado na API se disponível
-        window.open('/api/relatorios/11111111-3333-4444-5555-666666666666/pdf', '_blank');
-      }
+      const obraNome = btn.getAttribute('data-obra-nome');
+      const codigo = btn.getAttribute('data-codigo');
+      const hash = btn.getAttribute('data-hash');
+
+      const targetId = relId || 'rel-seed-001';
+      const pdfUrl = `/api/relatorios/${targetId}/pdf`;
+
+      modal.openPdfViewer({
+        title: `Relatório de Fiscalização • ${obraNome}`,
+        pdfUrl: pdfUrl,
+        codigo: codigo,
+        hash: hash
+      });
     });
   });
 }

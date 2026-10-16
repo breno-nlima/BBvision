@@ -59,7 +59,7 @@ async function enviarRelatorioEmail(relatorio, pdfBuffer, destinatario = null) {
           </div>
         </div>
         <div style="background-color: #f1f5f9; padding: 12px; text-align: center; font-size: 11px; color: #64748b;">
-          Banco do Brasil S.A. &bull; Diretoria de Engenharia e Tecnologia &bull; Residência TakeOff
+          Banco do Brasil S.A. &bull; Diretoria de Engenharia e Infraestrutura &bull; BBVision Fiscalização Remota
         </div>
       </div>
     `,

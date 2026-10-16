@@ -3,6 +3,7 @@
  * Em conformidade com a Seção 8.2 do Documento de Entrega TakeOff
  */
 const mockData = require('../mockData');
+const { supabase, isConfigured } = require('../config/supabase');
 
 const obrasController = {
   /**
@@ -12,6 +13,13 @@ const obrasController = {
    */
   async listar(req, res, next) {
     try {
+      if (isConfigured && supabase) {
+        const { data, error } = await supabase.from('obras').select('*').order('created_at', { ascending: false });
+        if (!error && data && data.length > 0) {
+          return res.status(200).json(data);
+        }
+      }
+
       const obras = mockData.listObras();
       return res.status(200).json(obras);
     } catch (err) {

@@ -17,29 +17,23 @@ class AppState {
         this.user = null;
       }
     } else {
-      this.user = {
-        id: '11111111-1111-4111-8111-111111111111',
-        nome: 'Rodrigo',
-        email: 'rodrigo@empreiteira.com',
-        cargo: 'empreiteira', // 'empreiteira' ou 'fiscal'
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-      };
+      this.user = null;
     }
 
-    this.currentPage = 'inicio';
+    this.currentPage = this.user ? 'inicio' : 'login';
     this.activeNav = 'inicio';
     this.selectedObra = null;
     this.searchQuery = '';
     this.isOffline = !navigator.onLine;
 
-    // Obras em conformidade com as telas fornecidas e backend
+    // Obras em conformidade com o Banco do Brasil e backend
     this.obras = [
       {
         id: 'obr-001',
-        nome: 'Obra Centro',
-        subtitulo: 'Futura unidade',
-        tipo: 'Residência vistoria',
-        responsavel: 'Rodrigo Silva',
+        nome: 'Obra Centro (Agência Sede)',
+        subtitulo: 'Reforma e Modernização',
+        tipo: 'Reforma e Modernização de Agência',
+        responsavel: 'Engenharia de Campo',
         endereco: 'Av. Rio Branco, 120 - Centro',
         status: 'REGULAR',
         destaque: true,
@@ -47,32 +41,32 @@ class AppState {
       },
       {
         id: 'obr-002',
-        nome: 'Obra Zona Sul',
-        subtitulo: 'Residência',
-        tipo: 'Residência vistoria',
-        responsavel: 'Rodrigo Silva',
-        endereco: 'Rua Domingos Ferreira, 450 - Zona Sul',
+        nome: 'Obra Zona Sul (Agência Paulista)',
+        subtitulo: 'Adequação de Acessibilidade',
+        tipo: 'Adequação de Acessibilidade',
+        responsavel: 'Engenharia de Campo',
+        endereco: 'Av. Paulista, 2163 - Cerqueira César',
         status: 'REGULAR',
         destaque: false,
         imagemTipo: 'cad1'
       },
       {
         id: 'obr-003',
-        nome: 'Residência Alpha',
-        subtitulo: 'Construção nova',
-        tipo: 'Residência vistoria',
-        responsavel: 'Rodrigo Silva',
-        endereco: 'Alameda dos Jacarandás, 88',
+        nome: 'Agência Asa Sul (Edificação Nova)',
+        subtitulo: 'Construção Nova',
+        tipo: 'Construção de Nova Agência',
+        responsavel: 'Engenharia de Campo',
+        endereco: 'SBS Quadra 1 Bloco G Lote 32',
         status: 'EM_ANDAMENTO',
         destaque: false,
         imagemTipo: 'cad2'
       },
       {
         id: 'obr-004',
-        nome: 'Obra Zona Sul',
-        subtitulo: 'Residência vistoria',
-        tipo: 'Residência vistoria',
-        responsavel: 'Rodrigo Silva',
+        nome: 'Obra Copacabana (Fachada e Interior)',
+        subtitulo: 'Manutenção Predial',
+        tipo: 'Manutenção Predial e Fachada',
+        responsavel: 'Engenharia de Campo',
         endereco: 'Rua Barata Ribeiro, 300',
         status: 'EM_ANDAMENTO',
         destaque: false,
@@ -230,23 +224,68 @@ class AppState {
 
   async carregarDadosIniciais() {
     try {
+      // 1. Carrega Obras
       const obrasApi = await api.getObras();
       if (Array.isArray(obrasApi) && obrasApi.length > 0) {
         this.obras = obrasApi.map((o, idx) => ({
           id: o.id,
           nome: o.nome,
           subtitulo: o.endereco ? o.endereco.split('-')[0].trim() : 'Unidade BB',
-          tipo: 'Residência vistoria',
+          tipo: o.tipo || 'Agência Bancária',
           responsavel: o.responsavel || 'Rodrigo Silva',
           endereco: o.endereco || 'Endereço da obra',
           status: o.status || 'REGULAR',
           destaque: idx === 0,
           imagemTipo: idx === 0 ? 'logo' : (idx % 2 === 0 ? 'cad1' : 'cad2')
         }));
-        this.notify();
       }
+
+      // 2. Carrega Relatórios do Backend
+      const relatoriosApi = await api.getRelatorios();
+      if (Array.isArray(relatoriosApi) && relatoriosApi.length > 0) {
+        this.relatorios = relatoriosApi.map(r => ({
+          id: r.id,
+          obraNome: r.obra?.nome || 'Obra Banco do Brasil',
+          subtitulo: r.obra?.endereco ? r.obra.endereco.split('-')[0].trim() : 'Agência BB',
+          status: r.status === 'APROVADO' ? 'Homologado' : (r.status === 'FINALIZADO' ? 'Concluído' : 'Em andamento'),
+          statusRaw: r.status,
+          data: r.data_finalizacao ? new Date(r.data_finalizacao).toLocaleDateString('pt-BR') : 'Hoje',
+          codigoUnico: r.codigo_unico || 'Pendente',
+          confiancaIA: r.fotos?.[0]?.confianca_ia || 0.95,
+          hash: r.hash_integridade || null,
+          pdfUrl: r.arquivo_pdf_url || `/api/relatorios/${r.id}/pdf`,
+          fotos: r.fotos || [],
+          respostas: r.respostas || []
+        }));
+
+        // Se houver fotos nos relatórios, sincroniza também os registros da fiscal Mariana
+        const todasFotos = [];
+        relatoriosApi.forEach(r => {
+          if (Array.isArray(r.fotos)) {
+            r.fotos.forEach((f, fIdx) => {
+              todasFotos.push({
+                id: f.id || `fot-${fIdx}`,
+                codigo: r.codigo_unico || '8F4A2C19E70B34DF',
+                titulo: f.motivo_ia ? f.motivo_ia.substring(0, 30) : `Foto ${fIdx + 1}`,
+                local: r.obra?.nome || 'Agência BB',
+                responsavel: r.obra?.responsavel || 'Rodrigo Silva',
+                status: f.status_ia === 'APROVADO' ? 'Validado' : 'Pendente',
+                img: f.url || 'prints/WhatsApp Image 2026-10-08 at 11.43.18.jpeg',
+                confianca: f.confianca_ia || 0.95,
+                relatorioId: r.id
+              });
+            });
+          }
+        });
+
+        if (todasFotos.length > 0) {
+          this.fiscalRegistros = todasFotos;
+        }
+      }
+
+      this.notify();
     } catch (err) {
-      console.log('[State] Operando com dados locais padrão:', err.message);
+      console.log('[State] Operando com dados locais e cache offline (HU05):', err.message);
     }
   }
 
@@ -323,7 +362,21 @@ class AppState {
         this.currentVistoria.relatorioId = relId;
       }
 
-      // 2. Salvar respostas do checklist
+      // 2. Anexar foto registrada
+      try {
+        await api.anexarFoto(relId, {
+          url: this.currentVistoria.fotoCamera || 'prints/WhatsApp Image 2026-10-08 at 11.43.17.jpeg',
+          hash_sha256: this.currentVistoria.hashSha256,
+          confianca_ia: this.currentVistoria.confiancaIA,
+          motivo_ia: this.currentVistoria.motivoIA,
+          status_ia: this.currentVistoria.confiancaIA >= 0.75 ? 'APROVADO' : 'VALIDACAO_MANUAL',
+          validacao_manual: this.currentVistoria.validacaoManual
+        });
+      } catch (errFoto) {
+        console.warn('[State] Aviso ao vincular foto na API:', errFoto.message);
+      }
+
+      // 3. Salvar respostas do checklist
       await api.salvarRespostas(relId, [
         {
           pergunta: 'Fachada da agência está legível?',
@@ -345,7 +398,7 @@ class AppState {
         }
       ]);
 
-      // 3. Finalizar e gerar PDF oficial com carimbo
+      // 4. Finalizar e gerar PDF oficial com carimbo via PDFKit
       const finalRes = await api.finalizarRelatorio(relId);
       if (finalRes && finalRes.codigo) {
         this.currentVistoria.codigoUnico = finalRes.codigo;
@@ -353,9 +406,11 @@ class AppState {
         this.currentVistoria.hashSha256 = finalRes.hashIntegridade;
         this.currentVistoria.pdfUrl = finalRes.pdfUrl;
       }
+
+      // Re-sincroniza lista completa
+      await this.carregarDadosIniciais();
     } catch (err) {
       console.warn('[State] Erro ao finalizar na API, aplicando persistência offline (HU05):', err.message);
-      // Enfileira offline conforme HU05
       offlineSync.enfileirarVistoria(this.currentVistoria);
     }
 
@@ -408,39 +463,60 @@ class AppState {
           nome: res.usuario.nome,
           email: res.usuario.email,
           cargo: res.usuario.cargo,
+          empresa: res.usuario.empresa || '',
+          registro_profissional: res.usuario.registro_profissional || '',
+          created_at: res.usuario.created_at || new Date().toISOString(),
           avatar: res.usuario.cargo === 'fiscal'
             ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
             : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
         };
+        localStorage.setItem('bbvision_user', JSON.stringify(this.user));
+        this.currentVistoria.responsavel = this.user.nome;
+        await this.carregarDadosIniciais();
+        this.navigate('inicio', 'inicio');
+        return res;
       }
     } catch (err) {
-      console.warn('[State] Fallback de login em modo offline/resiliente:', err.message);
-      if (email.includes('fiscal') || email.includes('mariana')) {
-        this.user = {
-          id: '22222222-2222-4222-8222-222222222222',
-          nome: 'Mariana Vasconcelos',
-          email: email,
-          cargo: 'fiscal',
-          avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
-        };
-      } else {
-        this.user = {
-          id: '11111111-1111-4111-8111-111111111111',
-          nome: 'Rodrigo Silva',
-          email: email || 'rodrigo@empreiteira.com',
-          cargo: 'empreiteira',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-        };
+      console.warn('[State] Erro ao autenticar:', err.message);
+      // Se estiver offline de fato e tiver sessão local compatível
+      if (this.isOffline) {
+        const cached = localStorage.getItem('bbvision_user');
+        if (cached) {
+          this.user = JSON.parse(cached);
+          this.navigate('inicio', 'inicio');
+          return;
+        }
       }
+      throw err;
     }
+  }
 
-    // Persiste usuário ativo no localStorage
-    if (this.user) {
-      localStorage.setItem('bbvision_user', JSON.stringify(this.user));
+  async register(dados) {
+    try {
+      const res = await api.register(dados);
+      if (res && res.usuario) {
+        this.user = {
+          id: res.usuario.id,
+          nome: res.usuario.nome,
+          email: res.usuario.email,
+          cargo: res.usuario.cargo,
+          empresa: res.usuario.empresa || '',
+          registro_profissional: res.usuario.registro_profissional || '',
+          created_at: res.usuario.created_at || new Date().toISOString(),
+          avatar: res.usuario.cargo === 'fiscal'
+            ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
+            : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+        };
+        localStorage.setItem('bbvision_user', JSON.stringify(this.user));
+        this.currentVistoria.responsavel = this.user.nome;
+        await this.carregarDadosIniciais();
+        this.navigate('inicio', 'inicio');
+        return res;
+      }
+    } catch (err) {
+      console.warn('[State] Erro ao cadastrar usuário:', err.message);
+      throw err;
     }
-
-    // Ambas as personas iniciam em seus respectivos dashboards profissionais
-    this.navigate('inicio', 'inicio');
   }
 
   logout() {

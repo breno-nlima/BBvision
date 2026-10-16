@@ -45,7 +45,7 @@ export function renderAssinaturaResponsavel() {
           <canvas id="signatureCanvas" class="signature-canvas" width="340" height="180"></canvas>
           <div class="canvas-pen-indicator" id="penIndicator">
             <span class="pen-icon">✍️</span>
-            <span class="pen-sample-sig">${vistoria.responsavel || 'Rodrigo Silva'}</span>
+            <span class="pen-sample-sig">${state.user?.nome || vistoria.responsavel || 'Assinatura Digital'}</span>
           </div>
         </div>
         <div class="canvas-caption-row">

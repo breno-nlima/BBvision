@@ -56,7 +56,7 @@ function gerarRelatorioPdfBuffer(relatorio) {
       doc.fontSize(9)
         .font('Helvetica')
         .text('Sistema Inteligente de Fiscalização e Monitoramento Remoto de Obras', 60, 68)
-        .text('Residência em Software & IA — Porto Digital / TakeOff', 60, 80);
+        .text('Diretoria de Engenharia, Infraestrutura e Patrimônio • DIPAT', 60, 80);
 
       doc.moveDown(2.5);
 

@@ -6,6 +6,7 @@
 import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { renderHeader, bindHeaderEvents } from '../components/header.js';
+import { toast } from '../components/toast.js';
 
 export function renderObras() {
   const query = state.searchQuery || '';
@@ -105,7 +106,7 @@ export function bindObrasEvents() {
   const btnNovaObraBar = document.getElementById('btnNovaObraBar');
   if (btnNovaObraBar) {
     btnNovaObraBar.addEventListener('click', () => {
-      alert('Modal para cadastro de nova obra (Agência / Reforma BB).');
+      toast.info('Cadastro de Unidade', 'Formulário de credenciamento de nova agência bancária ou canteiro de obras BB.');
     });
   }
 

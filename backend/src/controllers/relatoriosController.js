@@ -6,6 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const mockData = require('../mockData');
+const { supabase, isConfigured } = require('../config/supabase');
 const pdfService = require('../services/pdfService');
 const emailService = require('../services/emailService');
 const { generateUniqueCode, generateReportIntegrityHash, generateSha256 } = require('../utils/cryptoUtils');
@@ -61,6 +62,18 @@ const relatoriosController = {
   async listar(req, res, next) {
     try {
       const { obra_id, status } = req.query;
+
+      if (isConfigured && supabase) {
+        let query = supabase.from('relatorios').select('*, obras(id, nome, endereco, responsavel, status)').order('created_at', { ascending: false });
+        if (obra_id) query = query.eq('obra_id', obra_id);
+        if (status) query = query.eq('status', status);
+
+        const { data, error } = await query;
+        if (!error && data && data.length > 0) {
+          return res.status(200).json(data);
+        }
+      }
+
       const relatorios = mockData.listRelatorios({ obra_id, status });
       return res.status(200).json(relatorios);
     } catch (err) {

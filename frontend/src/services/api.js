@@ -61,6 +61,18 @@ class BBVisionApiClient {
     return data;
   }
 
+  async register(dados) {
+    const data = await this.request('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    });
+    if (data.token) {
+      this.setToken(data.token);
+    }
+    return data;
+  }
+
   async me() {
     return this.request('/api/auth/me', {
       method: 'GET',
@@ -170,6 +182,13 @@ class BBVisionApiClient {
       method: 'PATCH',
       headers: this.getHeaders(),
       body: JSON.stringify({ status, justificativa }),
+    });
+  }
+
+  async validarDocumento(codigoOuHash) {
+    const termo = encodeURIComponent((codigoOuHash || '').trim());
+    return this.request(`/api/validador/${termo}`, {
+      method: 'GET',
     });
   }
 

@@ -6,6 +6,7 @@
 
 import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
+import { toast } from '../components/toast.js';
 
 export function renderImagemProtegida() {
   const vistoria = state.currentVistoria;
@@ -118,7 +119,8 @@ export function bindImagemProtegidaEvents() {
   const itemCodigo = document.getElementById('itemCodigoUnico');
   if (itemCodigo) {
     itemCodigo.addEventListener('click', () => {
-      alert(`Código Único Inviolável:\n${state.currentVistoria.codigoUnico} (${state.currentVistoria.codigoHexDoc})\nHash SHA-256:\n${state.currentVistoria.hashSha256}`);
+      navigator.clipboard.writeText(state.currentVistoria.codigoUnico);
+      toast.info('Código Copiado', `Protocolo ${state.currentVistoria.codigoUnico} copiado para a área de transferência.`);
     });
   }
 }

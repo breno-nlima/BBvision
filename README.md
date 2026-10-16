@@ -51,9 +51,78 @@ Bvision/
 
 ---
 
+## 🚀 Execução e Deploy em Produção
+
+### 1. Pré-requisitos
+- Node.js (v18 ou superior)
+- NPM
+
+### 2. Execução Local
+```bash
+# Instalar dependências
+npm install
+
+# Iniciar servidor completo (API + Frontend)
+npm start
+# ou
+npm run dev
+```
+Acesse a aplicação em: `http://localhost:3000`
+
+### 3. Deploy em Produção (Hostinger / VPS / Cloud / PM2)
+O sistema BBVision foi estruturado no padrão monolítico híbrido: o backend Express serve simultaneamente a API RESTful (`/api/...`) e todos os arquivos estáticos do frontend Vanilla JS.
+
+1. **Variáveis de Ambiente**:
+   Copie `backend/.env.example` para `.env` e configure:
+   - `PORT`: Porta do servidor (padrão `3000` ou atribuída pela hospedagem).
+   - `JWT_SECRET`: Chave secreta forte para assinatura de tokens.
+   - `GEMINI_API_KEY`: Chave da API Google Gemini para análise de fotos in-loco.
+   - `RESEND_API_KEY`: Chave para envio transacional de relatórios por e-mail.
+
+2. **Gerenciador de Processos (PM2 / Hostinger Node.js)**:
+   ```bash
+   pm2 start backend/src/server.js --name bbvision
+   pm2 save
+   ```
+
+3. **Proxy Reverso (Nginx / Apache)**:
+   Se estiver utilizando Apache (ex: XAMPP / cPanel / Hostinger), aponte as requisições para a porta do Node.js através de `mod_proxy`:
+   ```apache
+   ProxyPreserveHost On
+   ProxyPass / http://127.0.0.1:3000/
+   ProxyPassReverse / http://127.0.0.1:3000/
+   ```
+
+---
+
+## 👥 Perfis de Acesso Externo
+
+A plataforma conta com fluxo aberto de cadastro e autenticação real com JWT:
+
+1. **👷 Empreiteira de Obra (Campo)**:
+   - Cadastro e login para empresas de engenharia e encarregados técnicos.
+   - Captura inviolável de evidências fotográficas exclusivamente por câmera ao vivo.
+   - Pré-validação instantânea por visão computacional (Google Gemini 1.5 Flash).
+   - Preenchimento de checklists normativos com sugestões dinâmicas de IA.
+   - Assinatura digital técnica de responsabilidade e encerramento do relatório.
+   - Geração de código hexadecimal único de 16 caracteres e hash criptográfico SHA-256.
+
+2. **👩‍💼 Fiscal de Obra (Banco do Brasil / Auditoria)**:
+   - Centro de controle e governança de engenharia do Banco do Brasil.
+   - Auditoria forense de integridade de hashes e dados das vistorias.
+   - Visualização e download de laudos em PDF compilados com carimbo oficial.
+   - Julgamento técnico com Fé Pública: Aprovar (Obra Regular) ou Solicitar Ajuste (Pendente de Ajuste).
+
+3. **🛡️ Validador Público de Fé Pública**:
+   - Disponível para qualquer cidadão, cartório ou órgão auditor externo, sem necessidade de autenticação.
+   - Consulta instantânea da autenticidade e validade de laudos via Código Único ou Hash SHA-256.
+
+---
+
 ## 📖 Especificação Oficial e Regras de Negócio
 
-Todo o projeto segue rigorosamente a **Entrega Parcial TakeOff | Residência em Software & IA** (Porto Digital / Banco do Brasil):
-- 📄 [Documento de Entrega Oficial (TakeOff)](file:///c:/xampp/htdocs/Bvision/docs/TAKEOFF_DOCUMENTO_ENTREGA.md)
-- 📌 Regras de IA, critérios de aceite, prompts homologados e contratos de endpoints definidos no documento base.
+Todo o projeto segue rigorosamente a **Entrega Oficial TakeOff | Banco do Brasil**:
+- 📄 [Documento de Entrega Oficial (TakeOff)](file:///c:/xampp/htdocs/BBvision/docs/TAKEOFF_DOCUMENTO_ENTREGA.md)
+- 📌 Regras de IA, SLA &le; 15s, limiar de confiança &ge; 75%, inviolabilidade e Fé Pública.
+
 

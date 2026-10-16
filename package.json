@@ -8,7 +8,6 @@
     "dev": "node backend/src/server.js",
     "backend": "node backend/src/server.js",
     "frontend": "node frontend/server.js",
-    "test": "node backend/tests/test_backend.js",
     "test": "node backend/tests/test_backend.js"
   },
   "keywords": [
@@ -23,6 +22,8 @@
   "dependencies": {
     "@google/genai": "^2.28.0",
     "@google/generative-ai": "^0.24.1",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.118.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^18.0.6",

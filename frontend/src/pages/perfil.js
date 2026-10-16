@@ -1,90 +1,103 @@
 /**
- * BVision Perfil Screen
- * Gestão de Perfil e Alternância de Personas com RBAC (Rodrigo vs Mariana)
+ * BBVision - Tela de Perfil e Gestão de Conta do Usuário
+ * Padrão Corporativo Banco do Brasil S.A.
  */
 
 import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { renderHeader, bindHeaderEvents } from '../components/header.js';
+import { toast } from '../components/toast.js';
 
 export function renderPerfil() {
-  const isEmpreiteira = state.user?.cargo === 'empreiteira';
+  const user = state.user;
+  const isEmpreiteira = user?.cargo === 'empreiteira';
+  const roleLabel = isEmpreiteira ? '👷‍♂️ Empreiteira (Campo & Vistorias)' : '👩‍💼 Fiscal de Obra (Banco do Brasil)';
+  const dataCadastro = user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : '10/10/2026';
 
   return `
     <div class="page-container fade-in" id="perfilPage">
       ${renderHeader('perfil')}
 
+      <!-- Card do Usuário Autenticado -->
       <div class="profile-card-top">
         <div class="profile-avatar-large">
-          <img src="${state.user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}" alt="Perfil">
+          <img 
+            src="${user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}" 
+            alt="${user?.nome || 'Usuário'}"
+          >
         </div>
-        <h2 class="profile-name">${state.user?.nome || 'Usuário'}</h2>
+        <h2 class="profile-name">${user?.nome || 'Usuário BBVision'}</h2>
         <span class="profile-role-badge ${isEmpreiteira ? 'empreiteira' : 'fiscal'}">
-          ${isEmpreiteira ? '👷‍♂️ Empreiteira (Campo & Vistorias)' : '👩‍💼 Fiscal de Serviço (Engenharia BB)'}
+          ${roleLabel}
         </span>
-        <span class="profile-email">${state.user?.email}</span>
+        <span class="profile-email">${user?.email || 'usuario@empresa.com.br'}</span>
+
+        <div class="profile-meta-tags-row" style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
+          <span style="background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #94A3B8;">
+            🏢 ${user?.empresa || (isEmpreiteira ? 'Empreiteira Contratada' : 'Banco do Brasil - DIPAT')}
+          </span>
+          ${user?.registro_profissional ? `
+            <span style="background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #94A3B8;">
+              📜 ${user.registro_profissional}
+            </span>
+          ` : ''}
+          <span style="background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #94A3B8;">
+            📅 Cadastro: ${dataCadastro}
+          </span>
+        </div>
       </div>
 
-      <!-- Resumo das Permissões do Perfil Ativo -->
+      <!-- Escopo de Atuação e Privilégios do Perfil -->
       <div class="profile-permissions-card">
-        <h4 class="perm-card-title">Permissões do Perfil Ativo:</h4>
+        <h4 class="perm-card-title">Privilégios e Escopo Operacional:</h4>
         ${isEmpreiteira ? `
           <ul class="perm-list">
-            <li>✓ Acesso ao fluxo de captura e câmera com IA (inviolável)</li>
-            <li>✓ Preenchimento de checklists dinâmicos com Gemini</li>
-            <li>✓ Assinatura digital com fé pública</li>
-            <li>✓ Emissão e bloqueio de relatórios</li>
-            <li class="restricted">✕ Bloqueado para homologação/julgamento de obras (Exclusivo BB)</li>
+            <li>✓ Acesso ao fluxo de captura e câmera in-loco (inviolável)</li>
+            <li>✓ Avaliação instantânea por IA com Google Gemini (SLA &le; 15s)</li>
+            <li>✓ Preenchimento guiado de checklists normativos</li>
+            <li>✓ Assinatura digital com fé pública e responsabilidade técnica</li>
+            <li>✓ Geração de código único e bloqueio de relatório</li>
+            <li class="restricted">✕ Bloqueado para homologação e julgamento técnico (Função do Fiscal BB)</li>
           </ul>
         ` : `
           <ul class="perm-list">
-            <li>✓ Acesso ao Centro de Controle do Banco do Brasil</li>
-            <li>✓ Auditoria de evidências com hashes SHA-256 e códigos únicos</li>
-            <li>✓ Download e análise de PDFs oficiais compilados</li>
-            <li>✓ Julgamento técnico com Fé Pública: Aprovar (Regular) ou Reprovar (Pendente)</li>
-            <li class="restricted">✕ Captura in-loco desabilitada (Função das empreiteiras de campo)</li>
+            <li>✓ Acesso ao Centro de Controle e Governança do Banco do Brasil</li>
+            <li>✓ Auditoria de evidências com verificação de hashes SHA-256</li>
+            <li>✓ Inspeção e download de PDFs oficiais certificados</li>
+            <li>✓ Julgamento técnico com Fé Pública: Aprovação (Regular) ou Reprovação (Pendente de Ajuste)</li>
+            <li class="restricted">✕ Captura in-loco desabilitada (Função exclusiva da empreiteira de campo)</li>
           </ul>
         `}
       </div>
 
-      <!-- Alternador de Personas para Demonstração da Residência TakeOff -->
-      <div class="persona-switch-box">
-        <h4>Alternar Tipo de Acesso (Personas TakeOff):</h4>
-        <p>Troque instantaneamente entre o fluxo de campo e a governança de auditoria do Banco do Brasil:</p>
-        
-        <div class="persona-buttons-row">
-          <button class="btn-persona ${isEmpreiteira ? 'active' : ''}" id="btnSwitchRodrigo">
-            👷‍♂️ Rodrigo (Empreiteira)
-          </button>
-          <button class="btn-persona ${!isEmpreiteira ? 'active' : ''}" id="btnSwitchMariana">
-            👩‍💼 Mariana (Fiscal BB)
-          </button>
-        </div>
-      </div>
-
-      <!-- Informações do Sistema e Governança -->
+      <!-- Informações Corporativas e Governança Técnica -->
       <div class="system-info-box">
         <div class="info-row">
-          <span>Programa:</span>
-          <strong>Residência TakeOff / Porto Digital</strong>
+          <span>Instituição:</span>
+          <strong>Banco do Brasil S.A.</strong>
         </div>
         <div class="info-row">
-          <span>Desafio:</span>
-          <strong>Fiscalização Remota de Obras (Banco do Brasil)</strong>
+          <span>Sistema:</span>
+          <strong>BBVision — Plataforma de Fiscalização Remota</strong>
         </div>
         <div class="info-row">
-          <span>Modelo de IA:</span>
-          <strong>Google Gemini 1.5 Flash (SLA &le; 15s)</strong>
+          <span>Motor de IA:</span>
+          <strong>Google Gemini 1.5 Flash (SLA &le; 15s • Confiança &ge; 75%)</strong>
         </div>
         <div class="info-row">
-          <span>Criptografia:</span>
-          <strong>SHA-256 + Código Hex 16 Dígitos</strong>
+          <span>Padrão Criptográfico:</span>
+          <strong>SHA-256 + Código Hexadecimal Único 16 Dígitos</strong>
+        </div>
+        <div class="info-row">
+          <span>Emissão de Documentos:</span>
+          <strong>PDFKit Certificado com Carimbo e Hash de Fé Pública</strong>
         </div>
       </div>
 
+      <!-- Ações da Conta -->
       <div class="logout-container">
         <button class="btn-logout" id="btnLogout">
-          Sair da Conta (Logout)
+          Sair da Conta (Encerrar Sessão)
         </button>
       </div>
     </div>
@@ -94,24 +107,11 @@ export function renderPerfil() {
 export function bindPerfilEvents() {
   bindHeaderEvents();
 
-  const btnRodrigo = document.getElementById('btnSwitchRodrigo');
-  if (btnRodrigo) {
-    btnRodrigo.addEventListener('click', async () => {
-      await state.login('rodrigo@empreiteira.com', '123456');
-    });
-  }
-
-  const btnMariana = document.getElementById('btnSwitchMariana');
-  if (btnMariana) {
-    btnMariana.addEventListener('click', async () => {
-      await state.login('mariana@bb.com.br', '123456');
-    });
-  }
-
   const btnLogout = document.getElementById('btnLogout');
   if (btnLogout) {
     btnLogout.addEventListener('click', () => {
       state.logout();
+      toast.info('Sessão Encerrada', 'Você saiu com sucesso do sistema BBVision.');
     });
   }
 }

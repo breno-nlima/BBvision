@@ -9,7 +9,9 @@ import { state } from '../services/state.js';
 
 export function renderChecklistVerificacao() {
   const vistoria = state.currentVistoria;
-  const user = state.user || { nome: 'Rodrigo Silva', email: 'obra-centro@empresa.com.br' };
+  const user = state.user || { nome: 'Responsável Técnico', email: 'responsavel@empresa.com.br' };
+  const responsavelNome = state.user?.nome || vistoria.responsavel || 'Responsável Técnico';
+  const responsavelDoc = state.user?.registro_profissional || vistoria.matricula || 'CREA/CAU Cadastrado';
 
   return `
     <div class="page-container fade-in" id="checklistVerificacaoPage">
@@ -39,7 +41,7 @@ export function renderChecklistVerificacao() {
           ${vistoria.codigoUnico}
         </div>
         <p class="codigo-email-notice">
-          Codigo enviado para: ${user.email || 'obra-centro@empresa.com.br'}
+          Codigo enviado para: ${user.email || 'responsavel@empresa.com.br'}
         </p>
       </div>
 
@@ -107,8 +109,8 @@ export function renderChecklistVerificacao() {
       <div class="responsavel-info-card">
         <div class="resp-text-group">
           <span class="resp-card-title">Responsável</span>
-          <strong class="resp-nome">Nome: ${vistoria.responsavel}</strong>
-          <span class="resp-matricula">Matrícula: ${vistoria.matricula}</span>
+          <strong class="resp-nome">Nome: ${responsavelNome}</strong>
+          <span class="resp-matricula">Registro/Doc: ${responsavelDoc}</span>
         </div>
         <div class="resp-arrow">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

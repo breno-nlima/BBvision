@@ -25,6 +25,8 @@ import { renderRelatorioBloqueado, bindRelatorioBloqueadoEvents } from './pages/
 import { renderFiscalAuditoria, bindFiscalAuditoriaEvents } from './pages/fiscalAuditoria.js';
 import { renderValidadorPublico, bindValidadorPublicoEvents } from './pages/validadorPublico.js';
 
+import { toast } from './components/toast.js';
+
 class BVisionApp {
   constructor() {
     this.screenContainer = document.getElementById('appScreenContainer');
@@ -60,7 +62,7 @@ class BVisionApp {
     // Regra de Controle de Acesso por Persona (RBAC):
     // Rodrigo (empreiteira) não pode acessar o painel de auditoria e julgamento exclusivo do Banco do Brasil
     if (page === 'fiscal-auditoria' && userRole === 'empreiteira') {
-      alert('⚠️ Acesso Restrito: O Painel de Auditoria e Julgamento é exclusivo do corpo técnico e engenharia do Banco do Brasil (Fiscal Mariana).');
+      toast.warning('Acesso Restrito', 'O Painel de Auditoria e Julgamento é restrito aos fiscais de obra e auditores de engenharia do Banco do Brasil.');
       state.navigate('inicio', 'inicio');
       return;
     }

@@ -9,7 +9,8 @@ import { state } from '../services/state.js';
 
 export function renderObraDetalhe() {
   const vistoria = state.currentVistoria;
-  const user = state.user || { nome: 'Rodrigo Silva', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' };
+  const user = state.user || { nome: 'Responsável Técnico', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' };
+  const responsavelNome = state.user?.nome || vistoria.responsavel || 'Responsável Técnico';
 
   return `
     <div class="page-container fade-in" id="obraDetalhePage">
@@ -25,7 +26,7 @@ export function renderObraDetalhe() {
           <h1 class="topbar-title">${vistoria.obraNome}</h1>
         </div>
         <div class="topbar-user">
-          <span class="user-label">${vistoria.responsavel}</span>
+          <span class="user-label">${responsavelNome}</span>
           <img src="${user.avatar}" alt="${user.nome}" class="topbar-avatar" />
         </div>
       </header>

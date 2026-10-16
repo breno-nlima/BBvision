@@ -35,7 +35,7 @@ const mockData = {
       endereco: 'Av. Rio Branco, 120 - Centro, Rio de Janeiro - RJ',
       responsavel: 'Rodrigo Silva',
       status: 'REGULAR',
-      tipo: 'Residência vistoria',
+      tipo: 'Reforma e Modernização de Agência',
       created_at: new Date().toISOString(),
     },
     {
@@ -44,32 +44,120 @@ const mockData = {
       endereco: 'Av. Paulista, 2163 - Cerqueira César, São Paulo - SP',
       responsavel: 'Rodrigo Silva',
       status: 'REGULAR',
-      tipo: 'Residência vistoria',
+      tipo: 'Adequação de Acessibilidade',
       created_at: new Date().toISOString(),
     },
     {
       id: 'obr-003',
-      nome: 'Residência Alpha (Agência Brasília)',
+      nome: 'Agência Asa Sul (Edificação Nova)',
       endereco: 'SBS Quadra 1 Bloco G Lote 32, Brasília - DF',
       responsavel: 'Rodrigo Silva',
       status: 'EM_ANDAMENTO',
-      tipo: 'Construção nova',
+      tipo: 'Construção de Nova Agência',
       created_at: new Date().toISOString(),
     },
     {
       id: 'obr-004',
-      nome: 'Obra Copacabana',
+      nome: 'Obra Copacabana (Fachada e Interior)',
       endereco: 'Rua Barata Ribeiro, 300 - Rio de Janeiro - RJ',
       responsavel: 'Rodrigo Silva',
       status: 'EM_ANDAMENTO',
-      tipo: 'Reforma',
+      tipo: 'Manutenção Predial e Fachada',
       created_at: new Date().toISOString(),
     },
   ],
 
-  relatorios: [],
-  fotos: [],
-  respostas: [],
+  relatorios: [
+    {
+      id: 'rel-seed-001',
+      obra_id: 'obr-001',
+      usuario_id: '11111111-1111-4111-8111-111111111111',
+      status: 'FINALIZADO',
+      codigo_unico: '8F4A2C19E70B34DF',
+      hash_integridade: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      arquivo_pdf_url: null,
+      created_at: '2026-10-10T14:30:00.000Z',
+      data_finalizacao: '2026-10-10T14:45:00.000Z',
+      justificativa_fiscal: null,
+    },
+    {
+      id: 'rel-seed-002',
+      obra_id: 'obr-002',
+      usuario_id: '11111111-1111-4111-8111-111111111111',
+      status: 'APROVADO',
+      codigo_unico: '91BC34EFA87210DC',
+      hash_integridade: 'd41d8cd98f00b204e9800998ecf8427e98a12c19e70b34dfe3b0c44298fc1c14',
+      arquivo_pdf_url: null,
+      created_at: '2026-10-01T10:00:00.000Z',
+      data_finalizacao: '2026-10-01T10:20:00.000Z',
+      justificativa_fiscal: 'Obra em estrita conformidade com o padrão visual e arquitetônico do Banco do Brasil.',
+      data_julgamento: '2026-10-01T14:00:00.000Z',
+    },
+  ],
+  fotos: [
+    {
+      id: 'fot-seed-001',
+      relatorio_id: 'rel-seed-001',
+      url: 'prints/WhatsApp Image 2026-10-08 at 11.43.18.jpeg',
+      hash_sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      confianca_ia: 0.96,
+      motivo_ia: 'Fachada frontal alinhada e iluminação uniforme de acordo com o gabarito.',
+      status_ia: 'APROVADO',
+      validacao_manual: false,
+      created_at: '2026-10-10T14:32:00.000Z',
+    },
+    {
+      id: 'fot-seed-002',
+      relatorio_id: 'rel-seed-001',
+      url: 'prints/WhatsApp Image 2026-10-08 at 11.43.17.jpeg',
+      hash_sha256: 'a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0',
+      confianca_ia: 0.94,
+      motivo_ia: 'Alvenaria com juntas niveladas e prumo adequado.',
+      status_ia: 'APROVADO',
+      validacao_manual: false,
+      created_at: '2026-10-10T14:35:00.000Z',
+    },
+    {
+      id: 'fot-seed-003',
+      relatorio_id: 'rel-seed-002',
+      url: 'prints/WhatsApp Image 2026-10-08 at 11.43.18.jpeg',
+      hash_sha256: 'd41d8cd98f00b204e9800998ecf8427e98a12c19e70b34dfe3b0c44298fc1c14',
+      confianca_ia: 0.92,
+      motivo_ia: 'Acesso e sinalização em conformidade com o padrão BB.',
+      status_ia: 'APROVADO',
+      validacao_manual: false,
+      created_at: '2026-10-01T10:05:00.000Z',
+    },
+  ],
+  respostas: [
+    {
+      id: 'resp-seed-001',
+      relatorio_id: 'rel-seed-001',
+      pergunta: 'Fachada da agência está legível?',
+      valor: 'Sim',
+      sugestao_ia: 'Fachada nivelada com gabarito de referência.',
+      tipo: 'multipla_escolha',
+      created_at: '2026-10-10T14:38:00.000Z',
+    },
+    {
+      id: 'resp-seed-002',
+      relatorio_id: 'rel-seed-001',
+      pergunta: 'Condição da sinalização institucional',
+      valor: 'Sim',
+      sugestao_ia: 'Sinalização completa e visível sem obstruções.',
+      tipo: 'multipla_escolha',
+      created_at: '2026-10-10T14:39:00.000Z',
+    },
+    {
+      id: 'resp-seed-003',
+      relatorio_id: 'rel-seed-001',
+      pergunta: 'Observações de engenharia e campo',
+      valor: 'Alvenaria e acabamentos estruturais em conformidade com o cronograma físico.',
+      sugestao_ia: 'Alvenaria nivelada com juntas regulares.',
+      tipo: 'texto',
+      created_at: '2026-10-10T14:40:00.000Z',
+    },
+  ],
 
   // Helpers de Usuário
   findUserByEmail(email) {
@@ -78,6 +166,36 @@ const mockData = {
 
   findUserById(id) {
     return this.usuarios.find(u => u.id === id) || null;
+  },
+
+  createUser(dados) {
+    const existing = this.findUserByEmail(dados.email);
+    if (existing) {
+      const err = new Error('E-mail já cadastrado no sistema.');
+      err.status = 409;
+      throw err;
+    }
+
+    const salt = bcrypt.genSaltSync(10);
+    const senhaHash = bcrypt.hashSync(dados.senha, salt);
+
+    const novoUsuario = {
+      id: `usr-${Date.now()}-${Math.round(Math.random() * 1000)}`,
+      nome: dados.nome,
+      email: dados.email.toLowerCase().trim(),
+      senha_hash: senhaHash,
+      cargo: dados.cargo === 'fiscal' ? 'fiscal' : 'empreiteira',
+      registro_profissional: dados.registro_profissional || '',
+      empresa: dados.empresa || (dados.cargo === 'fiscal' ? 'Banco do Brasil S.A.' : 'Empreiteira Contratada'),
+      telefone: dados.telefone || '',
+      created_at: new Date().toISOString(),
+    };
+
+    this.usuarios.push(novoUsuario);
+
+    // Retorna sem a senha_hash
+    const { senha_hash, ...publicUser } = novoUsuario;
+    return publicUser;
   },
 
   // Helpers de Obras

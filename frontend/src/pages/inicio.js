@@ -1,38 +1,65 @@
 /**
  * BVision Início / Dashboard Screen
- * Adaptado dinamicamente para os 2 tipos de acesso:
- * - Acesso Rodrigo: Empreiteira (Campo)
- * - Acesso Mariana: Fiscal de Serviço (Engenharia e Governança BB)
+ * Padrão Corporativo Banco do Brasil:
+ * - Acesso Rodrigo: Operação de Campo (Empreiteira)
+ * - Acesso Mariana: Fiscalização de Engenharia e Governança BB
  */
 
 import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { renderHeader, bindHeaderEvents } from '../components/header.js';
+import { modal } from '../components/modal.js';
+import { toast } from '../components/toast.js';
 
 export function renderInicio() {
-  const userName = state.user?.nome || 'usuário';
+  const userName = state.user?.nome || 'Usuário';
   const isFiscal = state.user?.cargo === 'fiscal';
 
   if (isFiscal) {
     // ------------------------------------------------------------------------
     // VISÃO DA PERSONA MARIANA — FISCALIZAÇÃO E AUDITORIA (BANCO DO BRASIL)
     // ------------------------------------------------------------------------
+    const totalObras = state.obras.length;
+    const relatoriosPendentes = state.relatorios.filter(r => r.statusRaw !== 'APROVADO').length;
+    const relatoriosHomologados = state.relatorios.filter(r => r.statusRaw === 'APROVADO').length;
+
+    const relatoriosHtml = state.relatorios.map(rel => {
+      const isHomologado = rel.statusRaw === 'APROVADO';
+      return `
+        <div class="analysis-item-card fiscal-card-interactive" data-rel-id="${rel.id}" data-obra-nome="${rel.obraNome}">
+          <div class="analysis-left">
+            <div class="analysis-icon">
+              ${isHomologado ? Icons.shieldYellow(24) : Icons.folderObras(24)}
+            </div>
+            <div class="analysis-info">
+              <h4>${rel.obraNome}</h4>
+              <p>Código: ${rel.codigoUnico} • Data: ${rel.data}</p>
+            </div>
+          </div>
+          <div class="analysis-status-pill ${isHomologado ? 'concluido' : 'pendente'}">
+            <span>${isHomologado ? 'Homologado' : 'Auditar'}</span>
+            ${Icons.chevronDown(14)}
+          </div>
+        </div>
+      `;
+    }).join('');
+
     return `
       <div class="page-container fade-in" id="inicioPage">
         ${renderHeader('inicio')}
 
         ${state.isOffline ? `
           <div class="offline-banner-notice">
-            <span>📡 Modo Offline ativo. Operando com dados locais em cache.</span>
+            <span>📡 Modo Offline ativo. Operando com dados locais em cache resiliente.</span>
           </div>
         ` : ''}
 
         <!-- Hero Card Azul Marinho Institucional do Fiscal BB -->
         <section class="hero-fiscal-card">
           <div class="hero-fiscal-header">
-            <span class="bb-institucional-tag">Banco do Brasil • Fiscalização Remota</span>
-            <h2 class="hero-fiscal-title">Centro de Controle</h2>
-            <p class="hero-fiscal-sub">Mariana Souza — Fiscal de Serviço / Engenharia BB</p>
+            <span class="bb-institucional-tag">Banco do Brasil S.A. • Fiscalização e Auditoria Remota</span>
+            <h2 class="hero-fiscal-title">Centro de Controle & Governança</h2>
+            <p class="hero-fiscal-sub">${userName} — Fiscal de Serviço / Engenharia BB</p>
           </div>
           <div class="hero-fiscal-badge-wrap">
             ${Icons.logoBBOficial(48)}
@@ -42,11 +69,11 @@ export function renderInicio() {
         <!-- Indicadores de Gestão e Governança (3 Métricas) -->
         <section class="fiscal-dashboard-metrics">
           <div class="fiscal-metric-box">
-            <span class="fmb-num">4</span>
+            <span class="fmb-num">${totalObras}</span>
             <span class="fmb-label">Obras no Radar</span>
           </div>
           <div class="fiscal-metric-box warning">
-            <span class="fmb-num">2</span>
+            <span class="fmb-num">${relatoriosPendentes}</span>
             <span class="fmb-label">Aguardando Parecer</span>
           </div>
           <div class="fiscal-metric-box success">
@@ -60,7 +87,7 @@ export function renderInicio() {
           <div class="callout-icon">⚖️</div>
           <div class="callout-text">
             <h4>Auditar Vistoria Recente</h4>
-            <p>Obra Centro — 12 fotos com códigos criptográficos pendentes de aprovação.</p>
+            <p>Selecione um relatório pendente para emitir parecer técnico ou visualizar PDF oficial.</p>
           </div>
           <div class="callout-btn-arrow">→</div>
         </section>
@@ -100,42 +127,11 @@ export function renderInicio() {
         <section class="analyses-section">
           <div class="section-header">
             <h2 class="section-title">Vistorias para Homologação</h2>
-            <span class="badge-role-tag">Exclusivo Fiscal</span>
+            <span class="badge-role-tag">Exclusivo Fiscal BB</span>
           </div>
 
           <div class="analyses-list">
-            <!-- Obra Centro -->
-            <div class="analysis-item-card fiscal-card-interactive" data-obra="obr-001">
-              <div class="analysis-left">
-                <div class="analysis-icon">
-                  ${Icons.shieldYellow(24)}
-                </div>
-                <div class="analysis-info">
-                  <h4>Obra Centro (Agência Sede)</h4>
-                  <p>Enviado por: Rodrigo Silva • 10/10/2025</p>
-                </div>
-              </div>
-              <div class="analysis-action-chip">
-                <span>Auditar</span>
-                ${Icons.chevronDown(14)}
-              </div>
-            </div>
-
-            <!-- Obra Zona Sul -->
-            <div class="analysis-item-card fiscal-card-interactive" data-obra="obr-002">
-              <div class="analysis-left">
-                <div class="analysis-icon">
-                  ${Icons.folderObras(24)}
-                </div>
-                <div class="analysis-info">
-                  <h4>Obra Zona Sul</h4>
-                  <p>Enviado por: Rodrigo Silva • 01/10/2026</p>
-                </div>
-              </div>
-              <div class="analysis-status-pill concluido">
-                <span>Homologado</span>
-              </div>
-            </div>
+            ${relatoriosHtml}
           </div>
         </section>
       </div>
@@ -145,6 +141,26 @@ export function renderInicio() {
   // ------------------------------------------------------------------------
   // VISÃO DA PERSONA RODRIGO — OPERAÇÃO DE CAMPO (EMPREITEIRA)
   // ------------------------------------------------------------------------
+  const obrasHtml = state.obras.map(obra => {
+    return `
+      <div class="analysis-item-card" data-obra="${obra.id}">
+        <div class="analysis-left">
+          <div class="analysis-icon">
+            ${Icons.shieldYellow(24)}
+          </div>
+          <div class="analysis-info">
+            <h4>${obra.nome}</h4>
+            <p>${obra.subtitulo} • ${obra.status === 'REGULAR' ? 'Regular' : 'Em andamento'}</p>
+          </div>
+        </div>
+        <div class="analysis-status-pill ${obra.status === 'REGULAR' ? 'concluido' : ''}">
+          <span>Vistoriar</span>
+          ${Icons.chevronDown(14)}
+        </div>
+      </div>
+    `;
+  }).join('');
+
   return `
     <div class="page-container fade-in" id="inicioPage">
       ${renderHeader('inicio')}
@@ -158,39 +174,39 @@ export function renderInicio() {
       <!-- Card Amarelo Hero / Banner de Boas-Vindas da Empreiteira -->
       <section class="hero-banner-card">
         <div class="hero-text-content">
-          <div class="hero-greeting">Olá, ${userName.toLowerCase()}!</div>
+          <div class="hero-greeting">Olá, ${userName}!</div>
           <div class="hero-accent-line"></div>
-          <div class="hero-role-tag">Empreiteira Homologada • Campo</div>
+          <div class="hero-role-tag">Empreiteira de Obra • Responsável Técnico de Campo</div>
         </div>
         <div class="hero-illustration">
           ${Icons.logoBVision(90)}
         </div>
       </section>
 
-      <!-- Grade de Ações Rápidas de Campo (3 Colunas) -->
+      <!-- Grade de Ações Rápidas de Campo (4 Colunas) -->
       <section class="quick-actions-grid">
         <div class="quick-action-card" id="btnNovaAnalise">
           <div class="quick-action-icon-badge">
             ${Icons.shieldYellow(28)}
           </div>
-          <span class="quick-action-label">Nova vistoria</span>
+          <span class="quick-action-label">Nova Vistoria</span>
         </div>
 
         <div class="quick-action-card" id="btnObrasRecentes">
           <div class="quick-action-icon-badge">
             ${Icons.folderObras(28)}
           </div>
-          <span class="quick-action-label">Minhas obras</span>
+          <span class="quick-action-label">Minhas Obras</span>
         </div>
 
         <div class="quick-action-card" id="btnAtalhoRelatorios">
           <div class="quick-action-icon-badge">
             ${Icons.reportsHex(28)}
           </div>
-          <span class="quick-action-label">Meus relatórios</span>
+          <span class="quick-action-label">Relatórios</span>
         </div>
 
-        <div class="quick-action-card" id="btnAtalhoValidadorRodrigo">
+        <div class="quick-action-card" id="btnAtalhoValidadorEmpreiteira">
           <div class="quick-action-icon-badge">
             🛡️
           </div>
@@ -198,54 +214,15 @@ export function renderInicio() {
         </div>
       </section>
 
-      <!-- Indicadores do Carrossel -->
-      <div class="carousel-dots">
-        <div class="dot active"></div>
-        <div class="dot"></div>
-      </div>
-
       <!-- Seção Minhas Obras em Vistoria -->
       <section class="analyses-section">
         <div class="section-header">
-          <h2 class="section-title">Minhas Obras Ativas</h2>
-          <div class="section-chevron">
-            ${Icons.chevronDown(18)}
-          </div>
+          <h2 class="section-title">Minhas Obras Cadastradas</h2>
+          <span class="badge-role-tag">Campo In-Loco</span>
         </div>
 
         <div class="analyses-list" id="analisesContainer">
-          <!-- Item 1: Obra Centro -->
-          <div class="analysis-item-card" data-obra="obr-001">
-            <div class="analysis-left">
-              <div class="analysis-icon">
-                ${Icons.shieldYellow(24)}
-              </div>
-              <div class="analysis-info">
-                <h4>Obra Centro</h4>
-                <p>Agência Sede • Estrutura em execução</p>
-              </div>
-            </div>
-            <div class="analysis-status-pill concluido">
-              <span>Registrar</span>
-              ${Icons.chevronDown(14)}
-            </div>
-          </div>
-
-          <!-- Item 2: Obra Zona Sul -->
-          <div class="analysis-item-card" data-obra="obr-002">
-            <div class="analysis-left">
-              <div class="analysis-icon">
-                ${Icons.folderObras(24)}
-              </div>
-              <div class="analysis-info">
-                <h4>Obra Zona Sul</h4>
-                <p>Fachada e Alvenaria</p>
-              </div>
-            </div>
-            <div class="analysis-status-pill">
-              <span>Em andamento</span>
-            </div>
-          </div>
+          ${obrasHtml}
         </div>
       </section>
     </div>
@@ -296,8 +273,16 @@ export function bindInicioEvents() {
     const cards = document.querySelectorAll('.fiscal-card-interactive');
     cards.forEach(card => {
       card.addEventListener('click', () => {
-        const obraId = card.getAttribute('data-obra');
-        if (obraId) state.selectObra(obraId);
+        const relId = card.getAttribute('data-rel-id');
+        const obraNome = card.getAttribute('data-obra-nome');
+        const rel = state.relatorios.find(r => r.id === relId);
+        if (rel) {
+          state.currentVistoria.relatorioId = rel.id;
+          state.currentVistoria.obraNome = rel.obraNome;
+          state.currentVistoria.codigoUnico = rel.codigoUnico;
+          state.currentVistoria.hashSha256 = rel.hash || state.currentVistoria.hashSha256;
+          state.currentVistoria.pdfUrl = rel.pdfUrl;
+        }
         state.navigate('fiscal-auditoria', 'fiscal-auditoria');
       });
     });
@@ -309,7 +294,8 @@ export function bindInicioEvents() {
   const btnNovaAnalise = document.getElementById('btnNovaAnalise');
   if (btnNovaAnalise) {
     btnNovaAnalise.addEventListener('click', () => {
-      state.navigate('obras', 'obras');
+      state.selectObra(state.obras[0]?.id || 'obr-001');
+      state.navigate('tipo-local');
     });
   }
 
@@ -327,9 +313,9 @@ export function bindInicioEvents() {
     });
   }
 
-  const btnValidadorRodrigo = document.getElementById('btnAtalhoValidadorRodrigo');
-  if (btnValidadorRodrigo) {
-    btnValidadorRodrigo.addEventListener('click', () => {
+  const btnValidadorEmpreiteira = document.getElementById('btnAtalhoValidadorEmpreiteira');
+  if (btnValidadorEmpreiteira) {
+    btnValidadorEmpreiteira.addEventListener('click', () => {
       state.navigate('validador-publico');
     });
   }
