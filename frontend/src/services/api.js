@@ -13,14 +13,9 @@ function resolveApiBaseUrl() {
 
   const { protocol, hostname, port } = window.location;
 
-  // 2. Se a aplicação já estiver sendo servida pelo Node.js na porta 3000
-  if (port === '3000') {
+  // 2. Se a aplicação estiver em produção (HTTPS) ou servida pelo próprio Node.js
+  if (protocol === 'https:' || port === '3000' || port === '80' || port === '443') {
     return '';
-  }
-
-  // 3. Se estiver acessando via HTTPS (produção, Hostinger com SSL, túnel ngrok/Cloudflare)
-  if (protocol === 'https:') {
-    return window.location.origin;
   }
 
   // 4. Se estiver no próprio computador acessando via outro servidor local (Live Server :5500, etc.)
