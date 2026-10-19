@@ -87,33 +87,13 @@
 
       if (user) {
         if (navLinks) navLinks.style.display = 'flex';
-        const isFiscal = user.cargo === 'fiscal';
-        
-        userArea.innerHTML = `
-          <div class="bb-user-profile-badge" id="btnIrPerfil" title="Ver meu perfil">
-            <img src="${user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}" alt="${user.nome}" class="bb-user-avatar">
-            <div class="bb-user-info">
-              <span class="bb-user-name">${user.nome}</span>
-              <span class="bb-user-role ${user.cargo}">${isFiscal ? '👩‍💼 Fiscal de Obra' : '👷 Empreiteira'}</span>
-            </div>
-          </div>
-          <button class="bb-btn-logout" id="btnNavbarLogout" title="Encerrar sessão">
-            Sair
-          </button>
-        `;
-
-        document.getElementById('btnIrPerfil')?.addEventListener('click', () => {
-          state.navigate('perfil', 'perfil');
-        });
-
-        document.getElementById('btnNavbarLogout')?.addEventListener('click', () => {
-          state.logout();
-        });
-
+        userArea.innerHTML = '';
+        userArea.style.display = 'none';
       } else {
         // Deslogado
         if (navLinks) navLinks.style.display = page === 'validador-publico' ? 'flex' : 'none';
         userArea.innerHTML = '';
+        userArea.style.display = 'none';
       }
     }
 

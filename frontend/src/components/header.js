@@ -37,9 +37,6 @@ export function renderHeader(type = 'default') {
       
       <div class="header-actions">
         ${actionButton}
-        <button class="user-avatar-btn" id="btnHeaderAvatar" title="Ver Perfil">
-          <img src="${state.user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}" alt="Avatar">
-        </button>
       </div>
     </header>
   `;
@@ -54,13 +51,6 @@ export function bindHeaderEvents() {
       } else {
         state.navigate('obras', 'obras');
       }
-    });
-  }
-
-  const btnAvatar = document.getElementById('btnHeaderAvatar');
-  if (btnAvatar) {
-    btnAvatar.addEventListener('click', () => {
-      state.navigate('perfil', 'perfil');
     });
   }
 }

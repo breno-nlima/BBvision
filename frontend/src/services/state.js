@@ -123,7 +123,7 @@ class AppState {
       etapa: 'Estrutura em execução',
       tipoLocal: 'Agência Bancária',
       tipoLocalDesc: 'Fachada, interior, caixa forte',
-      fotoUrl: 'prints/WhatsApp Image 2026-10-08 at 11.43.18.jpeg',
+      fotoUrl: null,
       fotoCamera: null,
       fotoBase64: null,
       dataFoto: dataInicial,
@@ -157,63 +157,8 @@ class AppState {
       pdfUrl: null
     };
 
-    // Registros de fotos para o Painel da Fiscal Mariana
-    this.fiscalRegistros = [
-      {
-        id: 'reg-01',
-        codigo: '8F4A2C19E70B34DF',
-        titulo: 'Fachada Principal',
-        local: 'Av. Paulista, 1000',
-        responsavel: 'Rodrigo Silva',
-        status: 'Validado',
-        img: 'prints/WhatsApp Image 2026-10-08 at 11.43.18.jpeg'
-      },
-      {
-        id: 'reg-02',
-        codigo: '8F4A2C19E70B34DF',
-        titulo: 'Alvenaria & Pilares',
-        local: 'Av. Paulista, 1000',
-        responsavel: 'Rodrigo Silva',
-        status: 'Validado',
-        img: 'prints/WhatsApp Image 2026-10-08 at 11.43.17.jpeg'
-      },
-      {
-        id: 'reg-03',
-        codigo: '8F4A2C19E70B34DF',
-        titulo: 'Área Externa',
-        local: 'Av. Paulista, 1000',
-        responsavel: 'Rodrigo Silva',
-        status: 'Pendente',
-        img: 'prints/WhatsApp Image 2026-10-08 at 11.43.18.jpeg'
-      },
-      {
-        id: 'reg-04',
-        codigo: '8F4A2C19E70B34DF',
-        titulo: 'Acesso e Entrada',
-        local: 'Av. Paulista, 1000',
-        responsavel: 'Rodrigo Silva',
-        status: 'Validado',
-        img: 'prints/WhatsApp Image 2026-10-08 at 11.43.17.jpeg'
-      },
-      {
-        id: 'reg-05',
-        codigo: '8F4A2C19E70B34DF',
-        titulo: 'Estrutura Lateral',
-        local: 'Av. Paulista, 1000',
-        responsavel: 'Rodrigo Silva',
-        status: 'Validado',
-        img: 'prints/WhatsApp Image 2026-10-08 at 11.43.18.jpeg'
-      },
-      {
-        id: 'reg-06',
-        codigo: '8F4A2C19E70B34DF',
-        titulo: 'Ponto Fiscalizado',
-        local: 'Av. Paulista, 1000',
-        responsavel: 'Rodrigo Silva',
-        status: 'Pendente',
-        img: 'prints/WhatsApp Image 2026-10-08 at 11.43.17.jpeg'
-      }
-    ];
+    // Registros reais de vistorias sincronizados com o backend ou capturados em campo
+    this.fiscalRegistros = [];
 
     this.listeners = [];
 
@@ -278,7 +223,7 @@ class AppState {
                 local: r.obra?.nome || 'Agência BB',
                 responsavel: r.obra?.responsavel || 'Rodrigo Silva',
                 status: f.status_ia === 'APROVADO' ? 'Validado' : 'Pendente',
-                img: f.url || 'prints/WhatsApp Image 2026-10-08 at 11.43.18.jpeg',
+                img: f.url || f.caminho_arquivo || '',
                 confianca: f.confianca_ia || 0.95,
                 relatorioId: r.id
               });
@@ -455,7 +400,7 @@ class AppState {
       // 2. Anexar foto registrada
       try {
         await api.anexarFoto(relId, {
-          url: this.currentVistoria.fotoCamera || 'prints/WhatsApp Image 2026-10-08 at 11.43.17.jpeg',
+          url: this.currentVistoria.fotoCamera || this.currentVistoria.fotoBase64 || '',
           hash_sha256: this.currentVistoria.hashSha256,
           confianca_ia: this.currentVistoria.confiancaIA,
           motivo_ia: this.currentVistoria.motivoIA,

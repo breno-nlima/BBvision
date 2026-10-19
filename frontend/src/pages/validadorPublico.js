@@ -52,18 +52,12 @@ export function renderValidadorPublico() {
             type="text" 
             id="inputTermoValidacao" 
             class="validador-input" 
-            placeholder="Ex: 8F4A2C19E70B34DF ou e3b0c442..."
+            placeholder="Informe o Código Único (16 dígitos) ou Hash SHA-256..."
             value="${termoConsultadoAtual}"
             autocomplete="off"
             spellcheck="false"
           />
           <button class="btn-limpar-termo" id="btnLimparTermo" title="Limpar">✕</button>
-        </div>
-
-        <div class="validador-presets">
-          <span class="preset-label">Exemplos homologados no banco:</span>
-          <button class="chip-preset" data-code="8F4A2C19E70B34DF">Obra Centro (Agência Sede)</button>
-          <button class="chip-preset" data-code="91BC34EFA87210DC">Obra Zona Sul (Paulista)</button>
         </div>
 
         <button class="btn-action-primary" id="btnConsultarIntegridade">
@@ -213,17 +207,6 @@ export function bindValidadorPublicoEvents() {
     });
   }
 
-  // Chips com códigos de exemplo
-  document.querySelectorAll('.chip-preset').forEach(chip => {
-    chip.addEventListener('click', () => {
-      const code = chip.getAttribute('data-code');
-      if (inputTermo) {
-        inputTermo.value = code;
-        termoConsultadoAtual = code;
-        executarConsulta(code);
-      }
-    });
-  });
 
   const btnConsultar = document.getElementById('btnConsultarIntegridade');
   if (btnConsultar && inputTermo) {

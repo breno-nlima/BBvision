@@ -69,19 +69,6 @@ export function renderLogin() {
             <button type="submit" class="btn-auth-submit" id="btnSubmitLogin">
               Entrar no Sistema
             </button>
-
-            <!-- Acesso Rápido com Contas Oficiais -->
-            <div class="demo-access-box">
-              <span class="demo-label">Acesso Rápido com Contas Oficiais:</span>
-              <div class="demo-chips-row">
-                <button type="button" class="chip-demo-user" id="btnDemoEmpreiteira" title="Preencher com credenciais de Empreiteira">
-                  👷 Rodrigo (Empreiteira)
-                </button>
-                <button type="button" class="chip-demo-user" id="btnDemoFiscal" title="Preencher com credenciais de Fiscalização">
-                  👩‍💼 Mariana (Fiscalização BB)
-                </button>
-              </div>
-            </div>
           </form>
         </div>
 
@@ -254,39 +241,7 @@ export function bindLoginEvents() {
     });
   }
 
-  // Preenchimento Rápido com Contas Oficiais
-  const btnDemoEmp = document.getElementById('btnDemoEmpreiteira');
-  const btnDemoFisc = document.getElementById('btnDemoFiscal');
-  const inputEmail = document.getElementById('loginEmail');
-  const inputSenha = document.getElementById('loginSenha');
 
-  if (btnDemoEmp) {
-    btnDemoEmp.addEventListener('click', () => {
-      if (inputEmail) {
-        inputEmail.value = 'rodrigo@empreiteira.com';
-        inputEmail.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      if (inputSenha) {
-        inputSenha.value = '123456';
-        inputSenha.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      toast.info('Credenciais Carregadas', 'Conta: Rodrigo Silva (Empreiteira)');
-    });
-  }
-
-  if (btnDemoFisc) {
-    btnDemoFisc.addEventListener('click', () => {
-      if (inputEmail) {
-        inputEmail.value = 'mariana@bb.com.br';
-        inputEmail.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      if (inputSenha) {
-        inputSenha.value = '123456';
-        inputSenha.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      toast.info('Credenciais Carregadas', 'Conta: Engª Mariana Vasconcelos (Fiscal BB)');
-    });
-  }
 
 
 

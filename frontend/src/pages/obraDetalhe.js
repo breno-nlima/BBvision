@@ -25,16 +25,12 @@ export function renderObraDetalhe() {
           ${Icons.logoBBOficial(34)}
           <h1 class="topbar-title">${vistoria.obraNome}</h1>
         </div>
-        <div class="topbar-user">
-          <span class="user-label">${responsavelNome}</span>
-          <img src="${user.avatar}" alt="${user.nome}" class="topbar-avatar" />
-        </div>
       </header>
 
       <!-- Foto da Obra com Overlay de Metadados Criptográficos -->
       <div class="obra-foto-wrapper">
         <img 
-          src="prints/WhatsApp Image 2026-10-08 at 11.43.18.jpeg" 
+          src="${vistoria.fotoCamera || vistoria.fotoUrl || 'https://images.unsplash.com/photo-1541888946425-d0fbb186f5f8?w=800&auto=format&fit=crop&q=80'}" 
           alt="${vistoria.obraNome}" 
           class="obra-hero-img"
           onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1541888946425-d0fbb186f5f8?w=800&auto=format&fit=crop&q=80';"

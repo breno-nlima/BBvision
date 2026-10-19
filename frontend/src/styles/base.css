@@ -476,46 +476,7 @@ html, body {
   transform: none;
 }
 
-/* Homologação / Demo Rápida */
-.demo-access-box {
-  margin-top: 20px;
-  padding-top: 18px;
-  border-top: 1px solid var(--border-light);
-  text-align: center;
-}
 
-.demo-label {
-  display: block;
-  font-size: 11px;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-  font-weight: 600;
-}
-
-.demo-chips-row {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.chip-demo-user {
-  background: #F1F5F9;
-  border: 1px solid var(--border-medium);
-  color: var(--text-primary);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 6px 12px;
-  border-radius: var(--radius-full);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.chip-demo-user:hover {
-  background: var(--bb-blue-navy);
-  color: #FFFFFF;
-  border-color: var(--bb-blue-navy);
-}
 
 .auth-card-footer {
   padding: 14px 28px;

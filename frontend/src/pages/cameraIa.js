@@ -336,22 +336,32 @@ export function bindCameraIaEvents() {
         }
       } catch (err) {
         console.warn('[Camera] Câmera física não iniciada:', err.message);
-        if (statusBadge) statusBadge.innerText = 'Modo Simulação • IA Pronta';
-        if (pulseDot) pulseDot.style.background = '#F59E0B';
+        if (statusBadge) statusBadge.innerText = 'Câmera Indisponível';
+        if (pulseDot) pulseDot.style.background = '#EF4444';
         if (mainStreamImg) {
-          mainStreamImg.src = state.currentVistoria.fotoCamera || 'prints/WhatsApp Image 2026-10-08 at 11.43.17.jpeg';
-          mainStreamImg.classList.remove('hidden');
+          if (state.currentVistoria.fotoCamera) {
+            mainStreamImg.src = state.currentVistoria.fotoCamera;
+            mainStreamImg.classList.remove('hidden');
+          } else {
+            mainStreamImg.classList.add('hidden');
+          }
         }
         if (videoFeed) videoFeed.classList.add('hidden');
-        toast.warning('Permissão de Câmera', 'Câmera não detectada ou permissão pendente. Modo simulação ativo.');
+        toast.warning('Permissão de Câmera', 'Câmera não detectada ou permissão negada. Por favor, habilite a câmera do dispositivo.');
       }
     } else {
+      if (statusBadge) statusBadge.innerText = 'Dispositivo sem Câmera';
+      if (pulseDot) pulseDot.style.background = '#EF4444';
       if (mainStreamImg) {
-        mainStreamImg.src = state.currentVistoria.fotoCamera || 'prints/WhatsApp Image 2026-10-08 at 11.43.17.jpeg';
-        mainStreamImg.classList.remove('hidden');
+        if (state.currentVistoria.fotoCamera) {
+          mainStreamImg.src = state.currentVistoria.fotoCamera;
+          mainStreamImg.classList.remove('hidden');
+        } else {
+          mainStreamImg.classList.add('hidden');
+        }
       }
       if (videoFeed) videoFeed.classList.add('hidden');
-      toast.warning('Dispositivo sem Câmera', 'Operando em modo de emulação.');
+      toast.warning('Dispositivo sem Câmera', 'Este dispositivo não possui suporte a câmera ao vivo.');
     }
   }
 
@@ -439,8 +449,12 @@ export function bindCameraIaEvents() {
         state.currentVistoria.fotoCamera = base64Foto;
         state.currentVistoria.fotoBase64 = base64Foto;
       } else {
-        // Fallback caso não haja stream de vídeo ativo
-        base64Foto = state.currentVistoria.fotoCamera || 'prints/WhatsApp Image 2026-10-08 at 11.43.17.jpeg';
+        if (!state.currentVistoria.fotoCamera) {
+          toast.warning('Câmera Necessária', 'É obrigatório capturar a foto ao vivo diretamente pela câmera do dispositivo.');
+          if (scannerOverlay) scannerOverlay.classList.add('hidden');
+          return;
+        }
+        base64Foto = state.currentVistoria.fotoCamera;
       }
 
       // Envia para API backend oficial (Gemini 1.5 Flash + Geração de Hash SHA-256)

@@ -259,9 +259,8 @@ export function bindVistoriaEvents() {
         base64Image = canvas.toDataURL('image/jpeg', 0.85);
         if (previewImg) previewImg.src = base64Image;
       } else {
-        // Fallback para imagem demonstrativa de alta qualidade
-        const fallbackUrl = 'https://images.unsplash.com/photo-1541888946425-d0fbb18615f8?w=600&auto=format&fit=crop&q=80';
-        if (previewImg) previewImg.src = fallbackUrl;
+        toast.warning('Câmera Necessária', 'Aponte e ative a câmera do dispositivo para capturar a evidência real da obra.');
+        return;
       }
 
       if (badge && text) {
@@ -271,20 +270,7 @@ export function bindVistoriaEvents() {
       }
 
       try {
-        let resultado = null;
-        if (base64Image) {
-          resultado = await api.avaliarFoto(base64Image);
-        } else {
-          // Pequeno delay para demonstrar interação visual se sem câmera
-          await new Promise(r => setTimeout(r, 1200));
-          resultado = {
-            status: 'APROVADO',
-            confianca: 0.96,
-            motivo: 'Imagem nítida, iluminação uniforme e gabarito alinhado.',
-            hash_integridade: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-            caminho_arquivo: 'uploads/evidencias/exemplo-fachada.jpg',
-          };
-        }
+        const resultado = await api.avaliarFoto(base64Image);
 
         ultimaFotoAvaliada = resultado;
 
@@ -363,8 +349,8 @@ export function bindVistoriaEvents() {
         // 2. Anexa foto avaliada se existir
         if (ultimaFotoAvaliada && relatorioCriadoId) {
           await api.anexarFoto(relatorioCriadoId, {
-            caminho_arquivo: ultimaFotoAvaliada.caminho_arquivo || 'uploads/evidencias/exemplo-fachada.jpg',
-            hash_integridade: ultimaFotoAvaliada.hash_integridade || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+            caminho_arquivo: ultimaFotoAvaliada.caminho_arquivo || '',
+            hash_integridade: ultimaFotoAvaliada.hash_integridade || '',
             avaliacao_gemini: ultimaFotoAvaliada.status || 'APROVADO',
             confianca: ultimaFotoAvaliada.confianca || 0.96,
             motivo: ultimaFotoAvaliada.motivo || 'Avaliação visual em conformidade.',

@@ -16,7 +16,8 @@ export function renderFiscalAuditoria() {
   const vistoria = state.currentVistoria;
   const registros = state.fiscalRegistros || [];
 
-  const gridCardsHtml = registros.map((reg, idx) => `
+  const gridCardsHtml = registros.length > 0 
+    ? registros.map((reg, idx) => `
     <div class="fiscal-photo-card" data-reg-id="${reg.id}" title="Clique para inspecionar perícia visual">
       <div class="photo-thumbnail-wrap">
         <img 
@@ -35,7 +36,14 @@ export function renderFiscalAuditoria() {
         <span class="photo-ia-badge">Gemini ${Math.round((reg.confianca || 0.95) * 100)}%</span>
       </div>
     </div>
-  `).join('');
+  `).join('')
+    : `
+    <div style="grid-column: 1 / -1; padding: 36px 16px; text-align: center; background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 12px;">
+      <span style="font-size: 32px; display: block; margin-bottom: 8px;">📷</span>
+      <h4 style="font-size: 15px; font-weight: 700; color: #002D62; margin-bottom: 6px;">Nenhuma evidência registrada</h4>
+      <p style="font-size: 12px; color: #64748B; max-width: 380px; margin: 0 auto;">As vistorias e fotos capturadas em campo pelas empreiteiras credenciadas aparecerão aqui em tempo real.</p>
+    </div>
+  `;
 
   return `
     <div class="page-container fade-in" id="fiscalAuditoriaPage">
@@ -64,7 +72,7 @@ export function renderFiscalAuditoria() {
             <span class="metric-label">Fotos Inspecionadas:</span>
             <span class="metric-chevron">📷</span>
           </div>
-          <div class="metric-large-number">${registros.length || 6}</div>
+          <div class="metric-large-number">${registros.length}</div>
           <span class="metric-bottom-hint">Todas com Carimbo SHA-256</span>
         </div>
 
@@ -152,7 +160,7 @@ export function renderFiscalAuditoria() {
             <button class="btn-icon-simple-sm" id="btnFecharModalInspecao" style="font-size: 16px; cursor: pointer;">✕</button>
           </div>
           <div style="border-radius: 12px; overflow: hidden; margin-bottom: 12px; border: 1px solid #CBD5E1;">
-            <img id="imgInspecaoModal" src="" alt="Foto" style="width: 100%; height: 220px; object-fit: cover; display: block;" onerror="this.src='prints/WhatsApp Image 2026-10-08 at 11.43.18.jpeg';" />
+            <img id="imgInspecaoModal" src="" alt="Foto" style="width: 100%; height: 220px; object-fit: cover; display: block;" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1541888946425-d0fbb186f5f8?w=800&auto=format&fit=crop&q=80';" />
           </div>
           <h4 id="tituloInspecaoModal" style="font-size: 15px; color: #002D62; margin-bottom: 4px;">Fachada Principal</h4>
           <p id="localInspecaoModal" style="font-size: 11px; color: #64748B; margin-bottom: 10px;">Localização da Unidade • Responsável de Campo</p>
@@ -238,14 +246,8 @@ export function bindFiscalAuditoriaEvents() {
     card.style.cursor = 'pointer';
     card.addEventListener('click', () => {
       const regId = card.getAttribute('data-reg-id');
-      const reg = (state.fiscalRegistros || []).find(r => r.id === regId) || {
-        titulo: 'Registro Fotográfico',
-        local: state.currentVistoria.endereco,
-        codigo: state.currentVistoria.codigoUnico,
-        responsavel: state.currentVistoria.responsavel,
-        img: 'prints/WhatsApp Image 2026-10-08 at 11.43.18.jpeg',
-        confianca: 0.96
-      };
+      const reg = (state.fiscalRegistros || []).find(r => r.id === regId);
+      if (!reg) return;
       if (imgFoto) imgFoto.src = reg.img;
       if (tituloFoto) tituloFoto.innerText = reg.titulo;
       if (localFoto) localFoto.innerText = `${reg.local} • Responsável: ${reg.responsavel || state.currentVistoria.responsavel}`;
