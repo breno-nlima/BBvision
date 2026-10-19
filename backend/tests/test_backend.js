@@ -1,6 +1,8 @@
 /**
- * BBVision - Teste Automatizado da API Backend Básica
- * Valida os fluxos essenciais de autenticação, obras, fotos, IA, relatórios e imutabilidade
+ * BBVision - Teste Automatizado da API Backend Corporativa
+ * Valida os fluxos essenciais de autenticação, obras, fotos, IA, relatórios, imutabilidade,
+ * segurança (Path Traversal, Magic Bytes), headers corporativos, rate limiting,
+ * sincronização offline (HU05) e tolerância de status fiscal (REGULAR/APROVADO).
  */
 
 const http = require('http');
@@ -62,18 +64,21 @@ function assert(condition, message) {
 
 async function runTests() {
   console.log('\n======================================================');
-  console.log('  Iniciando Testes da API Backend Básica BBVision');
+  console.log('  Iniciando Testes da API Backend BBVision');
   console.log('======================================================\n');
 
   try {
-    // 1. Healthcheck
-    console.log('1. Testando Health Check da API...');
+    // 1. Healthcheck e Headers de Segurança
+    console.log('1. Testando Health Check & Headers de Segurança Corporativos...');
     const health = await request('GET', '/api/health');
     assert(health.status === 200, 'Health check respondeu HTTP 200');
     assert(health.body.status === 'online', 'Status da API é online');
+    assert(health.headers['x-content-type-options'] === 'nosniff', 'Header X-Content-Type-Options: nosniff presente');
+    assert(health.headers['x-frame-options'] === 'SAMEORIGIN', 'Header X-Frame-Options: SAMEORIGIN presente');
+    assert(health.headers['x-ratelimit-limit'], 'Headers de Rate Limiting presentes');
 
     // 2. Autenticação (Rodrigo - Empreiteira)
-    console.log('\n2. Testando Autenticação (Persona Rodrigo)...');
+    console.log('\n2. Testando Autenticação com Bcrypt Não-Bloqueante (Persona Rodrigo)...');
     const loginRodrigo = await request('POST', '/api/auth/login', {
       email: 'rodrigo@empreiteira.com',
       senha: '123456',
@@ -101,8 +106,28 @@ async function runTests() {
     assert(meRes.status === 200, 'Endpoint /me retornou HTTP 200');
     assert(meRes.body.usuario.email === 'rodrigo@empreiteira.com', 'E-mail do usuário autenticado confere');
 
-    // 5. Listagem de Obras
-    console.log('\n5. Testando Listagem de Obras (/api/obras)...');
+    // 5. Teste de Cadastro de Usuário (Validações de Segurança)
+    console.log('\n5. Testando Cadastro com Validações de Segurança (/api/auth/register)...');
+    const regFraco = await request('POST', '/api/auth/register', {
+      nome: 'Teste',
+      email: 'teste@bb.com.br',
+      senha: '123', // Senha menor que 6 caracteres
+      cargo: 'fiscal',
+    });
+    assert(regFraco.status === 400, 'Senha curta rejeitada com HTTP 400');
+
+    const novoEmail = `engenheiro_${Date.now()}@empreiteira.com`;
+    const regSucesso = await request('POST', '/api/auth/register', {
+      nome: 'Engenheiro Novo',
+      email: novoEmail,
+      senha: 'senhaSegura123',
+      cargo: 'empreiteira',
+    });
+    assert(regSucesso.status === 201, 'Cadastro bem-sucedido retornou HTTP 201 com token');
+    assert(regSucesso.body.token, 'Token gerado no registro');
+
+    // 6. Listagem de Obras
+    console.log('\n6. Testando Listagem de Obras (/api/obras)...');
     const obrasRes = await request('GET', '/api/obras', null, {
       Authorization: `Bearer ${tokenRodrigo}`,
     });
@@ -110,8 +135,8 @@ async function runTests() {
     assert(Array.isArray(obrasRes.body) && obrasRes.body.length > 0, 'Retornou array com obras cadastradas');
     const obraId = obrasRes.body[0].id;
 
-    // 6. Criar Relatório de Vistoria
-    console.log('\n6. Testando Criação de Relatório de Vistoria (/api/relatorios)...');
+    // 7. Criar Relatório de Vistoria
+    console.log('\n7. Testando Criação de Relatório de Vistoria (/api/relatorios)...');
     const relRes = await request('POST', '/api/relatorios', { obra_id: obraId }, {
       Authorization: `Bearer ${tokenRodrigo}`,
     });
@@ -120,8 +145,8 @@ async function runTests() {
     assert(relRes.body.status === 'EM_ANDAMENTO', 'Status inicial é EM_ANDAMENTO');
     const relatorioId = relRes.body.id;
 
-    // 7. Avaliação de Foto com IA Gemini e Hash SHA-256
-    console.log('\n7. Testando Avaliação de Imagem com Gemini & Hash SHA-256 (/api/fotos/avaliar)...');
+    // 8. Avaliação de Foto com IA Gemini e Hash SHA-256
+    console.log('\n8. Testando Avaliação de Imagem com Gemini & Hash SHA-256 (/api/fotos/avaliar)...');
     const fakeImageB64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
     const fotoEval = await request('POST', '/api/fotos/avaliar', {
       imagemBase64: fakeImageB64,
@@ -131,8 +156,15 @@ async function runTests() {
     assert(fotoEval.body.hash_integridade.length === 64, 'Hash tem 64 caracteres');
     assert(['APROVADO', 'REJEITADO', 'VALIDACAO_MANUAL'].includes(fotoEval.body.status), 'Status da foto é válido');
 
-    // 8. Anexar Foto ao Relatório
-    console.log('\n8. Anexando Foto ao Relatório (/api/relatorios/:id/fotos)...');
+    // 9. Proteção contra Path Traversal
+    console.log('\n9. Testando Proteção contra Path Traversal em Fotos (/api/fotos/sugerir-observacao)...');
+    const traversalAttempt = await request('POST', '/api/fotos/sugerir-observacao', {
+      caminho_arquivo: '../../../../windows/system.ini',
+    });
+    assert(traversalAttempt.status === 400, 'Tentativa de Path Traversal BLOQUEADA com HTTP 400');
+
+    // 10. Anexar Foto ao Relatório
+    console.log('\n10. Anexando Foto ao Relatório (/api/relatorios/:id/fotos)...');
     const anexoRes = await request('POST', `/api/relatorios/${relatorioId}/fotos`, {
       caminho_arquivo: fotoEval.body.caminho_arquivo,
       hash_integridade: fotoEval.body.hash_integridade,
@@ -144,8 +176,8 @@ async function runTests() {
     });
     assert(anexoRes.status === 201, 'Foto vinculada com sucesso');
 
-    // 9. Salvar Respostas do Checklist
-    console.log('\n9. Testando Preenchimento do Checklist (/api/relatorios/:id/respostas)...');
+    // 11. Salvar Respostas do Checklist
+    console.log('\n11. Testando Preenchimento do Checklist (/api/relatorios/:id/respostas)...');
     const checklistRes = await request('PUT', `/api/relatorios/${relatorioId}/respostas`, [
       {
         pergunta: 'Status da alvenaria',
@@ -158,8 +190,8 @@ async function runTests() {
     });
     assert(checklistRes.status === 200, 'Respostas salvas com sucesso');
 
-    // 10. Finalização do Relatório (Inviolabilidade e PDF)
-    console.log('\n10. Finalizando Relatório e Gerando PDF Inviolável (/api/relatorios/:id/finalizar)...');
+    // 12. Finalização do Relatório (Inviolabilidade e PDF)
+    console.log('\n12. Finalizando Relatório e Gerando PDF Inviolável (/api/relatorios/:id/finalizar)...');
     const finalizarRes = await request('POST', `/api/relatorios/${relatorioId}/finalizar`, {}, {
       Authorization: `Bearer ${tokenRodrigo}`,
     });
@@ -170,8 +202,8 @@ async function runTests() {
     assert(finalizarRes.body.hashIntegridade, 'Hash SHA-256 do relatório gerado');
     assert(finalizarRes.body.status === 'FINALIZADO', 'Status atualizado para FINALIZADO');
 
-    // 11. Bloqueio de Edição Posterior (Imutabilidade)
-    console.log('\n11. Testando Bloqueio de Edição Posterior (Imutabilidade)...');
+    // 13. Bloqueio de Edição Posterior (Imutabilidade)
+    console.log('\n13. Testando Bloqueio de Edição Posterior (Imutabilidade)...');
     const tentativaEdicao = await request('PUT', `/api/relatorios/${relatorioId}/respostas`, [
       { pergunta: 'Alteração Indevida', valor: 'Hack' },
     ], {
@@ -184,14 +216,14 @@ async function runTests() {
     });
     assert(tentativaReenvio.status === 400, 'Tentativa de reenvio foi BLOQUEADA com HTTP 400');
 
-    // 12. Download / Visualização do PDF Gerado
-    console.log('\n12. Testando Visualização do PDF Compilado (/api/relatorios/:id/pdf)...');
+    // 14. Download / Visualização do PDF Gerado
+    console.log('\n14. Testando Visualização do PDF Compilado (/api/relatorios/:id/pdf)...');
     const pdfRes = await request('GET', `/api/relatorios/${relatorioId}/pdf`);
     assert(pdfRes.status === 200, 'Download do PDF retornou HTTP 200');
     assert(pdfRes.headers['content-type'] === 'application/pdf', 'Content-Type é application/pdf');
 
-    // 13. Parecer e Auditoria do Fiscal (Mariana) com RBAC
-    console.log('\n13. Testando Controle de Perfis e Auditoria (/api/relatorios/:id/status)...');
+    // 15. Parecer e Auditoria do Fiscal com RBAC e tolerância a REGULAR
+    console.log('\n15. Testando Controle de Perfis e Auditoria (/api/relatorios/:id/status)...');
     const tentativaFiscalRodrigo = await request('PATCH', `/api/relatorios/${relatorioId}/status`, {
       status: 'APROVADO',
       justificativa: 'Tentativa de aprovação por empreiteira',
@@ -200,18 +232,19 @@ async function runTests() {
     });
     assert(tentativaFiscalRodrigo.status === 403, 'Acesso de Rodrigo a julgamento fiscal BLOQUEADO com HTTP 403');
 
+    // Testa envio com status 'REGULAR' (conforme emitido pelo frontend)
     const auditoriaRes = await request('PATCH', `/api/relatorios/${relatorioId}/status`, {
-      status: 'APROVADO',
-      justificativa: 'Fotos nítidas e medição condizente.',
+      status: 'REGULAR',
+      justificativa: 'Fotos nítidas e medição condizente com os gabaritos BB.',
     }, {
       Authorization: `Bearer ${tokenMariana}`,
     });
-    assert(auditoriaRes.status === 200, 'Auditoria realizada com HTTP 200 pela fiscal Mariana');
-    assert(auditoriaRes.body.status === 'APROVADO', 'Status do relatório é APROVADO');
+    assert(auditoriaRes.status === 200, 'Auditoria com status REGULAR homologada com HTTP 200');
+    assert(auditoriaRes.body.status === 'APROVADO', 'Status do relatório mapeado para APROVADO');
     assert(auditoriaRes.body.obraStatus === 'REGULAR', 'Status da obra atualizado para REGULAR');
 
-    // 14. Validador Público de Autenticidade
-    console.log('\n14. Testando Validador Público de Autenticidade (/api/validador/:codigoOuHash)...');
+    // 16. Validador Público de Autenticidade
+    console.log('\n16. Testando Validador Público de Autenticidade (/api/validador/:codigoOuHash)...');
     const validacaoSucesso = await request('GET', `/api/validador/${finalizarRes.body.codigo}`);
     assert(validacaoSucesso.status === 200, 'Validador público retornou HTTP 200 para código gerado');
     assert(validacaoSucesso.body.autentico === true, 'Documento atestado como AUTÊNTICO');
@@ -220,8 +253,33 @@ async function runTests() {
     assert(validacaoFalsa.status === 404, 'Código inexistente rejeitado com HTTP 404');
     assert(validacaoFalsa.body.autentico === false, 'Documento inexistente atestado como NÃO autêntico');
 
+    // 17. Sincronização de Vistoria Offline (HU05)
+    console.log('\n17. Testando Sincronização de Vistoria Offline (/api/relatorios/sincronizar-offline)...');
+    const syncOfflineRes = await request('POST', '/api/relatorios/sincronizar-offline', {
+      obra_id: obraId,
+      respostas: [
+        { pergunta: 'Alvenaria', valor: 'Conforme', sugestao_ia: 'Nivelamento verificado' },
+      ],
+      fotos: [
+        { imagemBase64: fakeImageB64, motivo: 'Foto capturada offline' },
+      ],
+      timestamp: new Date().toISOString(),
+    }, {
+      Authorization: `Bearer ${tokenRodrigo}`,
+    });
+    assert(syncOfflineRes.status === 200, 'Sincronização offline retornou HTTP 200');
+    assert(syncOfflineRes.body.sucesso === true, 'Flag sucesso é true');
+    assert(syncOfflineRes.body.codigo && syncOfflineRes.body.codigo.length === 16, 'Código gerado para vistoria offline');
+    assert(syncOfflineRes.body.status === 'FINALIZADO', 'Status da vistoria sincronizada é FINALIZADO');
+
+    // 18. Tratamento de Endpoint Inexistente da API (404 JSON)
+    console.log('\n18. Testando 404 JSON em Endpoints Inexistentes da API (/api/inexistente)...');
+    const rota404 = await request('GET', '/api/rota-inexistente');
+    assert(rota404.status === 404, 'Rota inexistente retornou HTTP 404');
+    assert(rota404.body.erro && typeof rota404.body.erro === 'string', 'Retornou mensagem de erro em JSON padronizado');
+
     console.log('\n======================================================');
-    console.log('  TODOS OS TESTES DO BACKEND BÁSICO PASSARAM COM SUCESSO!');
+    console.log('  TODOS OS 18 GRUPOS DE TESTES PASSARAM COM SUCESSO!');
     console.log('======================================================\n');
   } catch (err) {
     console.error('\n❌ ERRO DURANTE A EXECUÇÃO DOS TESTES:', err);

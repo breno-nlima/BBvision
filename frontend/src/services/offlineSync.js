@@ -9,9 +9,11 @@ const QUEUE_STORAGE_KEY = 'bbvision_offline_queue';
 
 class OfflineSyncService {
   constructor() {
-    this.isOnline = navigator.onLine;
+    this.isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
     this.listeners = [];
-    this.initNetworkListeners();
+    if (typeof window !== 'undefined') {
+      this.initNetworkListeners();
+    }
   }
 
   initNetworkListeners() {
@@ -40,6 +42,7 @@ class OfflineSyncService {
 
   obterFila() {
     try {
+      if (typeof localStorage === 'undefined') return [];
       const data = localStorage.getItem(QUEUE_STORAGE_KEY);
       return data ? JSON.parse(data) : [];
     } catch (e) {
@@ -50,7 +53,9 @@ class OfflineSyncService {
 
   salvarFila(fila) {
     try {
-      localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(fila));
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(fila));
+      }
       this.notifyStatus(this.isOnline);
     } catch (e) {
       console.error('[OfflineSync] Erro ao salvar fila local:', e);
@@ -86,11 +91,30 @@ class OfflineSyncService {
     const filaRestante = [];
     for (const item of fila) {
       try {
-        // Envia para o backend se houver serviço disponível
-        const response = await fetch('/api/relatorios', {
+        const dados = item.dados || {};
+        const payload = {
+          obra_id: dados.obraId || dados.obra_id || 'obr-001',
+          codigo_unico: dados.codigoUnico || null,
+          timestamp: item.timestamp,
+          respostas: dados.respostas ? [
+            { pergunta: 'Status da alvenaria e acabamentos', valor: dados.respostas.alvenaria || dados.respostas.fachada || 'Conforme' },
+            { pergunta: 'Condições da calçada e acessibilidade', valor: dados.respostas.calcada || 'Conforme' },
+            { pergunta: 'Observações de engenharia e campo', valor: dados.respostas.observacoes || 'Registro sincronizado da fila offline.' }
+          ] : [],
+          fotos: (dados.fotoCamera || dados.fotoUrl) ? [{
+            imagemBase64: dados.fotoCamera || null,
+            caminho_arquivo: dados.fotoUrl && !dados.fotoCamera ? dados.fotoUrl : null,
+            avaliacao_gemini: 'VALIDACAO_MANUAL',
+            confianca: 0.75,
+            motivo: 'Registro capturado em modo offline (sincronizado automaticamente).'
+          }] : [],
+        };
+
+        // Envia para o endpoint oficial de sincronização offline
+        const response = await fetch('/api/relatorios/sincronizar-offline', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ obra_id: item.dados.obraId || 'obr-001' }),
+          body: JSON.stringify(payload),
         });
 
         if (response.ok) {

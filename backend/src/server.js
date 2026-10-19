@@ -1,13 +1,16 @@
 /**
  * BBVision - Servidor HTTP da API Backend
- * Inicialização com tolerância a portas ocupadas
+ * Inicialização com tolerância inteligente a portas ocupadas e Graceful Shutdown
  */
 
 const http = require('http');
 const os = require('os');
 const app = require('./app');
 
-let PORT = parseInt(process.env.PORT, 10) || 3000;
+let INITIAL_PORT = parseInt(process.env.PORT, 10) || 3000;
+const MAX_PORT_RETRIES = 10;
+let currentRetry = 0;
+
 const server = http.createServer(app);
 
 function getNetworkIp() {
@@ -30,17 +33,57 @@ function startServer(portToTry) {
     console.log(`  - Local (Computador): http://localhost:${portToTry}`);
     console.log(`  - Rede Local (Celular): http://${netIp}:${portToTry}`);
     console.log(`  - Healthcheck API:    http://${netIp}:${portToTry}/api/health`);
+    console.log(`  - Validador Público:  http://${netIp}:${portToTry}/api/validador/:codigo`);
     console.log(`======================================================\n`);
   });
 
-  server.on('error', (err) => {
+  // Usa .once para evitar acumulação de event listeners em caso de múltiplas portas ocupadas
+  server.once('error', (err) => {
     if (err.code === 'EADDRINUSE') {
-      console.warn(`[BBVision Backend] Porta ${portToTry} ocupada. Tentando porta ${portToTry + 1}...`);
-      startServer(portToTry + 1);
+      currentRetry++;
+      if (currentRetry <= MAX_PORT_RETRIES) {
+        console.warn(`[BBVision Backend] Porta ${portToTry} ocupada. Tentando porta ${portToTry + 1} (tentativa ${currentRetry}/${MAX_PORT_RETRIES})...`);
+        startServer(portToTry + 1);
+      } else {
+        console.error(`[BBVision Backend Erro Fatal] Limite de tentativas de portas atingido (${MAX_PORT_RETRIES}). Libere uma porta e reinicie.`);
+        process.exit(1);
+      }
     } else {
       console.error('[BBVision Backend Erro Fatal]:', err);
+      process.exit(1);
     }
   });
 }
 
-startServer(PORT);
+// ----------------------------------------------------------------------------
+// GRACEFUL SHUTDOWN (Encerramento Gracioso em Hostinger / Docker / PM2)
+// ----------------------------------------------------------------------------
+function handleShutdown(signal) {
+  console.log(`\n[BBVision Backend] Recebido sinal ${signal}. Iniciando Graceful Shutdown...`);
+  server.close(() => {
+    console.log('[BBVision Backend] Todas as conexões ativas foram finalizadas. Servidor desligado com segurança.');
+    process.exit(0);
+  });
+
+  // Força encerramento se travar por mais de 5 segundos
+  setTimeout(() => {
+    console.error('[BBVision Backend] Encerramento forçado por timeout de shutdown.');
+    process.exit(1);
+  }, 5000).unref();
+}
+
+process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+process.on('SIGINT', () => handleShutdown('SIGINT'));
+
+// Captura de exceções globais para evitar crashes silenciosos
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[BBVision Backend] Rejeição de Promise não tratada:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[BBVision Backend] Exceção não capturada:', err);
+});
+
+startServer(INITIAL_PORT);
+
+module.exports = server;

@@ -1,26 +1,20 @@
 /**
- * BBVision - Controller de Obras
- * Em conformidade com a Seção 8.2 do Documento de Entrega TakeOff
+ * BBVision - Controller de Obras e Unidades do Banco do Brasil
+ * Em estrita conformidade com a Seção 8.2 do Documento de Entrega TakeOff
  */
+
 const mockData = require('../mockData');
-const { supabase, isConfigured } = require('../config/supabase');
+const { sanitizeString } = require('../utils/securityUtils');
 
 const obrasController = {
   /**
    * GET /api/obras
-   * Headers: Authorization: Bearer <token>
-   * Retorno (200): [ { id, nome, endereco, responsavel, status } ]
+   * Headers: Authorization: Bearer <token> (ou opcional dev)
+   * Retorno (200): [ { id, nome, endereco, responsavel, status, ... } ]
    */
   async listar(req, res, next) {
     try {
-      if (isConfigured && supabase) {
-        const { data, error } = await supabase.from('obras').select('*').order('created_at', { ascending: false });
-        if (!error && data && data.length > 0) {
-          return res.status(200).json(data);
-        }
-      }
-
-      const obras = mockData.listObras();
+      const obras = await mockData.listObrasAsync();
       return res.status(200).json(obras);
     } catch (err) {
       next(err);
@@ -34,10 +28,13 @@ const obrasController = {
   async obterPorId(req, res, next) {
     try {
       const { id } = req.params;
-      const obra = mockData.findObraById(id);
+      const obra = await mockData.findObraByIdAsync(id);
 
       if (!obra) {
-        return res.status(404).json({ erro: 'Obra não encontrada.' });
+        return res.status(404).json({
+          status: 404,
+          erro: 'Obra não encontrada no cadastro.',
+        });
       }
 
       // Busca relatórios vinculados a esta obra
@@ -54,25 +51,29 @@ const obrasController = {
 
   /**
    * POST /api/obras
-   * Cadastra uma nova obra para fiscalização remota
+   * Cadastra uma nova obra ou agência para fiscalização remota
    */
   async criar(req, res, next) {
     try {
-      const { nome, endereco, responsavel, status } = req.body;
+      const { nome, endereco, responsavel, status, tipo } = req.body;
 
       if (!nome || !endereco) {
-        return res.status(400).json({ erro: 'Nome e endereço são obrigatórios para cadastrar uma obra.' });
+        return res.status(400).json({
+          status: 400,
+          erro: 'Nome e endereço completo da unidade são obrigatórios.',
+        });
       }
 
-      const novaObra = mockData.createObra({
-        nome,
-        endereco,
-        responsavel: responsavel || (req.user && req.user.nome) || 'Responsável Técnico',
-        status: status || 'REGULAR',
+      const novaObra = await mockData.createObraAsync({
+        nome: sanitizeString(nome),
+        endereco: sanitizeString(endereco),
+        responsavel: sanitizeString(responsavel || (req.user && req.user.nome) || 'Rodrigo Silva'),
+        status: status === 'PENDENTE_AJUSTE' ? 'PENDENTE_AJUSTE' : 'REGULAR',
+        tipo: sanitizeString(tipo || 'Reforma e Adequação'),
       });
 
       return res.status(201).json({
-        mensagem: 'Obra cadastrada com sucesso.',
+        mensagem: 'Obra cadastrada com sucesso para fiscalização remota.',
         obra: novaObra,
       });
     } catch (err) {
