@@ -108,6 +108,10 @@ class AppState {
       }
     ];
 
+    const agoraInicial = new Date();
+    const dataInicial = agoraInicial.toLocaleDateString('pt-BR');
+    const horaInicial = agoraInicial.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
     // Estado da Vistoria Ativa (Conforme Fluxo dos Mockups e Documento)
     this.currentVistoria = {
       relatorioId: null,
@@ -120,11 +124,12 @@ class AppState {
       tipoLocal: 'Agência Bancária',
       tipoLocalDesc: 'Fachada, interior, caixa forte',
       fotoUrl: 'prints/WhatsApp Image 2026-10-08 at 11.43.18.jpeg',
-      fotoCamera: 'prints/WhatsApp Image 2026-10-08 at 11.43.17.jpeg',
+      fotoCamera: null,
       fotoBase64: null,
-      dataFoto: '10/10/2025',
-      horaFoto: '14:30',
-      localizacaoFoto: 'Av. Paulista, 1000',
+      dataFoto: dataInicial,
+      horaFoto: horaInicial,
+      localizacaoFoto: 'Obtendo GPS em tempo real...',
+      coordenadas: null,
       codigoUnico: '8F4A2C19E70B34DF',
       codigoHexDoc: '8F4A2C19E70B34DF',
       hashSha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
@@ -220,6 +225,9 @@ class AppState {
 
     // Carrega dados iniciais da API se online
     this.carregarDadosIniciais();
+
+    // Inicia geolocalização em tempo real global
+    this.iniciarGeolocalizacaoGlobal();
   }
 
   async carregarDadosIniciais() {
@@ -336,6 +344,88 @@ class AppState {
     this.currentVistoria.hashSha256 = resultado.hash_integridade || this.currentVistoria.hashSha256;
     this.currentVistoria.validacaoManual = resultado.validacao_manual || resultado.status === 'VALIDACAO_MANUAL';
     this.notify();
+  }
+
+  setLocalizacaoFoto(local, coords = null, shouldNotify = true) {
+    if (this.currentVistoria.localizacaoFoto === local && !coords) return;
+    this.currentVistoria.localizacaoFoto = local;
+    if (coords) this.currentVistoria.coordenadas = coords;
+    if (shouldNotify && this.currentPage !== 'camera-ia') {
+      this.notify();
+    }
+  }
+
+  atualizarDataHoraCaptura(data = null, hora = null) {
+    const agora = new Date();
+    this.currentVistoria.dataFoto = data || agora.toLocaleDateString('pt-BR');
+    this.currentVistoria.horaFoto = hora || agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    this.currentVistoria.timestampFoto = agora.toISOString();
+    if (this.currentPage !== 'camera-ia') {
+      this.notify();
+    }
+  }
+
+  iniciarGeolocalizacaoGlobal() {
+    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const precisao = pos.coords.accuracy;
+          await this.atualizarLocalizacaoComCoords(lat, lng, precisao);
+        },
+        (err) => {
+          console.warn('[GPS Global] Erro ao obter GPS inicial:', err.message);
+          if (!this.currentVistoria.coordenadas) {
+            this.currentVistoria.localizacaoFoto = this.currentVistoria.endereco 
+              ? `${this.currentVistoria.endereco} (GPS pendente)` 
+              : 'GPS pendente de permissão';
+            if (this.currentPage !== 'camera-ia') {
+              this.notify();
+            }
+          }
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+    }
+  }
+
+  async atualizarLocalizacaoComCoords(lat, lng, precisao) {
+    this.currentVistoria.coordenadas = { lat, lng, precisao };
+    const coordsStr = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    let localFormatado = `GPS: ${coordsStr} (±${Math.round(precisao)}m)`;
+
+    try {
+      const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(3500)
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const addr = data.address || {};
+        const rua = addr.road || addr.street || addr.pedestrian || addr.suburb || '';
+        const num = addr.house_number ? `, ${addr.house_number}` : '';
+        const bairro = addr.suburb || addr.neighbourhood || '';
+        const cidade = addr.city || addr.town || addr.village || addr.municipality || '';
+        const uf = addr.state_code || addr.state || '';
+
+        let end = rua ? `${rua}${num}` : '';
+        if (bairro && end) end += ` - ${bairro}`;
+        if (cidade) end += `, ${cidade}`;
+        if (uf) end += `/${uf}`;
+
+        if (end) {
+          localFormatado = `${end} (${coordsStr})`;
+        }
+      }
+    } catch (e) {
+      // Mantém formato GPS padrão
+    }
+
+    this.currentVistoria.localizacaoFoto = localFormatado;
+    if (this.currentPage !== 'camera-ia') {
+      this.notify();
+    }
   }
 
   async finalizarVistoriaComAssinatura(assinaturaDataUrl) {

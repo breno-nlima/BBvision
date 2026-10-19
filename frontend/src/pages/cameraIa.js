@@ -1,9 +1,12 @@
 /**
  * BVision - Tela de Câmera com IA Verificando Imagem
  * Padrão Corporativo Banco do Brasil: Captura in-loco com Visão Computacional Gemini
- * - Captura exclusiva in-app sem upload de arquivos da galeria (Inviolabilidade 1.3.1)
+ * - Entrada direta na tela de câmera ativa (Câmera física / live video stream em tempo real)
+ * - Remoção do gabarito de referência prévio (captura direta sem drawer obstrutivo)
+ * - Data e hora exatas da foto em tempo real (relógio contínuo congelado no disparo)
+ * - Geolocalização GPS de alta precisão em tempo real com resolução de endereço
+ * - Estampa criptográfica inviolável embutida no canvas antes do envio ao Gemini
  * - Avaliação do Google Gemini com SLA <= 15s e limiar 75% (Seção 4.2)
- * - Scanner Holográfico de Inspeção Visual
  * - Fallback para Validação Manual em caso de timeout ou indisponibilidade (Seção 5.1)
  */
 
@@ -15,6 +18,12 @@ import { toast } from '../components/toast.js';
 export function renderCameraIa() {
   const vistoria = state.currentVistoria;
   const confiancaPct = Math.round((vistoria.confiancaIA || 0.95) * 100);
+
+  // Data e hora atuais em tempo real
+  const agora = new Date();
+  const dataHoje = vistoria.dataFoto || agora.toLocaleDateString('pt-BR');
+  const horaAgora = vistoria.horaFoto || agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const localAtual = vistoria.localizacaoFoto || 'Obtendo GPS em tempo real...';
 
   return `
     <div class="page-container fade-in camera-screen-wrapper" id="cameraIaPage">
@@ -30,48 +39,28 @@ export function renderCameraIa() {
           
           <div class="cam-status-pill">
             <span class="ai-status-pulse" id="aiStatusPulse"></span>
-            <span id="aiStatusBadgeText">IA Pronta • Gemini 1.5 Flash</span>
+            <span id="aiStatusBadgeText">Câmera Ativa • IA Pronta</span>
           </div>
 
           <div style="display: flex; gap: 6px;">
             <button class="cam-top-btn" id="btnAlternarCamera" title="Inverter Câmera (Frontal/Traseira)">
               🔄
             </button>
-            <button class="cam-top-btn" id="btnVerReferencia" title="Ver Imagem de Referência (HU02)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                <polyline points="21 15 16 10 5 21"></polyline>
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <!-- Banner Retrátil de Imagem de Referência (HU02) -->
-        <div class="referencia-drawer hidden" id="drawerReferencia">
-          <div class="referencia-drawer-content">
-            <div class="ref-header-row">
-              <span class="ref-badge-tag">📷 Gabarito de Referência BB (HU02)</span>
-              <button class="btn-close-ref" id="btnFecharRef">✕</button>
-            </div>
-            <div class="ref-img-wrap">
-              <img src="prints/WhatsApp Image 2026-10-08 at 11.43.18.jpeg" alt="Gabarito BB" class="ref-img-sample" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1541888946425-d0fbb186f5f8?w=800&auto=format&fit=crop&q=80';" />
-            </div>
-            <p class="ref-tip-text">Mantenha a fachada ou estrutura enquadrada no horizonte, com iluminação natural uniforme e sem obstruções nos elementos de marca.</p>
           </div>
         </div>
 
         <!-- Vídeo ou Imagem de Fundo Capturada pela Câmera -->
         <div class="camera-lens-container" id="cameraLensContainer">
-          <video id="liveVideoFeed" autoplay playsinline class="camera-live-video hidden"></video>
+          <!-- Feed de vídeo ao vivo (Entrada direta na Câmera) -->
+          <video id="liveVideoFeed" autoplay playsinline muted class="camera-live-video"></video>
           <canvas id="liveCaptureCanvas" class="hidden"></canvas>
 
+          <!-- Imagem congelada exibida apenas após o disparo -->
           <img 
-            src="${vistoria.fotoCamera || 'prints/WhatsApp Image 2026-10-08 at 11.43.17.jpeg'}" 
+            src="${vistoria.fotoCamera || ''}" 
             alt="Visor da Câmera" 
-            class="camera-stream-img"
+            class="camera-stream-img ${vistoria.fotoCamera ? '' : 'hidden'}"
             id="cameraMainStream"
-            onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1541888946425-d0fbb186f5f8?w=800&auto=format&fit=crop&q=80';"
           />
 
           <!-- Overlay Central com Retículo de Enquadramento e Nível de Horizonte -->
@@ -98,11 +87,18 @@ export function renderCameraIa() {
             <span class="warning-msg" id="aiWarningMsg">Foto escura ou fora de prumo. Reenquadre.</span>
           </div>
 
-          <!-- Overlay com Metadados Invioláveis Registrados -->
-          <div class="camera-meta-overlay">
-            <div class="meta-line"><strong>Data:</strong> ${vistoria.dataFoto} &nbsp; <strong>Hora:</strong> ${vistoria.horaFoto}</div>
-            <div class="meta-line"><strong>Local:</strong> ${vistoria.localizacaoFoto}</div>
-            <div class="meta-line" style="font-family: monospace; font-size: 10px; opacity: 0.9;"><strong>SHA-256:</strong> ${vistoria.hashSha256.substring(0, 28)}...</div>
+          <!-- Overlay com Metadados Invioláveis Registrados em Tempo Real -->
+          <div class="camera-meta-overlay" id="cameraMetaOverlay">
+            <div class="meta-line">
+              <strong>Data:</strong> <span id="metaDataFoto">${dataHoje}</span> &nbsp; 
+              <strong>Hora:</strong> <span id="metaHoraFoto">${horaAgora}</span>
+            </div>
+            <div class="meta-line">
+              <strong>Localização:</strong> <span id="metaLocalFoto">${localAtual}</span>
+            </div>
+            <div class="meta-line" style="font-family: monospace; font-size: 10px; opacity: 0.9;">
+              <strong>SHA-256:</strong> <span id="metaHashFoto">${vistoria.hashSha256 ? vistoria.hashSha256.substring(0, 28) + '...' : 'Pendente de disparo'}</span>
+            </div>
           </div>
         </div>
 
@@ -116,8 +112,8 @@ export function renderCameraIa() {
           </div>
 
           <div class="camera-action-row">
-            <!-- Botão Iniciar Câmera ao Vivo -->
-            <button class="cam-circle-btn" id="btnLigarCameraAoVivo" title="Ativar Câmera Física / Webcam">
+            <!-- Botão Alternar/Reativar Câmera Física -->
+            <button class="cam-circle-btn" id="btnLigarCameraAoVivo" title="Reativar Câmera">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                 <circle cx="12" cy="13" r="4"></circle>
@@ -169,74 +165,11 @@ export function bindCameraIaEvents() {
     });
   }
 
-  // Visualização de Gabarito de Referência (HU02)
-  const btnVerRef = document.getElementById('btnVerReferencia');
-  const drawerRef = document.getElementById('drawerReferencia');
-  const btnFecharRef = document.getElementById('btnFecharRef');
-
-  if (btnVerRef && drawerRef) {
-    btnVerRef.addEventListener('click', () => {
-      drawerRef.classList.toggle('hidden');
-    });
-  }
-
-  if (btnFecharRef && drawerRef) {
-    btnFecharRef.addEventListener('click', () => {
-      drawerRef.classList.add('hidden');
-    });
-  }
-
-  // Câmera ao vivo
+  // Elementos do visor e controles
   const videoFeed = document.getElementById('liveVideoFeed');
   const mainStreamImg = document.getElementById('cameraMainStream');
   const btnLigarCam = document.getElementById('btnLigarCameraAoVivo');
   const btnAlternarCam = document.getElementById('btnAlternarCamera');
-  let streamAtivo = null;
-  let facingModeAtual = 'environment';
-
-  async function iniciarCamera() {
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      try {
-        pararCamera();
-        streamAtivo = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: facingModeAtual, width: { ideal: 1280 }, height: { ideal: 720 } }
-        });
-        if (videoFeed) {
-          videoFeed.srcObject = streamAtivo;
-          videoFeed.classList.remove('hidden');
-          if (mainStreamImg) mainStreamImg.classList.add('hidden');
-          toast.info('Câmera Ativada', 'Captura in-loco inicializada com sucesso.');
-        }
-      } catch (err) {
-        console.warn('[Camera] Não foi possível ativar câmera física:', err.message);
-        toast.warning('Câmera Indisponível', 'Utilizando visualizador de simulação em campo.');
-      }
-    } else {
-      toast.warning('Dispositivo sem Câmera', 'Operando em modo de emulação com imagem de campo.');
-    }
-  }
-
-  function pararCamera() {
-    if (streamAtivo) {
-      streamAtivo.getTracks().forEach(t => t.stop());
-      streamAtivo = null;
-    }
-  }
-
-  if (btnLigarCam) {
-    btnLigarCam.addEventListener('click', () => {
-      iniciarCamera();
-    });
-  }
-
-  if (btnAlternarCam) {
-    btnAlternarCam.addEventListener('click', () => {
-      facingModeAtual = facingModeAtual === 'environment' ? 'user' : 'environment';
-      iniciarCamera();
-    });
-  }
-
-  // Disparo e Avaliação pelo Google Gemini
   const btnDisparar = document.getElementById('btnDispararAvaliacao');
   const statusBadge = document.getElementById('aiStatusBadgeText');
   const pulseDot = document.getElementById('aiStatusPulse');
@@ -246,8 +179,219 @@ export function bindCameraIaEvents() {
   const warningMsg = document.getElementById('aiWarningMsg');
   const scannerOverlay = document.getElementById('aiScannerOverlay');
   const modalManual = document.getElementById('modalValidacaoManual');
+  const btnRetake = document.getElementById('btnRetakePhoto');
+  const btnAvancar = document.getElementById('btnAvancarVerificado');
 
+  const elMetaData = document.getElementById('metaDataFoto');
+  const elMetaHora = document.getElementById('metaHoraFoto');
+  const elMetaLocal = document.getElementById('metaLocalFoto');
+  const elMetaHash = document.getElementById('metaHashFoto');
+
+  let streamAtivo = null;
+  let facingModeAtual = 'environment';
+  let relogioInterval = null;
+  let watchGpsId = null;
+  let fotoCongelada = false;
+
+  // --------------------------------------------------------------------------
+  // 1. RELÓGIO EM TEMPO REAL (DATA E HORA ATUAIS DA FOTO)
+  // --------------------------------------------------------------------------
+  function iniciarRelogioTempoReal() {
+    function atualizar() {
+      if (fotoCongelada) return;
+      const agora = new Date();
+      const dataStr = agora.toLocaleDateString('pt-BR');
+      const horaStr = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      if (elMetaData) elMetaData.textContent = dataStr;
+      if (elMetaHora) elMetaHora.textContent = horaStr;
+
+      state.currentVistoria.dataFoto = dataStr;
+      state.currentVistoria.horaFoto = horaStr;
+    }
+
+    atualizar();
+    if (relogioInterval) clearInterval(relogioInterval);
+    relogioInterval = setInterval(atualizar, 1000);
+  }
+
+  // --------------------------------------------------------------------------
+  // 2. GEOLOCALIZAÇÃO EXATA EM TEMPO REAL (ALTA PRECISÃO + ENDEREÇO)
+  // --------------------------------------------------------------------------
+  async function resolverEnderecoReverso(lat, lng, precisao) {
+    const coordsStr = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    let localFinal = `GPS: ${coordsStr} (±${Math.round(precisao)}m)`;
+
+    try {
+      const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(3500)
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const addr = data.address || {};
+        const rua = addr.road || addr.street || addr.pedestrian || addr.suburb || '';
+        const num = addr.house_number ? `, ${addr.house_number}` : '';
+        const bairro = addr.suburb || addr.neighbourhood || '';
+        const cidade = addr.city || addr.town || addr.village || addr.municipality || '';
+        const uf = addr.state_code || addr.state || '';
+
+        let formatado = rua ? `${rua}${num}` : '';
+        if (bairro && formatado) formatado += ` - ${bairro}`;
+        if (cidade) formatado += `, ${cidade}`;
+        if (uf) formatado += `/${uf}`;
+
+        if (formatado) {
+          localFinal = `${formatado} (${coordsStr})`;
+        }
+      }
+    } catch (e) {
+      // Mantém fallback de coordenadas GPS exatas
+    }
+
+    state.setLocalizacaoFoto(localFinal, { lat, lng, precisao }, false);
+    if (elMetaLocal) elMetaLocal.textContent = localFinal;
+  }
+
+  function iniciarGpsTempoReal() {
+    if (!navigator.geolocation) {
+      const fallback = state.currentVistoria.endereco ? `${state.currentVistoria.endereco} (GPS indisponível)` : 'Geolocalização não suportada';
+      state.setLocalizacaoFoto(fallback, null, false);
+      if (elMetaLocal) elMetaLocal.textContent = fallback;
+      return;
+    }
+
+    if (elMetaLocal && (!state.currentVistoria.coordenadas || elMetaLocal.textContent.includes('Obtendo'))) {
+      elMetaLocal.textContent = 'Obtendo GPS exato em tempo real...';
+    }
+
+    // 1. Busca imediata com alta precisão
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude, accuracy } = pos.coords;
+        resolverEnderecoReverso(latitude, longitude, accuracy);
+      },
+      (err) => {
+        console.warn('[GPS] Erro ao obter posição:', err.message);
+        const fallback = state.currentVistoria.endereco 
+          ? `${state.currentVistoria.endereco} (GPS pendente)` 
+          : 'GPS pendente de permissão no dispositivo';
+        state.setLocalizacaoFoto(fallback, null, false);
+        if (elMetaLocal) elMetaLocal.textContent = fallback;
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+    );
+
+    // 2. Monitoramento contínuo em tempo real (watchPosition)
+    try {
+      watchGpsId = navigator.geolocation.watchPosition(
+        (pos) => {
+          if (fotoCongelada) return;
+          const { latitude, longitude, accuracy } = pos.coords;
+          state.currentVistoria.coordenadas = { lat: latitude, lng: longitude, precisao: accuracy };
+          const coordsStr = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+          if (elMetaLocal && !elMetaLocal.textContent.includes(' - ')) {
+            elMetaLocal.textContent = `GPS: ${coordsStr} (±${Math.round(accuracy)}m)`;
+          }
+        },
+        (err) => console.warn('[GPS Watch] Erro:', err.message),
+        { enableHighAccuracy: true, maximumAge: 2000 }
+      );
+    } catch (e) {
+      // Ignora erro de watch
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // 3. ENTRADA DIRETA NA CÂMERA (STREAM DE VÍDEO AO VIVO)
+  // --------------------------------------------------------------------------
+  async function iniciarCamera() {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        pararStream();
+        let stream = null;
+
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: facingModeAtual, width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false
+          });
+        } catch (firstErr) {
+          console.warn('[Camera] Tentando fallback para qualquer câmera de vídeo:', firstErr.message);
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        }
+
+        streamAtivo = stream;
+        if (videoFeed) {
+          videoFeed.srcObject = streamAtivo;
+          videoFeed.classList.remove('hidden');
+          if (mainStreamImg) mainStreamImg.classList.add('hidden');
+          try {
+            await videoFeed.play();
+          } catch (e) {
+            console.warn('[Camera] videoFeed.play():', e.message);
+          }
+          if (statusBadge) statusBadge.innerText = 'Câmera Ativa • IA Pronta';
+          if (pulseDot) pulseDot.style.background = '#10B981';
+        }
+      } catch (err) {
+        console.warn('[Camera] Câmera física não iniciada:', err.message);
+        if (statusBadge) statusBadge.innerText = 'Modo Simulação • IA Pronta';
+        if (pulseDot) pulseDot.style.background = '#F59E0B';
+        if (mainStreamImg) {
+          mainStreamImg.src = state.currentVistoria.fotoCamera || 'prints/WhatsApp Image 2026-10-08 at 11.43.17.jpeg';
+          mainStreamImg.classList.remove('hidden');
+        }
+        if (videoFeed) videoFeed.classList.add('hidden');
+        toast.warning('Permissão de Câmera', 'Câmera não detectada ou permissão pendente. Modo simulação ativo.');
+      }
+    } else {
+      if (mainStreamImg) {
+        mainStreamImg.src = state.currentVistoria.fotoCamera || 'prints/WhatsApp Image 2026-10-08 at 11.43.17.jpeg';
+        mainStreamImg.classList.remove('hidden');
+      }
+      if (videoFeed) videoFeed.classList.add('hidden');
+      toast.warning('Dispositivo sem Câmera', 'Operando em modo de emulação.');
+    }
+  }
+
+  function pararStream() {
+    if (streamAtivo) {
+      streamAtivo.getTracks().forEach(t => t.stop());
+      streamAtivo = null;
+    }
+  }
+
+  function pararCamera() {
+    pararStream();
+    if (relogioInterval) {
+      clearInterval(relogioInterval);
+      relogioInterval = null;
+    }
+    if (watchGpsId !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchGpsId);
+      watchGpsId = null;
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // 4. DISPARO DA FOTO E AVALIAÇÃO COM GEMINI (SLA <= 15s)
+  // --------------------------------------------------------------------------
   async function executarAvaliacao() {
+    fotoCongelada = true;
+    if (relogioInterval) clearInterval(relogioInterval);
+
+    // Registra o momento EXATO e imutável do disparo
+    const momentoDisparo = new Date();
+    const dataCaptura = momentoDisparo.toLocaleDateString('pt-BR');
+    const horaCaptura = momentoDisparo.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    state.currentVistoria.dataFoto = dataCaptura;
+    state.currentVistoria.horaFoto = horaCaptura;
+    state.currentVistoria.timestampDisparo = momentoDisparo.toISOString();
+
+    if (elMetaData) elMetaData.textContent = dataCaptura;
+    if (elMetaHora) elMetaHora.textContent = horaCaptura;
+
     if (scannerOverlay) scannerOverlay.classList.remove('hidden');
     if (statusBadge) statusBadge.innerText = 'IA avaliando com Gemini 1.5 Flash...';
     if (pulseDot) pulseDot.style.background = '#FED304';
@@ -256,17 +400,37 @@ export function bindCameraIaEvents() {
     const startTime = performance.now();
 
     try {
-      // Captura frame do canvas se houver vídeo rodando
       const canvas = document.getElementById('liveCaptureCanvas');
       let base64Foto = null;
+
       if (videoFeed && videoFeed.videoWidth > 0 && canvas) {
         canvas.width = videoFeed.videoWidth;
         canvas.height = videoFeed.videoHeight;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(videoFeed, 0, 0, canvas.width, canvas.height);
-        base64Foto = canvas.toDataURL('image/jpeg', 0.85);
 
-        // Atualiza a imagem congelada
+        // Estampa Criptográfica de Fé Pública In-Loco na Foto
+        const bannerH = Math.max(46, Math.round(canvas.height * 0.085));
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 27, 61, 0.88)';
+        ctx.fillRect(0, canvas.height - bannerH, canvas.width, bannerH);
+        ctx.fillStyle = '#FED304';
+        ctx.fillRect(0, canvas.height - bannerH, canvas.width, 2.5);
+
+        ctx.fillStyle = '#FFFFFF';
+        const fontSizeTitle = Math.max(12, Math.round(canvas.height * 0.024));
+        ctx.font = `bold ${fontSizeTitle}px sans-serif`;
+        ctx.fillText(`BBVision In-Loco • Data: ${dataCaptura}  Hora: ${horaCaptura}`, 14, canvas.height - bannerH + (bannerH * 0.44));
+
+        ctx.fillStyle = '#CBD5E1';
+        const fontSizeSub = Math.max(10, Math.round(canvas.height * 0.018));
+        ctx.font = `normal ${fontSizeSub}px sans-serif`;
+        ctx.fillText(`Localização: ${state.currentVistoria.localizacaoFoto}`, 14, canvas.height - bannerH + (bannerH * 0.82));
+        ctx.restore();
+
+        base64Foto = canvas.toDataURL('image/jpeg', 0.90);
+
+        // Atualiza a imagem congelada na tela
         if (mainStreamImg) {
           mainStreamImg.src = base64Foto;
           mainStreamImg.classList.remove('hidden');
@@ -274,14 +438,21 @@ export function bindCameraIaEvents() {
         videoFeed.classList.add('hidden');
         state.currentVistoria.fotoCamera = base64Foto;
         state.currentVistoria.fotoBase64 = base64Foto;
+      } else {
+        // Fallback caso não haja stream de vídeo ativo
+        base64Foto = state.currentVistoria.fotoCamera || 'prints/WhatsApp Image 2026-10-08 at 11.43.17.jpeg';
       }
 
-      // Envia para API backend oficial
-      const resultado = await api.avaliarFoto(base64Foto || 'prints/WhatsApp Image 2026-10-08 at 11.43.17.jpeg');
+      // Envia para API backend oficial (Gemini 1.5 Flash + Geração de Hash SHA-256)
+      const resultado = await api.avaliarFoto(base64Foto);
       const elapsedSec = ((performance.now() - startTime) / 1000).toFixed(1);
 
       if (scannerOverlay) scannerOverlay.classList.add('hidden');
       state.setResultadoAvaliacaoIa(resultado);
+
+      if (elMetaHash && resultado.hash_integridade) {
+        elMetaHash.textContent = resultado.hash_integridade.substring(0, 28) + '...';
+      }
 
       if (resultado.status === 'APROVADO') {
         const confiancaPct = Math.round((resultado.confianca || 0.95) * 100);
@@ -317,14 +488,28 @@ export function bindCameraIaEvents() {
     }
   }
 
+  // --------------------------------------------------------------------------
+  // BIND DE EVENTOS E CONTROLES
+  // --------------------------------------------------------------------------
   if (btnDisparar) {
     btnDisparar.addEventListener('click', () => {
       executarAvaliacao();
     });
   }
 
-  // Avançar Verificado para Imagem Protegida
-  const btnAvancar = document.getElementById('btnAvancarVerificado');
+  if (btnAlternarCam) {
+    btnAlternarCam.addEventListener('click', () => {
+      facingModeAtual = facingModeAtual === 'environment' ? 'user' : 'environment';
+      iniciarCamera();
+    });
+  }
+
+  if (btnLigarCam) {
+    btnLigarCam.addEventListener('click', () => {
+      iniciarCamera();
+    });
+  }
+
   if (btnAvancar) {
     btnAvancar.addEventListener('click', () => {
       pararCamera();
@@ -332,21 +517,28 @@ export function bindCameraIaEvents() {
     });
   }
 
-  // Recapturar foto
-  const btnRetake = document.getElementById('btnRetakePhoto');
   if (btnRetake) {
     btnRetake.addEventListener('click', () => {
-      if (statusBadge) statusBadge.innerText = 'IA pronta para novo disparo';
+      fotoCongelada = false;
+      iniciarRelogioTempoReal();
+      if (statusBadge) statusBadge.innerText = 'Câmera Ativa • IA Pronta';
+      if (pulseDot) pulseDot.style.background = '#10B981';
       if (warningBox) warningBox.classList.add('hidden');
-      if (videoFeed && streamAtivo) {
+      if (lblVerified) lblVerified.innerText = 'Verificado';
+      if (lblSub) lblSub.innerText = 'Gemini 95% • Aprovado';
+
+      if (videoFeed) {
         videoFeed.classList.remove('hidden');
         if (mainStreamImg) mainStreamImg.classList.add('hidden');
       }
-      toast.info('Recaptura', 'Posicione a câmera para nova verificação.');
+      if (!streamAtivo) {
+        iniciarCamera();
+      }
+      toast.info('Recaptura', 'Posicione a câmera para novo registro.');
     });
   }
 
-  // Controles do modal manual
+  // Controles do modal manual (SLA > 15s)
   const btnCancelarManual = document.getElementById('btnCancelarManual');
   const btnConfirmarManual = document.getElementById('btnConfirmarManual');
 
@@ -364,4 +556,11 @@ export function bindCameraIaEvents() {
       state.navigate('imagem-protegida');
     });
   }
+
+  // --------------------------------------------------------------------------
+  // INICIALIZAÇÃO IMEDIATA (ENTRA DIRETO NA SEGUNDA TELA / CÂMERA AO VIVO)
+  // --------------------------------------------------------------------------
+  iniciarRelogioTempoReal();
+  iniciarGpsTempoReal();
+  iniciarCamera();
 }

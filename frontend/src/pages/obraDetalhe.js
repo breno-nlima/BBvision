@@ -40,7 +40,7 @@ export function renderObraDetalhe() {
           onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1541888946425-d0fbb186f5f8?w=800&auto=format&fit=crop&q=80';"
         />
         <div class="obra-foto-overlay">
-          <div class="meta-tag">Date: ${vistoria.dataFoto} ${vistoria.horaFoto}</div>
+          <div class="meta-tag">Data: ${vistoria.dataFoto} às ${vistoria.horaFoto}</div>
           <div class="meta-tag">Localização: ${vistoria.localizacaoFoto}</div>
         </div>
       </div>

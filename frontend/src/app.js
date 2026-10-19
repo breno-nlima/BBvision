@@ -44,9 +44,15 @@ class BVisionApp {
     this.render();
   }
 
-  render() {
+  render(force = false) {
     const page = state.currentPage;
     const userRole = state.user?.cargo || 'empreiteira';
+
+    // Evita loop de re-renderização e tela piscando na câmera
+    if (this.currentRenderedPage === page && page === 'camera-ia' && !force) {
+      return;
+    }
+    this.currentRenderedPage = page;
 
     // Regra de Autenticação Real: Redireciona para login se não autenticado
     if (!state.user && page !== 'login' && page !== 'validador-publico') {

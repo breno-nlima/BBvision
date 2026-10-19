@@ -29,8 +29,8 @@ export function renderChecklistPergunta() {
             ${Icons.logoBVisionBadge(26)}
           </div>
           <div class="agencia-meta-text">
-            <strong>Agência: 1234 — Centro</strong>
-            <span>Av. Paulista, 1000 — São Paulo/SP</span>
+            <strong>${vistoria.obraNome || 'Agência BB'}</strong>
+            <span>${vistoria.localizacaoFoto || vistoria.endereco || 'Localização em tempo real'}</span>
             <span>Data: ${vistoria.dataFoto} | Hora: ${vistoria.horaFoto}</span>
           </div>
         </div>

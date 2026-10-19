@@ -1167,10 +1167,14 @@
 }
 
 .camera-stream-img {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+  z-index: 1;
 }
 
 .camera-focus-reticle {
@@ -1301,14 +1305,24 @@
 .camera-meta-overlay {
   position: absolute;
   bottom: 16px;
-  left: 20px;
+  left: 16px;
+  right: 16px;
+  max-width: calc(100% - 32px);
+  background: rgba(0, 27, 61, 0.80);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  border-left: 3px solid #FED304;
   color: #FFFFFF;
-  font-size: 12px;
-  font-weight: var(--font-weight-semibold);
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  z-index: 12;
+  pointer-events: none;
 }
 
 .camera-bottom-controls {
@@ -2800,9 +2814,13 @@
 
 /* Câmera Física Feed */
 .camera-live-video {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  z-index: 1;
 }
 
 .shutter-btn {
