@@ -131,6 +131,7 @@ export function bindChecklistDinamicoEvents() {
   const btnVoltar = document.getElementById('btnVoltarPerguntaAnterior');
   if (btnVoltar) {
     btnVoltar.addEventListener('click', () => {
+      state.checklistQuestionIndex = 3;
       state.navigate('checklist-pergunta');
     });
   }

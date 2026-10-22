@@ -138,6 +138,13 @@ class AppState {
       validacaoManual: false,
       respostas: {
         fachadaLegivel: 'Sim',
+        segurancaEpc: [
+          'Isolamento perimetral e tapumes íntegros',
+          'Sinalização visual de perigo e rotas de pedestres',
+          'Uso obrigatório de EPIs completos pela equipe'
+        ],
+        relatoEstrutural: 'Alvenaria alinhada e nivelada. Ausência de trincas estruturais e juntas regulares conforme projeto executivo do BB.',
+        acessibilidade: 'Totalmente acessível (Piso tátil e rampa nivelada sem degraus)',
         sinalizacao: 'Sim',
         limpeza: 5,
         cameras: 4,
@@ -411,22 +418,44 @@ class AppState {
         console.warn('[State] Aviso ao vincular foto na API:', errFoto.message);
       }
 
-      // 3. Salvar respostas do checklist
+      // 3. Salvar respostas do checklist (Passo a passo com 4 perguntas + dinâmico)
+      const epcFormatado = Array.isArray(this.currentVistoria.respostas.segurancaEpc)
+        ? this.currentVistoria.respostas.segurancaEpc.join('; ')
+        : (this.currentVistoria.respostas.segurancaEpc || 'Isolamento e EPIs ativos');
+
       await api.salvarRespostas(relId, [
         {
-          pergunta: 'Fachada da agência está legível?',
+          pergunta: '1. Fachada da agência está legível e conforme padrão BB?',
           valor: this.currentVistoria.respostas.fachadaLegivel || 'Sim',
           tipo: 'multipla_escolha',
-          sugestao_ia: 'Fachada nivelada com gabarito de referência.'
+          sugestao_ia: 'Fachada frontal alinhada ao padrão visual oficial do Banco do Brasil.'
         },
         {
-          pergunta: 'Condição da sinalização',
+          pergunta: '2. Itens de segurança, proteção coletiva (EPC) e sinalização',
+          valor: epcFormatado,
+          tipo: 'caixa_selecao',
+          sugestao_ia: 'Itens essenciais de proteção coletiva e sinalização identificados in loco.'
+        },
+        {
+          pergunta: '3. Relato técnico sobre alvenaria, acabamentos e anomalias',
+          valor: this.currentVistoria.respostas.relatoEstrutural || this.currentVistoria.respostas.observacoes || 'Alvenaria e vigas em conformidade executiva.',
+          tipo: 'texto',
+          sugestao_ia: this.currentVistoria.respostas.relatoEstrutural || this.currentVistoria.respostas.observacoes
+        },
+        {
+          pergunta: '4. Calçada externa e acessibilidade da entrada principal (NBR 9050)',
+          valor: this.currentVistoria.respostas.acessibilidade || 'Totalmente acessível (Piso tátil e rampa)',
+          tipo: 'multipla_escolha',
+          sugestao_ia: 'Acessibilidade em conformidade com as diretrizes de mobilidade reduzida do BB.'
+        },
+        {
+          pergunta: 'Condição da sinalização complementar',
           valor: this.currentVistoria.respostas.sinalizacao || 'Sim',
           tipo: 'multipla_escolha',
           sugestao_ia: 'Sinalização completa e visível.'
         },
         {
-          pergunta: 'Observações adicionais',
+          pergunta: 'Observações adicionais consolidadas',
           valor: this.currentVistoria.respostas.observacoes || '',
           tipo: 'texto',
           sugestao_ia: this.currentVistoria.respostas.observacoes
