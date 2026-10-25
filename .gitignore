@@ -3,12 +3,34 @@ node_modules/
 .pnp
 .pnp.js
 
-# Environment variables
+# Environment variables and secrets
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+*.env
+*.env.*
+*.env.backup
+backend/.env*
+!.env.example
+!backend/.env.example
+
+# Certificates, Keys, Tokens and Credentials
+*.pem
+*.key
+*.cert
+*.cer
+*.crt
+*.pfx
+*.p12
+credentials.json
+serviceAccountKey*.json
+*token*.json
+
+# Database dumps and local database files
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.sql.gz
 
 # Logs
 npm-debug.log*
@@ -24,8 +46,6 @@ backend/uploads/relatorios/*
 !backend/uploads/relatorios/.gitkeep
 backend/uploads/temp/*
 !backend/uploads/temp/.gitkeep
-
-backend/.env
 
 # OS and IDE files
 .DS_Store
