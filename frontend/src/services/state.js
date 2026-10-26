@@ -37,7 +37,10 @@ class AppState {
         endereco: 'Av. Rio Branco, 120 - Centro',
         status: 'REGULAR',
         destaque: true,
-        imagemTipo: 'logo'
+        imagemTipo: 'logo',
+        empreiteira_id: '11111111-1111-4111-8111-111111111111',
+        cadastrado_por_fiscal_id: '22222222-2222-4222-8222-222222222222',
+        fiscal_responsavel_id: '22222222-2222-4222-8222-222222222222'
       },
       {
         id: 'obr-002',
@@ -48,7 +51,10 @@ class AppState {
         endereco: 'Av. Paulista, 2163 - Cerqueira César',
         status: 'REGULAR',
         destaque: false,
-        imagemTipo: 'cad1'
+        imagemTipo: 'cad1',
+        empreiteira_id: '11111111-1111-4111-8111-111111111111',
+        cadastrado_por_fiscal_id: '22222222-2222-4222-8222-222222222222',
+        fiscal_responsavel_id: '22222222-2222-4222-8222-222222222222'
       },
       {
         id: 'obr-003',
@@ -59,7 +65,10 @@ class AppState {
         endereco: 'SBS Quadra 1 Bloco G Lote 32',
         status: 'EM_ANDAMENTO',
         destaque: false,
-        imagemTipo: 'cad2'
+        imagemTipo: 'cad2',
+        empreiteira_id: '11111111-1111-4111-8111-111111111111',
+        cadastrado_por_fiscal_id: '22222222-2222-4222-8222-222222222222',
+        fiscal_responsavel_id: '44444444-4444-4444-8444-444444444444'
       },
       {
         id: 'obr-004',
@@ -70,7 +79,10 @@ class AppState {
         endereco: 'Rua Barata Ribeiro, 300',
         status: 'EM_ANDAMENTO',
         destaque: false,
-        imagemTipo: 'cad2'
+        imagemTipo: 'cad2',
+        empreiteira_id: '33333333-3333-4333-8333-333333333333',
+        cadastrado_por_fiscal_id: '22222222-2222-4222-8222-222222222222',
+        fiscal_responsavel_id: '22222222-2222-4222-8222-222222222222'
       }
     ];
 

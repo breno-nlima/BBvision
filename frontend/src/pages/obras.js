@@ -60,11 +60,13 @@ export function renderObras() {
     `;
   }).join('');
 
+  const isFiscal = state.user?.cargo === 'fiscal';
+
   return `
     <div class="page-container fade-in" id="obrasPage">
       ${renderHeader('obras')}
 
-      <!-- Linha de Busca e Ação 'Nova Obra' -->
+      <!-- Linha de Busca -->
       <section class="search-bar-row">
         <div class="search-input-wrapper">
           <div class="search-icon">
@@ -78,9 +80,11 @@ export function renderObras() {
             value="${state.searchQuery}"
           />
         </div>
-        <button class="btn-pill-navy" id="btnNovaObraBar">
-          Nova Obra
-        </button>
+        ${isFiscal ? `
+          <button class="btn-pill-navy" id="btnNovaObraBar" title="Cadastrar Nova Unidade BB">
+            Nova Obra
+          </button>
+        ` : ''}
       </section>
 
       <!-- Grid de Obras (2 Colunas) -->
@@ -102,10 +106,14 @@ export function bindObrasEvents() {
     });
   }
 
-  // Botão Nova Obra
+  // Botão Nova Obra (exclusivo para Fiscal BB)
   const btnNovaObraBar = document.getElementById('btnNovaObraBar');
   if (btnNovaObraBar) {
     btnNovaObraBar.addEventListener('click', () => {
+      if (state.user?.cargo !== 'fiscal') {
+        toast.warning('Acesso Restrito', 'Apenas fiscais do Banco do Brasil podem cadastrar novas obras.');
+        return;
+      }
       toast.info('Cadastro de Unidade', 'Formulário de credenciamento de nova agência bancária ou canteiro de obras BB.');
     });
   }

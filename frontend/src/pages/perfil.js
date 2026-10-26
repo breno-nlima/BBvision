@@ -57,11 +57,13 @@ export function renderPerfil() {
             <li>✓ Preenchimento guiado de checklists normativos</li>
             <li>✓ Assinatura digital com fé pública e responsabilidade técnica</li>
             <li>✓ Geração de código único e bloqueio de relatório</li>
+            <li class="restricted">✕ Bloqueado para cadastro de novas obras (Função exclusiva do Banco do Brasil / Fiscal)</li>
             <li class="restricted">✕ Bloqueado para homologação e julgamento técnico (Função do Fiscal BB)</li>
           </ul>
         ` : `
           <ul class="perm-list">
             <li>✓ Acesso ao Centro de Controle e Governança do Banco do Brasil</li>
+            <li>✓ Cadastro e credenciamento de novas obras e agências BB</li>
             <li>✓ Auditoria de evidências com verificação de hashes SHA-256</li>
             <li>✓ Inspeção e download de PDFs oficiais certificados</li>
             <li>✓ Julgamento técnico com Fé Pública: Aprovação (Regular) ou Reprovação (Pendente de Ajuste)</li>

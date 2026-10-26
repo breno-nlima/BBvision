@@ -129,14 +129,23 @@ O modelo tradicional de fiscalização de obras apresenta um **alto custo operac
 
 ## 7. Modelagem do Banco de Dados (Supabase / PostgreSQL)
 
-### 7.1 Entidades e Estrutura Relacional
+### 7.1 Entidades, Estrutura Relacional e Cardinalidade
+
+> **Princípios Cardeais do Domínio:**
+> - **Empreiteira**: Pode possuir **N Obras** sob sua responsabilidade de execução (`empreiteira_id` / `obras_empreiteiras`). Não cadastra obras.
+> - **Fiscal**: Pode **cadastrar N Obras** no sistema (`cadastrado_por_fiscal_id`).
+> - **Fiscal**: Pode **fiscalizar N Obras** emitindo pareceres e laudos técnicos (`fiscal_responsavel_id` / `obras_fiscais`).
 
 ```
- [USUARIO] (1) ──── (N) [RELATORIO] (1) ──── (N) [FOTO]
-                           │
-                           ├────── (1) ──── (N) [RESPOSTA]
-                           │
- [OBRA]    (1) ──── (N) ────┘
+ [USUARIO: cargo='empreiteira'] (1) ─── pode ter ─── (N) [OBRA]
+ [USUARIO: cargo='fiscal']      (1) ─── cadastra ─── (N) [OBRA]
+ [USUARIO: cargo='fiscal']      (1) ─── fiscaliza ── (N) [OBRA]
+                                                            │
+                                                            ├────── (1) ──── (N) [RELATORIO] (1) ──── (N) [FOTO]
+                                                            │                               │
+                                                            │                               ├──────── (1) ──── (N) [RESPOSTA]
+                                                            │
+                                    [USUARIO: Vistoriador] ─┘
 ```
 
 #### Tabela: `usuarios` (ou `usuario`)
@@ -145,6 +154,8 @@ O modelo tradicional de fiscalização de obras apresenta um **alto custo operac
 - `email`: VARCHAR(255) NOT NULL UNIQUE
 - `senha_hash`: VARCHAR(255) NOT NULL
 - `cargo`: VARCHAR(100) NOT NULL (ex: `'empreiteira'`, `'fiscal'`, `'engenheiro'`)
+- `empresa`: VARCHAR(255)
+- `registro_profissional`: VARCHAR(100)
 - `created_at`: TIMESTAMP WITH TIME ZONE
 
 #### Tabela: `obras` (ou `obra`)
@@ -152,8 +163,17 @@ O modelo tradicional de fiscalização de obras apresenta um **alto custo operac
 - `nome`: VARCHAR(255) NOT NULL
 - `endereco`: TEXT NOT NULL
 - `responsavel`: VARCHAR(255) NOT NULL
-- `status`: VARCHAR(50) DEFAULT 'REGULAR' (ex: `'REGULAR'`, `'PENDENTE_AJUSTE'`)
+- `status`: VARCHAR(50) DEFAULT 'REGULAR' (ex: `'REGULAR'`, `'PENDENTE_AJUSTE'`, `'EM_ANDAMENTO'`)
+- `tipo`: VARCHAR(100) DEFAULT 'Reforma e Modernização de Agência'
+- `empreiteira_id`: UUID REFERENCES usuarios(id) (**1 Empreiteira pode ter N Obras**)
+- `cadastrado_por_fiscal_id`: UUID REFERENCES usuarios(id) (**1 Fiscal pode cadastrar N Obras**)
+- `fiscal_responsavel_id`: UUID REFERENCES usuarios(id) (**1 Fiscal pode fiscalizar N Obras**)
 - `created_at`: TIMESTAMP WITH TIME ZONE
+- `updated_at`: TIMESTAMP WITH TIME ZONE
+
+#### Tabelas Associativas Opcionais (Extensão N:N para Consórcios e Múltiplos Fiscais)
+- `obras_empreiteiras`: `(obra_id, empreiteira_id, data_vinculo, ativo)`
+- `obras_fiscais`: `(obra_id, fiscal_id, papel, data_designacao)`
 
 #### Tabela: `relatorios` (ou `relatorio`)
 - `id`: UUID (PK, DEFAULT gen_random_uuid())

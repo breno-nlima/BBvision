@@ -68,6 +68,9 @@ const mockData = {
       responsavel: 'Rodrigo Silva',
       status: 'REGULAR',
       tipo: 'Reforma e Modernização de Agência',
+      empreiteira_id: '11111111-1111-4111-8111-111111111111', // Rodrigo (1 Empreiteira -> N Obras)
+      cadastrado_por_fiscal_id: '22222222-2222-4222-8222-222222222222', // Mariana (1 Fiscal cadastra N Obras)
+      fiscal_responsavel_id: '22222222-2222-4222-8222-222222222222', // Mariana (1 Fiscal fiscaliza N Obras)
       created_at: new Date('2026-10-01T09:00:00.000Z').toISOString(),
     },
     {
@@ -77,6 +80,9 @@ const mockData = {
       responsavel: 'Rodrigo Silva',
       status: 'REGULAR',
       tipo: 'Adequação de Acessibilidade',
+      empreiteira_id: '11111111-1111-4111-8111-111111111111', // Rodrigo (1 Empreiteira -> N Obras)
+      cadastrado_por_fiscal_id: '22222222-2222-4222-8222-222222222222', // Mariana (1 Fiscal cadastra N Obras)
+      fiscal_responsavel_id: '22222222-2222-4222-8222-222222222222', // Mariana (1 Fiscal fiscaliza N Obras)
       created_at: new Date('2026-10-02T09:00:00.000Z').toISOString(),
     },
     {
@@ -86,15 +92,21 @@ const mockData = {
       responsavel: 'Rodrigo Silva',
       status: 'EM_ANDAMENTO',
       tipo: 'Construção de Nova Agência',
+      empreiteira_id: '11111111-1111-4111-8111-111111111111', // Rodrigo (1 Empreiteira -> N Obras)
+      cadastrado_por_fiscal_id: '22222222-2222-4222-8222-222222222222', // Mariana (1 Fiscal cadastra N Obras)
+      fiscal_responsavel_id: '44444444-4444-4444-8444-444444444444', // Auditor BB (1 Fiscal fiscaliza N Obras)
       created_at: new Date('2026-10-03T09:00:00.000Z').toISOString(),
     },
     {
       id: 'obr-004',
       nome: 'Obra Copacabana (Fachada e Interior)',
       endereco: 'Rua Barata Ribeiro, 300 - Rio de Janeiro - RJ',
-      responsavel: 'Rodrigo Silva',
+      responsavel: 'Engenheiro de Campo',
       status: 'EM_ANDAMENTO',
       tipo: 'Manutenção Predial e Fachada',
+      empreiteira_id: '33333333-3333-4333-8333-333333333333', // Outra Empreiteira
+      cadastrado_por_fiscal_id: '22222222-2222-4222-8222-222222222222', // Mariana (1 Fiscal cadastra N Obras)
+      fiscal_responsavel_id: '22222222-2222-4222-8222-222222222222', // Mariana (1 Fiscal fiscaliza N Obras)
       created_at: new Date('2026-10-04T09:00:00.000Z').toISOString(),
     },
   ],
@@ -319,22 +331,47 @@ const mockData = {
   },
 
   // ----------------------------------------------------------------------------
-  // GESTÃO DE OBRAS
+  // GESTÃO DE OBRAS (Suporte a N Obras por Empreiteira e N Obras por Fiscal)
   // ----------------------------------------------------------------------------
-  listObras() {
-    return this.obras.map(o => ({ ...o }));
+  listObras(filtros = {}) {
+    let result = this.obras.map(o => ({ ...o }));
+
+    if (filtros.empreiteira_id) {
+      result = result.filter(o => o.empreiteira_id === filtros.empreiteira_id);
+    }
+    if (filtros.fiscal_responsavel_id || filtros.fiscal_id) {
+      const fId = filtros.fiscal_responsavel_id || filtros.fiscal_id;
+      result = result.filter(o => o.fiscal_responsavel_id === fId);
+    }
+    if (filtros.cadastrado_por_fiscal_id) {
+      result = result.filter(o => o.cadastrado_por_fiscal_id === filtros.cadastrado_por_fiscal_id);
+    }
+
+    return result;
   },
 
-  async listObrasAsync() {
+  async listObrasAsync(filtros = {}) {
     if (isConfigured && supabase) {
       try {
-        const { data, error } = await supabase.from('obras').select('*').order('created_at', { ascending: false });
+        let query = supabase.from('obras').select('*').order('created_at', { ascending: false });
+
+        if (filtros.empreiteira_id) {
+          query = query.eq('empreiteira_id', filtros.empreiteira_id);
+        }
+        if (filtros.fiscal_responsavel_id || filtros.fiscal_id) {
+          query = query.eq('fiscal_responsavel_id', filtros.fiscal_responsavel_id || filtros.fiscal_id);
+        }
+        if (filtros.cadastrado_por_fiscal_id) {
+          query = query.eq('cadastrado_por_fiscal_id', filtros.cadastrado_por_fiscal_id);
+        }
+
+        const { data, error } = await query;
         if (!error && data && data.length > 0) return data;
       } catch (e) {
         // Fallback
       }
     }
-    return this.listObras();
+    return this.listObras(filtros);
   },
 
   findObraById(id) {
@@ -359,6 +396,10 @@ const mockData = {
       id: `obr-${Date.now()}`,
       created_at: new Date().toISOString(),
       status: dados.status || 'REGULAR',
+      tipo: dados.tipo || 'Reforma e Modernização de Agência',
+      empreiteira_id: dados.empreiteira_id || '11111111-1111-4111-8111-111111111111',
+      cadastrado_por_fiscal_id: dados.cadastrado_por_fiscal_id || '22222222-2222-4222-8222-222222222222',
+      fiscal_responsavel_id: dados.fiscal_responsavel_id || dados.cadastrado_por_fiscal_id || '22222222-2222-4222-8222-222222222222',
       ...dados,
     };
 
@@ -379,7 +420,11 @@ const mockData = {
     const novaObra = {
       id: `obr-${Date.now()}`,
       created_at: new Date().toISOString(),
-      status: 'REGULAR',
+      status: dados.status || 'REGULAR',
+      tipo: dados.tipo || 'Reforma e Modernização de Agência',
+      empreiteira_id: dados.empreiteira_id || '11111111-1111-4111-8111-111111111111',
+      cadastrado_por_fiscal_id: dados.cadastrado_por_fiscal_id || '22222222-2222-4222-8222-222222222222',
+      fiscal_responsavel_id: dados.fiscal_responsavel_id || dados.cadastrado_por_fiscal_id || '22222222-2222-4222-8222-222222222222',
       ...dados,
     };
     this.obras.push(novaObra);

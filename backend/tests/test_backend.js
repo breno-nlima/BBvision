@@ -126,14 +126,57 @@ async function runTests() {
     assert(regSucesso.status === 201, 'Cadastro bem-sucedido retornou HTTP 201 com token');
     assert(regSucesso.body.token, 'Token gerado no registro');
 
-    // 6. Listagem de Obras
-    console.log('\n6. Testando Listagem de Obras (/api/obras)...');
+    // 6. Listagem de Obras, Permissões RBAC & Cardinalidades (1:N)
+    console.log('\n6. Testando Listagem de Obras, Permissões RBAC & Cardinalidade (/api/obras)...');
     const obrasRes = await request('GET', '/api/obras', null, {
       Authorization: `Bearer ${tokenRodrigo}`,
     });
     assert(obrasRes.status === 200, 'Listagem de obras retornou HTTP 200');
     assert(Array.isArray(obrasRes.body) && obrasRes.body.length > 0, 'Retornou array com obras cadastradas');
     const obraId = obrasRes.body[0].id;
+
+    // Teste Cardinalidade: 1 Empreiteira pode ter N Obras
+    const obrasDaEmpreiteira = await request('GET', `/api/obras?empreiteira_id=${loginRodrigo.body.usuario.id}`, null, {
+      Authorization: `Bearer ${tokenRodrigo}`,
+    });
+    assert(obrasDaEmpreiteira.status === 200, 'Filtro por empreiteira retornou HTTP 200');
+    assert(obrasDaEmpreiteira.body.length >= 2, 'Empreiteira Rodrigo possui N obras associadas (>= 2)');
+
+    // Teste Cardinalidade: 1 Fiscal pode fiscalizar N Obras
+    const obrasFiscalizadasMariana = await request('GET', `/api/obras?fiscal_id=${loginMariana.body.usuario.id}`, null, {
+      Authorization: `Bearer ${tokenMariana}`,
+    });
+    assert(obrasFiscalizadasMariana.status === 200, 'Filtro por fiscal retornou HTTP 200');
+    assert(obrasFiscalizadasMariana.body.length >= 2, 'Fiscal Mariana fiscaliza N obras associadas (>= 2)');
+
+    // Teste Detalhe da Obra com Relacionamentos
+    const detalheObra = await request('GET', `/api/obras/${obraId}`, null, {
+      Authorization: `Bearer ${tokenRodrigo}`,
+    });
+    assert(detalheObra.status === 200, 'Detalhes da obra retornou HTTP 200');
+    assert(detalheObra.body.empreiteira, 'Obra contém objeto da empreiteira vinculada');
+    assert(detalheObra.body.fiscal_responsavel, 'Obra contém objeto do fiscal responsável vinculado');
+
+    // Teste RBAC: Empreiteira tentando cadastrar obra deve ser rejeitada com 403
+    const criaObraEmpreiteira = await request('POST', '/api/obras', {
+      nome: 'Agência Tentativa Não Autorizada',
+      endereco: 'Rua Proibida, 100',
+    }, {
+      Authorization: `Bearer ${tokenRodrigo}`,
+    });
+    assert(criaObraEmpreiteira.status === 403, 'Tentativa de criar obra por empreiteira bloqueada com HTTP 403');
+
+    // Teste RBAC & Cardinalidade: Fiscal Mariana cadastrando mais uma obra (N obras cadastradas por fiscal)
+    const criaObraFiscal = await request('POST', '/api/obras', {
+      nome: 'Agência BB Autorizada Fiscal',
+      endereco: 'Av. Paulista, 2000, SP',
+      empreiteira_id: loginRodrigo.body.usuario.id,
+    }, {
+      Authorization: `Bearer ${tokenMariana}`,
+    });
+    assert(criaObraFiscal.status === 201, 'Cadastro de obra por fiscal retornou HTTP 201 com sucesso');
+    assert(criaObraFiscal.body.obra.cadastrado_por_fiscal_id === loginMariana.body.usuario.id, 'Obra registra que foi cadastrada pelo fiscal Mariana');
+    assert(criaObraFiscal.body.obra.empreiteira_id === loginRodrigo.body.usuario.id, 'Obra vinculada à empreiteira Rodrigo');
 
     // 7. Criar Relatório de Vistoria
     console.log('\n7. Testando Criação de Relatório de Vistoria (/api/relatorios)...');

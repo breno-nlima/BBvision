@@ -27,3 +27,8 @@ Todo desenvolvimento neste repositório DEVE rigorosamente respeitar o documento
 4. **Resiliência e Fallbacks**:
    - Modo offline com fila local e sincronização automática.
    - Fallback para validação manual caso a API do Gemini atinja timeout (>15s) ou falhe.
+
+5. **Cardinalidade e Relacionamento de Obras**:
+   - Uma **Empreiteira pode ter N Obras** atribuídas para vistoria técnica in-loco (`empreiteira_id`). A empreiteira NÃO tem permissão para cadastrar novas obras.
+   - Um **Fiscal pode cadastrar N Obras** no sistema (`cadastrado_por_fiscal_id`).
+   - Um **Fiscal pode fiscalizar N Obras** realizando auditorias técnicas e homologações (`fiscal_responsavel_id`).

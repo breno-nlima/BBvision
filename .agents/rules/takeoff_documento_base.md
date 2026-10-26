@@ -37,6 +37,9 @@
    - Ausência de código único ou carimbo no PDF acarreta invalidação imediata pelo fiscal.
    - Prevenção de duplicidade: relatórios finalizados não podem ser reenviados ou editados.
 
-5. **Modelagem de Dados Supabase**:
+5. **Modelagem de Dados Supabase & Cardinalidade**:
    - Entidades principais: `usuarios`, `obras`, `relatorios`, `fotos`, `respostas`.
+   - **Empreiteira pode ter N Obras** (`empreiteira_id` / `obras_empreiteiras`). Bloqueada para criar obras.
+   - **Fiscal pode cadastrar N Obras** (`cadastrado_por_fiscal_id`).
+   - **Fiscal pode fiscalizar N Obras** (`fiscal_responsavel_id` / `obras_fiscais`).
    - Compatível com expansões de geofencing e agências do BB conforme as premissas do projeto.
