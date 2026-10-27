@@ -45,6 +45,43 @@
   gap: 10px;
 }
 
+/* Botão de Logout no App Header */
+.btn-header-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #DC2626;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-header-logout:hover {
+  background: #DC2626;
+  color: #FFFFFF;
+  border-color: #DC2626;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
+}
+
+.btn-header-logout:active {
+  transform: translateY(0) scale(0.97);
+}
+
+@media (max-width: 480px) {
+  .btn-header-logout .btn-header-logout-text {
+    display: none;
+  }
+  .btn-header-logout {
+    padding: 6px 8px;
+  }
+}
+
 /* Botão Pílula Amarelo 'Nova Obra' */
 .btn-pill-yellow {
   background-color: var(--bb-yellow);
@@ -212,7 +249,7 @@
    -------------------------------------------------------------------------- */
 .quick-actions-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: 12px;
   padding: 0 18px 12px 18px;
 }
@@ -236,6 +273,19 @@
   transform: translateY(-2px);
   border-color: var(--bb-yellow);
   box-shadow: var(--shadow-card-hover);
+}
+
+.quick-action-card.highlight-card {
+  background: linear-gradient(135deg, #FFFFFF 0%, #FFFDF0 100%);
+  border-color: rgba(254, 211, 4, 0.6);
+  box-shadow: 0 3px 10px rgba(254, 211, 4, 0.15);
+}
+
+.quick-action-card.highlight-card:hover {
+  background: #FEF9D9;
+  border-color: var(--bb-yellow);
+  box-shadow: 0 6px 16px rgba(254, 211, 4, 0.25);
+  transform: translateY(-2px);
 }
 
 .quick-action-icon-badge {

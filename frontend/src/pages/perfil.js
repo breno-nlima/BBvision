@@ -6,6 +6,7 @@
 import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { renderHeader, bindHeaderEvents } from '../components/header.js';
+import { modal } from '../components/modal.js';
 import { toast } from '../components/toast.js';
 
 export function renderPerfil() {
@@ -96,10 +97,20 @@ export function renderPerfil() {
         </div>
       </div>
 
-      <!-- Ações da Conta -->
-      <div class="logout-container">
-        <button class="btn-logout" id="btnLogout">
-          Sair da Conta (Encerrar Sessão)
+      <!-- Ações da Conta e Encerramento Seguro de Sessão -->
+      <div class="profile-logout-section">
+        <div class="logout-notice-box">
+          <div class="logout-notice-icon">
+            ${Icons.logOut(24, '#DC2626')}
+          </div>
+          <div class="logout-notice-text">
+            <h4>Encerrar Sessão do Usuário</h4>
+            <p>Desconecte com segurança após finalizar suas vistorias e relatórios no sistema.</p>
+          </div>
+        </div>
+        <button class="btn-logout-full" id="btnLogout" title="Sair da Conta">
+          ${Icons.logOut(18, '#FFFFFF')}
+          <span>Sair da Conta (Encerrar Sessão)</span>
         </button>
       </div>
     </div>
@@ -112,8 +123,13 @@ export function bindPerfilEvents() {
   const btnLogout = document.getElementById('btnLogout');
   if (btnLogout) {
     btnLogout.addEventListener('click', () => {
-      state.logout();
-      toast.info('Sessão Encerrada', 'Você saiu com sucesso do sistema BBVision.');
+      modal.confirmLogout({
+        user: state.user,
+        onConfirm: async () => {
+          await state.logout();
+          toast.info('Sessão Encerrada', 'Você saiu com sucesso do sistema BBVision.');
+        }
+      });
     });
   }
 }

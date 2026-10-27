@@ -296,6 +296,67 @@ class AppState {
     this.notify();
   }
 
+  async criarNovaObra(dados) {
+    if (this.user?.cargo !== 'fiscal') {
+      throw new Error('Acesso negado. Apenas Fiscais de Obra do Banco do Brasil podem cadastrar novas obras.');
+    }
+
+    try {
+      const resp = await api.criarObra({
+        nome: dados.nome,
+        endereco: dados.endereco,
+        responsavel: dados.responsavel || 'Rodrigo Silva',
+        tipo: dados.tipo || 'Reforma e Modernização de Agência',
+        status: dados.status || 'REGULAR',
+        empreiteira_id: dados.empreiteira_id || '11111111-1111-4111-8111-111111111111',
+        fiscal_responsavel_id: this.user.id
+      });
+
+      const novaObraCadastrada = resp?.obra || resp;
+
+      const novaObraLocal = {
+        id: novaObraCadastrada.id || `obr-${Date.now()}`,
+        nome: novaObraCadastrada.nome || dados.nome,
+        subtitulo: dados.endereco ? dados.endereco.split('-')[0].trim() : 'Unidade BB',
+        tipo: novaObraCadastrada.tipo || dados.tipo || 'Agência Bancária',
+        responsavel: novaObraCadastrada.responsavel || dados.responsavel || 'Rodrigo Silva',
+        endereco: novaObraCadastrada.endereco || dados.endereco,
+        status: novaObraCadastrada.status || dados.status || 'REGULAR',
+        destaque: false,
+        imagemTipo: 'cad1',
+        empreiteira_id: dados.empreiteira_id || '11111111-1111-4111-8111-111111111111',
+        cadastrado_por_fiscal_id: this.user.id,
+        fiscal_responsavel_id: this.user.id
+      };
+
+      this.obras.unshift(novaObraLocal);
+      this.notify();
+      return novaObraLocal;
+    } catch (err) {
+      const isNetwork = err.message === 'Load failed' || err.message.includes('fetch') || this.isOffline;
+      if (isNetwork) {
+        const novaObraLocal = {
+          id: `obr-offline-${Date.now()}`,
+          nome: dados.nome,
+          subtitulo: dados.endereco ? dados.endereco.split('-')[0].trim() : 'Unidade BB',
+          tipo: dados.tipo || 'Agência Bancária',
+          responsavel: dados.responsavel || 'Rodrigo Silva',
+          endereco: dados.endereco,
+          status: dados.status || 'REGULAR',
+          destaque: false,
+          imagemTipo: 'cad1',
+          empreiteira_id: dados.empreiteira_id || '11111111-1111-4111-8111-111111111111',
+          cadastrado_por_fiscal_id: this.user.id,
+          fiscal_responsavel_id: this.user.id
+        };
+        this.obras.unshift(novaObraLocal);
+        this.notify();
+        return novaObraLocal;
+      }
+      throw err;
+    }
+  }
+
   setTipoLocal(tipo, desc) {
     this.currentVistoria.tipoLocal = tipo;
     this.currentVistoria.tipoLocalDesc = desc;
@@ -653,10 +714,10 @@ class AppState {
     }
   }
 
-  logout() {
+  async logout() {
     this.user = null;
     localStorage.removeItem('bbvision_user');
-    api.setToken(null);
+    await api.logout();
     this.navigate('login');
   }
 }

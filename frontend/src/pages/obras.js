@@ -6,6 +6,7 @@
 import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { renderHeader, bindHeaderEvents } from '../components/header.js';
+import { modal } from '../components/modal.js';
 import { toast } from '../components/toast.js';
 
 export function renderObras() {
@@ -81,8 +82,8 @@ export function renderObras() {
           />
         </div>
         ${isFiscal ? `
-          <button class="btn-pill-navy" id="btnNovaObraBar" title="Cadastrar Nova Unidade BB">
-            Nova Obra
+          <button class="btn-pill-yellow" id="btnNovaObraBar" title="Cadastrar Nova Obra (Exclusivo Fiscal BB)">
+            + Nova Obra
           </button>
         ` : ''}
       </section>
@@ -114,7 +115,13 @@ export function bindObrasEvents() {
         toast.warning('Acesso Restrito', 'Apenas fiscais do Banco do Brasil podem cadastrar novas obras.');
         return;
       }
-      toast.info('Cadastro de Unidade', 'Formulário de credenciamento de nova agência bancária ou canteiro de obras BB.');
+      modal.openNovaObraModal({
+        fiscalUser: state.user,
+        onSave: async (dados) => {
+          await state.criarNovaObra(dados);
+          toast.success('Obra Cadastrada', `A unidade "${dados.nome}" foi cadastrada com sucesso e vinculada à empreiteira.`);
+        }
+      });
     });
   }
 

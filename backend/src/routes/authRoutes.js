@@ -16,4 +16,7 @@ router.post('/register', authLimiter, authController.register);
 // Consulta de perfil autenticado
 router.get('/me', requireAuth, authController.me);
 
+// Encerramento de sessão
+router.post('/logout', authController.logout);
+
 module.exports = router;

@@ -117,6 +117,19 @@ class BBVisionApiClient {
     });
   }
 
+  async logout() {
+    try {
+      await this.request('/api/auth/logout', {
+        method: 'POST',
+        headers: this.getHeaders(),
+      });
+    } catch (err) {
+      // Ignora erro de rede/offline no logout para garantir saída local segura
+    } finally {
+      this.setToken(null);
+    }
+  }
+
   // ----------------------------------------------------------------------------
   // OBRAS
   // ----------------------------------------------------------------------------
@@ -131,6 +144,14 @@ class BBVisionApiClient {
     return this.request(`/api/obras/${id}`, {
       method: 'GET',
       headers: this.getHeaders(),
+    });
+  }
+
+  async criarObra(dados) {
+    return this.request('/api/obras', {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(dados),
     });
   }
 

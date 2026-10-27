@@ -71,6 +71,9 @@
   <!-- Sincronização da Navbar com o Estado de Autenticação -->
   <script type="module">
     import { state } from './src/services/state.js';
+    import { modal } from './src/components/modal.js';
+    import { toast } from './src/components/toast.js';
+    import { Icons } from './src/assets/icons.js';
 
     function sincronizarNavbar(s) {
       const user = s.user;
@@ -87,13 +90,68 @@
 
       if (user) {
         if (navLinks) navLinks.style.display = 'flex';
-        userArea.innerHTML = '';
-        userArea.style.display = 'none';
+        const isFiscal = user.cargo === 'fiscal';
+        const roleLabel = isFiscal ? 'Fiscal BB' : 'Empreiteira';
+        const avatarUrl = user.avatar || (isFiscal
+          ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
+          : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80');
+
+        userArea.innerHTML = `
+          ${isFiscal ? `
+            <button class="bb-nav-link" id="btnNavNovaObra" style="background: rgba(254, 211, 4, 0.18); color: #FED304; border: 1px solid rgba(254, 211, 4, 0.45); border-radius: var(--radius-full); padding: 5px 12px; font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;" title="Cadastrar Nova Obra (Exclusivo Fiscal BB)">
+              <span>➕</span> Nova Obra
+            </button>
+          ` : ''}
+          <div class="bb-user-profile-badge" id="btnNavUserProfile" title="Ver Perfil de ${user.nome}">
+            <img src="${avatarUrl}" alt="${user.nome}" class="bb-user-avatar">
+            <div class="bb-user-info">
+              <span class="bb-user-name">${user.nome.split(' ')[0]}</span>
+              <span class="bb-user-role ${isFiscal ? 'fiscal' : 'empreiteira'}">${roleLabel}</span>
+            </div>
+          </div>
+          <button class="bb-btn-logout" id="btnNavLogout" title="Sair da Conta (Encerrar Sessão)" aria-label="Sair da Conta">
+            ${Icons.logOut ? Icons.logOut(14) : ''}
+            <span>Sair</span>
+          </button>
+        `;
+        userArea.style.display = 'flex';
+
+        document.getElementById('btnNavNovaObra')?.addEventListener('click', () => {
+          modal.openNovaObraModal({
+            fiscalUser: state.user,
+            onSave: async (dados) => {
+              await state.criarNovaObra(dados);
+              toast.success('Obra Cadastrada', `A unidade "${dados.nome}" foi cadastrada com sucesso e vinculada à empreiteira.`);
+            }
+          });
+        });
+
+        document.getElementById('btnNavUserProfile')?.addEventListener('click', () => {
+          state.navigate('perfil', 'perfil');
+        });
+
+        document.getElementById('btnNavLogout')?.addEventListener('click', () => {
+          modal.confirmLogout({
+            user: state.user,
+            onConfirm: async () => {
+              await state.logout();
+              toast.info('Sessão Encerrada', 'Você saiu com sucesso da sua conta BBVision.');
+            }
+          });
+        });
       } else {
         // Deslogado
         if (navLinks) navLinks.style.display = page === 'validador-publico' ? 'flex' : 'none';
-        userArea.innerHTML = '';
-        userArea.style.display = 'none';
+        userArea.innerHTML = page === 'validador-publico' ? `
+          <button class="bb-nav-link" id="btnNavAcessarLogin" style="background: rgba(254, 211, 4, 0.15); color: #FED304; border: 1px solid rgba(254, 211, 4, 0.4); border-radius: 9999px; padding: 6px 14px;">
+            <span>🔑</span> Acessar Sistema
+          </button>
+        ` : '';
+        userArea.style.display = page === 'validador-publico' ? 'flex' : 'none';
+
+        document.getElementById('btnNavAcessarLogin')?.addEventListener('click', () => {
+          state.navigate('login');
+        });
       }
     }
 

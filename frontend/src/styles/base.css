@@ -184,19 +184,29 @@ html, body {
 }
 
 .bb-btn-logout {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  color: #FCA5A5;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(239, 68, 68, 0.18);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #FECACA;
   font-size: 12px;
   font-weight: 600;
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.18s ease;
+  white-space: nowrap;
 }
 .bb-btn-logout:hover {
-  background: rgba(239, 68, 68, 0.3);
+  background: #DC2626;
+  border-color: #DC2626;
   color: #FFFFFF;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
+}
+.bb-btn-logout:active {
+  transform: translateY(0) scale(0.97);
 }
 
 /* ==========================================================================
@@ -231,6 +241,21 @@ html, body {
   }
   .app-screen-container {
     padding: 16px 14px 90px 14px;
+  }
+}
+
+@media (max-width: 520px) {
+  .bb-user-info {
+    display: none;
+  }
+  .bb-user-profile-badge {
+    padding: 2px;
+  }
+  .bb-btn-logout span {
+    display: none;
+  }
+  .bb-btn-logout {
+    padding: 6px 8px;
   }
 }
 

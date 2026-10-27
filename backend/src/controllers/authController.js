@@ -163,6 +163,21 @@ const authController = {
       next(err);
     }
   },
+
+  /**
+   * POST /api/auth/logout
+   * Finaliza a sessão do usuário no backend
+   */
+  async logout(req, res, next) {
+    try {
+      return res.status(200).json({
+        sucesso: true,
+        mensagem: 'Sessão encerrada com sucesso no sistema BBVision.',
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
 };
 
 module.exports = authController;

@@ -60,6 +60,11 @@ export function renderInicio() {
             <span class="bb-institucional-tag">Banco do Brasil S.A. • Fiscalização e Auditoria Remota</span>
             <h2 class="hero-fiscal-title">Centro de Controle & Governança</h2>
             <p class="hero-fiscal-sub">${userName} — Fiscal de Serviço / Engenharia BB</p>
+            <div style="margin-top: 12px;">
+              <button class="btn-pill-yellow" id="btnHeroNovaObra" title="Cadastrar Nova Obra (Exclusivo Fiscal BB)">
+                + Nova Obra
+              </button>
+            </div>
           </div>
           <div class="hero-fiscal-badge-wrap">
             ${Icons.logoBBOficial(48)}
@@ -94,6 +99,13 @@ export function renderInicio() {
 
         <!-- Ações Rápidas do Fiscal -->
         <section class="quick-actions-grid">
+          <div class="quick-action-card highlight-card" id="btnAtalhoNovaObraGrid" title="Cadastrar Nova Obra (Exclusivo Fiscal BB)">
+            <div class="quick-action-icon-badge" style="background: rgba(254, 211, 4, 0.25); color: #002D62; font-size: 20px; font-weight: 800;">
+              ➕
+            </div>
+            <span class="quick-action-label" style="font-weight: 700; color: #002D62;">Nova Obra</span>
+          </div>
+
           <div class="quick-action-card" id="btnAtalhoAuditoriaGrid">
             <div class="quick-action-icon-badge">
               ${Icons.shieldYellow(28)}
@@ -235,6 +247,26 @@ export function bindInicioEvents() {
 
   if (isFiscal) {
     // Eventos exclusivos do Fiscal Mariana
+    const triggerNovaObra = () => {
+      modal.openNovaObraModal({
+        fiscalUser: state.user,
+        onSave: async (dados) => {
+          await state.criarNovaObra(dados);
+          toast.success('Obra Cadastrada', `A unidade "${dados.nome}" foi cadastrada com sucesso e vinculada à empreiteira.`);
+        }
+      });
+    };
+
+    const btnHeroNovaObra = document.getElementById('btnHeroNovaObra');
+    if (btnHeroNovaObra) {
+      btnHeroNovaObra.addEventListener('click', triggerNovaObra);
+    }
+
+    const btnNovaObraGrid = document.getElementById('btnAtalhoNovaObraGrid');
+    if (btnNovaObraGrid) {
+      btnNovaObraGrid.addEventListener('click', triggerNovaObra);
+    }
+
     const btnCallout = document.getElementById('btnIrAuditoriaDirect');
     if (btnCallout) {
       btnCallout.addEventListener('click', () => {

@@ -233,6 +233,15 @@ export const Icons = {
       <circle cx="54" cy="51" r="1.5" fill="#002D62"/>
       <line x1="54" y1="52.5" x2="54" y2="56" stroke="#002D62" stroke-width="1.2"/>
     </svg>
+  `,
+
+  // Ícone de Log-out / Encerrar Sessão Corporativa
+  logOut: (size = 18, color = "currentColor") => `
+    <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+      <polyline points="16 17 21 12 16 7"></polyline>
+      <line x1="21" y1="12" x2="9" y2="12"></line>
+    </svg>
   `
 };
 

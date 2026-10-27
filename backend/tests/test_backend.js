@@ -106,6 +106,14 @@ async function runTests() {
     assert(meRes.status === 200, 'Endpoint /me retornou HTTP 200');
     assert(meRes.body.usuario.email === 'rodrigo@empreiteira.com', 'E-mail do usuário autenticado confere');
 
+    // 4.1 Teste de Logout (/api/auth/logout)
+    console.log('\n4.1 Testando Encerramento de Sessão (/api/auth/logout)...');
+    const logoutRes = await request('POST', '/api/auth/logout', null, {
+      Authorization: `Bearer ${tokenRodrigo}`,
+    });
+    assert(logoutRes.status === 200, 'Endpoint /api/auth/logout retornou HTTP 200');
+    assert(logoutRes.body.sucesso === true, 'Mensagem de confirmação de logout bem-sucedida');
+
     // 5. Teste de Cadastro de Usuário (Validações de Segurança)
     console.log('\n5. Testando Cadastro com Validações de Segurança (/api/auth/register)...');
     const regFraco = await request('POST', '/api/auth/register', {
