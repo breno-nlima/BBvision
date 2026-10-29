@@ -78,7 +78,7 @@ export function renderPerfil() {
       <div class="system-info-box">
         <div class="info-row">
           <span>Instituição:</span>
-          <strong>Banco do Brasil S.A.</strong>
+          <strong style="display: inline-flex; align-items: center; gap: 6px;">${Icons.iconeBanco(18)} Banco do Brasil S.A.</strong>
         </div>
         <div class="info-row">
           <span>Sistema:</span>

@@ -267,7 +267,33 @@ export const Icons = {
   // 5. Perfil Oficial Obras / Empreiteira (Rodrigo - Responsável Técnico de Campo com Capacete e Prancheta)
   perfilObras: (size = 24, className = '') => `
     <img src="src/assets/icons/perfil_obras.png" width="${size}" height="${size}" alt="Perfil Obras" class="${className}" style="width: ${size}px; height: ${size}px; object-fit: contain; display: inline-block; vertical-align: middle;" />
+  `,
+
+  // 6. Ícone Oficial Banco / Agência (Fachada Clássica com Colunas e Medalhão Dourado)
+  iconeBanco: (size = 24, className = '') => `
+    <img src="src/assets/icons/icone_banco.png" width="${size}" height="${size}" alt="Banco" class="${className}" style="width: ${size}px; height: ${size}px; object-fit: contain; display: inline-block; vertical-align: middle;" />
+  `,
+
+  // 7. Ícone Oficial Auditoria (Prancheta + Escudo Dourado com Checkmark + Lupa com Gráfico)
+  iconeAuditoria: (size = 24, className = '') => `
+    <img src="src/assets/icons/icone_auditoria.png" width="${size}" height="${size}" alt="Auditoria" class="${className}" style="width: ${size}px; height: ${size}px; object-fit: contain; display: inline-block; vertical-align: middle;" />
+  `,
+
+  // 8. Ícone Oficial Obras (Estrutura Predial em Construção + Guindaste / Grua BB)
+  iconeObras: (size = 24, className = '') => `
+    <img src="src/assets/icons/icone_obras.png" width="${size}" height="${size}" alt="Obras" class="${className}" style="width: ${size}px; height: ${size}px; object-fit: contain; display: inline-block; vertical-align: middle;" />
+  `,
+
+  // 9. Ícone Oficial Relatório (Documento de Checklist com Gráfico Ascendente e Lupa)
+  iconeRelatorio: (size = 24, className = '') => `
+    <img src="src/assets/icons/icone_relatorio.png" width="${size}" height="${size}" alt="Relatório" class="${className}" style="width: ${size}px; height: ${size}px; object-fit: contain; display: inline-block; vertical-align: middle;" />
+  `,
+
+  // 10. Ícone Oficial Início (Casa Azul com Porta Dourada e Raios de Sol)
+  iconeInicio: (size = 24, className = '') => `
+    <img src="src/assets/icons/icone_inicio.png" width="${size}" height="${size}" alt="Início" class="${className}" style="width: ${size}px; height: ${size}px; object-fit: contain; display: inline-block; vertical-align: middle;" />
   `
 };
+
 
 

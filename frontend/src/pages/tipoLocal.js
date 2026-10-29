@@ -44,7 +44,7 @@ export function renderTipoLocal() {
 
     let iconSvg = '';
     if (loc.id === 'agencia') {
-      iconSvg = Icons.logoBVisionBadge(30);
+      iconSvg = Icons.iconeBanco(36);
     } else if (loc.id === 'caixa') {
       iconSvg = Icons.iconAtm(32, iconColor);
     } else if (loc.id === 'externa') {

@@ -45,8 +45,8 @@ export function renderRelatorios() {
         ` : ''}
 
         <div class="rel-action-row">
-          <button class="btn-ver-pdf" data-rel-id="${rel.id}" data-obra-nome="${rel.obraNome}" data-codigo="${rel.codigoUnico}" data-hash="${rel.hash || ''}">
-            📄 Visualizar Relatório em PDF (Carimbo BB)
+          <button class="btn-ver-pdf" data-rel-id="${rel.id}" data-obra-nome="${rel.obraNome}" data-codigo="${rel.codigoUnico}" data-hash="${rel.hash || ''}" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+            ${Icons.iconeRelatorio(18)} Visualizar Relatório em PDF (Carimbo BB)
           </button>
         </div>
       </div>
@@ -58,7 +58,9 @@ export function renderRelatorios() {
       ${renderHeader('relatorios')}
 
       <div class="relatorios-intro-header">
-        <h2 class="section-title">Relatórios & Auditoria</h2>
+        <h2 class="section-title" style="display: flex; align-items: center; gap: 8px;">
+          ${Icons.iconeRelatorio(26)} Relatórios & Auditoria
+        </h2>
         <p class="section-subtitle">Documentos oficiais com inviolabilidade matemática, carimbo temporal e fé pública do Banco do Brasil.</p>
       </div>
 

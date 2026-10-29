@@ -23,14 +23,14 @@ export function renderBottomNav() {
 
         <button class="nav-item-btn ${current === 'fiscal-auditoria' ? 'active' : ''}" data-nav="fiscal-auditoria" id="navItemAuditoria">
           <div class="nav-icon-container">
-            ${Icons.shieldYellow(20)}
+            ${Icons.iconeAuditoria(22)}
           </div>
           <span class="nav-item-label">Auditoria</span>
         </button>
 
         <button class="nav-item-btn ${current === 'obras' ? 'active' : ''}" data-nav="obras" id="navItemObras">
           <div class="nav-icon-container">
-            ${Icons.navObras(20)}
+            ${Icons.iconeObras(22)}
           </div>
           <span class="nav-item-label">Obras BB</span>
         </button>
@@ -50,21 +50,21 @@ export function renderBottomNav() {
     <nav class="bottom-nav-bar" id="bottomNav">
       <button class="nav-item-btn ${current === 'inicio' ? 'active' : ''}" data-nav="inicio" id="navItemInicio">
         <div class="nav-icon-container">
-          ${Icons.navInicio(20)}
+          ${Icons.iconeInicio(22)}
         </div>
         <span class="nav-item-label">Início</span>
       </button>
 
       <button class="nav-item-btn ${current === 'obras' ? 'active' : ''}" data-nav="obras" id="navItemObras">
         <div class="nav-icon-container">
-          ${Icons.navObras(20)}
+          ${Icons.iconeObras(22)}
         </div>
         <span class="nav-item-label">Obras</span>
       </button>
 
       <button class="nav-item-btn ${current === 'relatorios' ? 'active' : ''}" data-nav="relatorios" id="navItemRelatorios">
         <div class="nav-icon-container">
-          ${Icons.navRelatorios(20)}
+          ${Icons.iconeRelatorio(22)}
         </div>
         <span class="nav-item-label">Relatórios</span>
       </button>

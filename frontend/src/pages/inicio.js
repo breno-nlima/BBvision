@@ -29,7 +29,7 @@ export function renderInicio() {
         <div class="analysis-item-card fiscal-card-interactive" data-rel-id="${rel.id}" data-obra-nome="${rel.obraNome}">
           <div class="analysis-left">
             <div class="analysis-icon">
-              ${isHomologado ? Icons.shieldYellow(24) : Icons.folderObras(24)}
+              ${isHomologado ? Icons.iconeAuditoria(24) : Icons.iconeRelatorio(24)}
             </div>
             <div class="analysis-info">
               <h4>${rel.obraNome}</h4>
@@ -57,7 +57,9 @@ export function renderInicio() {
         <!-- Hero Card Azul Marinho Institucional do Fiscal BB -->
         <section class="hero-fiscal-card">
           <div class="hero-fiscal-header">
-            <span class="bb-institucional-tag">Banco do Brasil S.A. • Fiscalização e Auditoria Remota</span>
+            <span class="bb-institucional-tag" style="display: inline-flex; align-items: center; gap: 6px;">
+              ${Icons.iconeBanco(14)} Banco do Brasil S.A. • Fiscalização e Auditoria Remota
+            </span>
             <div style="display: flex; align-items: center; gap: 8px; margin: 4px 0 2px 0;">
               ${Icons.iconeControle(28)}
               <h2 class="hero-fiscal-title" style="margin: 0;">Centro de Controle & Governança</h2>
@@ -95,7 +97,7 @@ export function renderInicio() {
 
         <!-- Card de Destaque para Ação Imediata de Auditoria -->
         <section class="fiscal-action-callout" id="btnIrAuditoriaDirect">
-          <div class="callout-icon">⚖️</div>
+          <div class="callout-icon">${Icons.iconeAuditoria(36)}</div>
           <div class="callout-text">
             <h4>Auditar Vistoria Recente</h4>
             <p>Selecione um relatório pendente para emitir parecer técnico ou visualizar PDF oficial.</p>
@@ -106,29 +108,29 @@ export function renderInicio() {
         <!-- Ações Rápidas do Fiscal -->
         <section class="quick-actions-grid">
           <div class="quick-action-card highlight-card" id="btnAtalhoNovaObraGrid" title="Cadastrar Nova Obra (Exclusivo Fiscal BB)">
-            <div class="quick-action-icon-badge" style="background: rgba(254, 211, 4, 0.25); color: #002D62; font-size: 20px; font-weight: 800;">
-              ➕
+            <div class="quick-action-icon-badge">
+              ${Icons.iconeCadastro(28)}
             </div>
             <span class="quick-action-label" style="font-weight: 700; color: #002D62;">Nova Obra</span>
           </div>
 
           <div class="quick-action-card" id="btnAtalhoAuditoriaGrid">
             <div class="quick-action-icon-badge">
-              ${Icons.shieldYellow(28)}
+              ${Icons.iconeAuditoria(28)}
             </div>
             <span class="quick-action-label">Painel Auditoria</span>
           </div>
 
           <div class="quick-action-card" id="btnAtalhoObrasGrid">
             <div class="quick-action-icon-badge">
-              ${Icons.folderObras(28)}
+              ${Icons.iconeBanco(28)}
             </div>
             <span class="quick-action-label">Agências BB</span>
           </div>
 
           <div class="quick-action-card" id="btnAtalhoRelatoriosGrid">
             <div class="quick-action-icon-badge">
-              ${Icons.reportsHex(28)}
+              ${Icons.iconeRelatorio(28)}
             </div>
             <span class="quick-action-label">PDFs Oficiais</span>
           </div>
@@ -171,7 +173,7 @@ export function renderInicio() {
       <div class="analysis-item-card" data-obra="${obra.id}">
         <div class="analysis-left">
           <div class="analysis-icon">
-            ${Icons.shieldYellow(24)}
+            ${Icons.iconeObras(24)}
           </div>
           <div class="analysis-info">
             <h4>${obra.nome}</h4>
@@ -212,21 +214,21 @@ export function renderInicio() {
       <section class="quick-actions-grid">
         <div class="quick-action-card" id="btnNovaAnalise">
           <div class="quick-action-icon-badge">
-            ${Icons.shieldYellow(28)}
+            ${Icons.iconeAuditoria(28)}
           </div>
           <span class="quick-action-label">Nova Vistoria</span>
         </div>
 
         <div class="quick-action-card" id="btnObrasRecentes">
           <div class="quick-action-icon-badge">
-            ${Icons.folderObras(28)}
+            ${Icons.iconeObras(28)}
           </div>
           <span class="quick-action-label">Minhas Obras</span>
         </div>
 
         <div class="quick-action-card" id="btnAtalhoRelatorios">
           <div class="quick-action-icon-badge">
-            ${Icons.reportsHex(28)}
+            ${Icons.iconeRelatorio(28)}
           </div>
           <span class="quick-action-label">Relatórios</span>
         </div>

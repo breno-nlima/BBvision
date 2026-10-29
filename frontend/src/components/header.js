@@ -32,7 +32,7 @@ export function renderHeader(type = 'default') {
     if (isObrasPage) {
       actionButton = `<button class="btn-pill-yellow" id="btnHeaderNovaObra" title="Cadastrar Nova Obra (Exclusivo Fiscal BB)" style="display: inline-flex; align-items: center; gap: 6px;">${Icons.iconeCadastro(16)} Nova Obra</button>`;
     } else {
-      actionButton = `<button class="btn-pill-navy" id="btnHeaderAction" title="Painel de Auditoria">Auditoria</button>`;
+      actionButton = `<button class="btn-pill-navy" id="btnHeaderAction" title="Painel de Auditoria" style="display: inline-flex; align-items: center; gap: 6px;">${Icons.iconeAuditoria(16)} Auditoria</button>`;
     }
   }
 
