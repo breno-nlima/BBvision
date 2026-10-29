@@ -11,7 +11,7 @@ import { state } from '../services/state.js';
 import { api } from '../services/api.js';
 import { toast } from '../components/toast.js';
 
-// Definição das 4 perguntas estruturadas com alternância de tipos
+// Definição padrão das 4 perguntas estruturadas com alternância de tipos
 const PERGUNTAS_CHECKLIST = [
   {
     id: 'fachadaLegivel',
@@ -144,9 +144,24 @@ const PERGUNTAS_CHECKLIST = [
   }
 ];
 
+export function getPerguntasChecklistAtual() {
+  const custom = state.currentVistoria?.perguntasChecklist || 
+                 state.selectedObra?.perguntasChecklist || 
+                 state.selectedObra?.checklist_perguntas;
+  if (Array.isArray(custom) && custom.length > 0) {
+    return custom;
+  }
+  if (Array.isArray(state.checklistTemplate) && state.checklistTemplate.length > 0) {
+    return state.checklistTemplate;
+  }
+  return PERGUNTAS_CHECKLIST;
+}
+
 export function renderChecklistPergunta() {
   const vistoria = state.currentVistoria;
   const respostas = vistoria.respostas = vistoria.respostas || {};
+  const listaPerguntas = getPerguntasChecklistAtual();
+  const totalPerguntas = listaPerguntas.length;
 
   // Garante inicialização das chaves no estado
   if (respostas.fachadaLegivel === undefined) respostas.fachadaLegivel = 'Sim';
@@ -165,43 +180,61 @@ export function renderChecklistPergunta() {
   }
 
   // Índice da pergunta ativa
-  if (typeof state.checklistQuestionIndex !== 'number' || state.checklistQuestionIndex < 0 || state.checklistQuestionIndex >= PERGUNTAS_CHECKLIST.length) {
+  if (typeof state.checklistQuestionIndex !== 'number' || state.checklistQuestionIndex < 0 || state.checklistQuestionIndex >= totalPerguntas) {
     state.checklistQuestionIndex = 0;
   }
   const currentIndex = state.checklistQuestionIndex;
-  const currentQ = PERGUNTAS_CHECKLIST[currentIndex];
+  const currentQ = listaPerguntas[currentIndex] || listaPerguntas[0];
+  const chave = currentQ.chaveResposta || currentQ.id || `pergunta_${currentIndex}`;
 
-  const totalPerguntas = PERGUNTAS_CHECKLIST.length;
+  if (respostas[chave] === undefined) {
+    if (currentQ.tipo === 'caixa') {
+      respostas[chave] = Array.isArray(currentQ.padrao) ? [...currentQ.padrao] : [];
+    } else {
+      respostas[chave] = currentQ.padrao || (currentQ.tipo === 'texto' ? '' : 'Sim');
+    }
+  }
+
   const progressoPorcentagem = Math.round(((currentIndex + 1) / totalPerguntas) * 100);
 
   // Render do corpo específico da pergunta ativa
   let questionBodyHtml = '';
 
   if (currentQ.tipo === 'multipla_escolha') {
-    const valorAtual = respostas[currentQ.chaveResposta] || currentQ.padrao;
+    const opcoes = currentQ.opcoes || [
+      { valor: 'Sim', label: 'Sim (Conforme)', detalhe: 'Atende aos critérios técnicos do BB', tag: 'Conforme', classeTag: 'tag-conforme' },
+      { valor: 'Parcial', label: 'Parcial (Com Ressalvas)', detalhe: 'Atende parcialmente com necessidade de ajuste', tag: 'Atenção', classeTag: 'tag-atencao' },
+      { valor: 'Não', label: 'Não (Não Conforme)', detalhe: 'Não atende aos critérios normativos', tag: 'Não Conforme', classeTag: 'tag-erro' }
+    ];
+    const valorAtual = respostas[chave] || currentQ.padrao || opcoes[0].valor;
+
     questionBodyHtml = `
       <div class="opcoes-resposta-group">
-        ${currentQ.opcoes.map(op => {
+        ${opcoes.map(op => {
           const isSelected = valorAtual === op.valor;
           return `
             <label class="radio-pill-option ${isSelected ? 'selected' : ''}" data-val="${op.valor}">
               <div class="radio-left-cluster">
-                <input type="radio" name="${currentQ.id}" value="${op.valor}" ${isSelected ? 'checked' : ''} />
+                <input type="radio" name="${currentQ.id || chave}" value="${op.valor}" ${isSelected ? 'checked' : ''} />
                 <span class="radio-custom-circle"></span>
                 <div class="radio-text-wrap">
                   <span class="radio-label-title">${op.label}</span>
-                  <span class="radio-label-sub">${op.detalhe}</span>
+                  <span class="radio-label-sub">${op.detalhe || ''}</span>
                 </div>
               </div>
-              <span class="option-badge-pill ${op.classeTag}">${op.tag}</span>
+              <span class="option-badge-pill ${op.classeTag || 'tag-conforme'}">${op.tag || 'Status'}</span>
             </label>
           `;
         }).join('')}
       </div>
     `;
   } else if (currentQ.tipo === 'caixa') {
-    const selecionados = Array.isArray(respostas[currentQ.chaveResposta]) 
-      ? respostas[currentQ.chaveResposta] 
+    const opcoes = currentQ.opcoes || [
+      { valor: 'Isolamento e tapumes conformes', label: 'Isolamento perimetral e tapumes', detalhe: 'Área isolada' },
+      { valor: 'EPIs e sinalização ativos', label: 'Sinalização e EPIs em uso', detalhe: 'Equipe protegida' }
+    ];
+    const selecionados = Array.isArray(respostas[chave]) 
+      ? respostas[chave] 
       : [];
     
     questionBodyHtml = `
@@ -211,12 +244,12 @@ export function renderChecklistPergunta() {
           <button type="button" class="btn-quick-check" id="btnLimparEpc">Limpar</button>
         </div>
         <span class="badge-selection-count" id="badgeEpcCount">
-          ${selecionados.length} de ${currentQ.opcoes.length} marcados
+          ${selecionados.length} de ${opcoes.length} marcados
         </span>
       </div>
 
       <div class="checkbox-options-group">
-        ${currentQ.opcoes.map(op => {
+        ${opcoes.map(op => {
           const isChecked = selecionados.includes(op.valor);
           return `
             <div class="checkbox-card-option ${isChecked ? 'checked' : ''}" data-val="${op.valor}">
@@ -227,7 +260,7 @@ export function renderChecklistPergunta() {
               </div>
               <div class="checkbox-text-wrap">
                 <strong class="chk-label-title">${op.label}</strong>
-                <span class="chk-label-detail">${op.detalhe}</span>
+                <span class="chk-label-detail">${op.detalhe || ''}</span>
               </div>
             </div>
           `;
@@ -235,8 +268,14 @@ export function renderChecklistPergunta() {
       </div>
     `;
   } else if (currentQ.tipo === 'texto') {
-    const textoAtual = respostas[currentQ.chaveResposta] || '';
+    const textoAtual = respostas[chave] || '';
     const charLen = textoAtual.length;
+    const chipsRapidos = currentQ.chipsRapidos || [
+      'Alvenaria aprumada e nivelada',
+      'Ausência de trincas estruturais',
+      'Emboço e acabamentos homogêneos',
+      'Instalações embutidas conforme projeto'
+    ];
 
     questionBodyHtml = `
       <div class="pergunta-textarea-wrap">
@@ -245,7 +284,7 @@ export function renderChecklistPergunta() {
           id="txtRelatoChecklist" 
           maxlength="500" 
           rows="4" 
-          placeholder="${currentQ.placeholder}"
+          placeholder="${currentQ.placeholder || 'Digite ou insira sugestões técnicas sobre a execução da obra...'}"
         >${textoAtual}</textarea>
 
         <div class="textarea-meta-bar">
@@ -259,7 +298,7 @@ export function renderChecklistPergunta() {
             <span>⚡ Sugestões rápidas de engenharia (toque para adicionar):</span>
           </div>
           <div class="quick-chips-cloud">
-            ${currentQ.chipsRapidos.map(chip => `
+            ${chipsRapidos.map(chip => `
               <button type="button" class="quick-chip-btn" data-chip="${chip}">
                 + ${chip}
               </button>
@@ -328,13 +367,13 @@ export function renderChecklistPergunta() {
           </div>
 
           <div class="pergunta-step-tabs">
-            ${PERGUNTAS_CHECKLIST.map((q, idx) => {
+            ${listaPerguntas.map((q, idx) => {
               const isActive = idx === currentIndex;
               const isDone = idx < currentIndex;
               return `
                 <button type="button" class="step-tab-pill ${isActive ? 'active' : ''} ${isDone ? 'completed' : ''}" data-step="${idx}">
-                  <span class="step-tab-icon">${isDone ? '✓' : q.tipoIcon}</span>
-                  <span>Q${q.numero}</span>
+                  <span class="step-tab-icon">${isDone ? '✓' : (q.tipoIcon || '🔘')}</span>
+                  <span>Q${q.numero || (idx + 1)}</span>
                 </button>
               `;
             }).join('')}
@@ -353,8 +392,8 @@ export function renderChecklistPergunta() {
             </div>
 
             <div class="pergunta-type-pill">
-              <span>${currentQ.tipoIcon}</span>
-              <span>${currentQ.tipoLabel}</span>
+              <span>${currentQ.tipoIcon || '🔘'}</span>
+              <span>${currentQ.tipoLabel || 'Pergunta Técnica'}</span>
             </div>
           </div>
 
@@ -363,7 +402,7 @@ export function renderChecklistPergunta() {
               ${currentQ.titulo}
             </h3>
             <p class="pergunta-subtitulo">
-              ${currentQ.subtitulo}
+              ${currentQ.subtitulo || ''}
             </p>
             
             ${questionBodyHtml}
@@ -384,7 +423,7 @@ export function renderChecklistPergunta() {
           </div>
         ` : `
           <button class="btn-primary-bb-yellow" id="btnProximaPergunta">
-            Próxima Pergunta
+            ${totalPerguntas === 1 ? 'Avançar para Checklist Dinâmico →' : 'Próxima Pergunta'}
           </button>
         `}
       </div>
@@ -393,8 +432,11 @@ export function renderChecklistPergunta() {
 }
 
 export function bindChecklistPerguntaEvents() {
+  const listaPerguntas = getPerguntasChecklistAtual();
+  const totalPerguntas = listaPerguntas.length;
   const currentIndex = state.checklistQuestionIndex || 0;
-  const currentQ = PERGUNTAS_CHECKLIST[currentIndex];
+  const currentQ = listaPerguntas[currentIndex] || listaPerguntas[0];
+  const chave = currentQ.chaveResposta || currentQ.id || `pergunta_${currentIndex}`;
   const respostas = state.currentVistoria.respostas;
 
   // 1. Botão Voltar no Header
@@ -405,7 +447,7 @@ export function bindChecklistPerguntaEvents() {
         state.checklistQuestionIndex = currentIndex - 1;
         state.notify();
       } else {
-        state.navigate('imagem-protegida');
+        state.navigate('tipo-local');
       }
     });
   }
@@ -421,7 +463,7 @@ export function bindChecklistPerguntaEvents() {
     });
   }
 
-  // 3. Clique nas tabs do Stepper (Q1, Q2, Q3, Q4)
+  // 3. Clique nas tabs do Stepper (Q1, Q2, Q3...)
   const tabPills = document.querySelectorAll('.step-tab-pill');
   tabPills.forEach(pill => {
     pill.addEventListener('click', () => {
@@ -459,7 +501,7 @@ export function bindChecklistPerguntaEvents() {
         const input = opt.querySelector('input');
         if (input) input.checked = true;
 
-        respostas[currentQ.chaveResposta] = val;
+        respostas[chave] = val;
       });
     });
   }
@@ -468,19 +510,20 @@ export function bindChecklistPerguntaEvents() {
   if (currentQ.tipo === 'caixa') {
     const chkOptions = document.querySelectorAll('.checkbox-card-option');
     const badgeCount = document.getElementById('badgeEpcCount');
+    const opcoes = currentQ.opcoes || [];
 
     function atualizarContador() {
-      const marcados = respostas[currentQ.chaveResposta] || [];
+      const marcados = respostas[chave] || [];
       if (badgeCount) {
-        badgeCount.innerText = `${marcados.length} de ${currentQ.opcoes.length} marcados`;
+        badgeCount.innerText = `${marcados.length} de ${opcoes.length} marcados`;
       }
     }
 
     chkOptions.forEach(card => {
       card.addEventListener('click', () => {
         const val = card.getAttribute('data-val');
-        let arr = Array.isArray(respostas[currentQ.chaveResposta]) 
-          ? [...respostas[currentQ.chaveResposta]] 
+        let arr = Array.isArray(respostas[chave]) 
+          ? [...respostas[chave]] 
           : [];
 
         if (card.classList.contains('checked')) {
@@ -491,7 +534,7 @@ export function bindChecklistPerguntaEvents() {
           if (!arr.includes(val)) arr.push(val);
         }
 
-        respostas[currentQ.chaveResposta] = arr;
+        respostas[chave] = arr;
         atualizarContador();
       });
     });
@@ -500,11 +543,11 @@ export function bindChecklistPerguntaEvents() {
     const btnMarcarTodos = document.getElementById('btnMarcarTodosEpc');
     if (btnMarcarTodos) {
       btnMarcarTodos.addEventListener('click', () => {
-        const todosValores = currentQ.opcoes.map(o => o.valor);
-        respostas[currentQ.chaveResposta] = todosValores;
+        const todosValores = opcoes.map(o => o.valor);
+        respostas[chave] = todosValores;
         chkOptions.forEach(c => c.classList.add('checked'));
         atualizarContador();
-        toast.info('Itens Marcados', 'Todos os itens de segurança foram marcados como ativos.');
+        toast.info('Itens Marcados', 'Todos os itens foram marcados como ativos.');
       });
     }
 
@@ -512,7 +555,7 @@ export function bindChecklistPerguntaEvents() {
     const btnLimpar = document.getElementById('btnLimparEpc');
     if (btnLimpar) {
       btnLimpar.addEventListener('click', () => {
-        respostas[currentQ.chaveResposta] = [];
+        respostas[chave] = [];
         chkOptions.forEach(c => c.classList.remove('checked'));
         atualizarContador();
       });
@@ -529,7 +572,7 @@ export function bindChecklistPerguntaEvents() {
 
     if (txtArea) {
       txtArea.addEventListener('input', (e) => {
-        respostas[currentQ.chaveResposta] = e.target.value;
+        respostas[chave] = e.target.value;
         if (lblChar) {
           lblChar.innerText = `${e.target.value.length} / 500 caracteres`;
         }
@@ -539,7 +582,7 @@ export function bindChecklistPerguntaEvents() {
     if (btnClearTxt && txtArea) {
       btnClearTxt.addEventListener('click', () => {
         txtArea.value = '';
-        respostas[currentQ.chaveResposta] = '';
+        respostas[chave] = '';
         if (lblChar) lblChar.innerText = `0 / 500 caracteres`;
         txtArea.focus();
       });
@@ -559,7 +602,7 @@ export function bindChecklistPerguntaEvents() {
           currentTxt = chipVal;
         }
         txtArea.value = currentTxt;
-        respostas[currentQ.chaveResposta] = currentTxt;
+        respostas[chave] = currentTxt;
         if (lblChar) lblChar.innerText = `${currentTxt.length} / 500 caracteres`;
         toast.info('Termo Adicionado', `Sugestão técnica inserida no parecer.`);
       });
@@ -584,7 +627,7 @@ export function bindChecklistPerguntaEvents() {
           const res = await api.sugerirObservacao('alvenaria');
           if (res && res.sugestao) {
             txtArea.value = res.sugestao;
-            respostas[currentQ.chaveResposta] = res.sugestao;
+            respostas[chave] = res.sugestao;
             toast.success('Parecer Gerado!', 'Sugestão técnica elaborada pela IA com sucesso.');
           } else {
             throw new Error('Resposta vazia');
@@ -593,7 +636,7 @@ export function bindChecklistPerguntaEvents() {
           console.warn('[ChecklistPergunta] Fallback técnico:', err.message);
           const fallbackTxt = 'Alvenaria perfeitamente alinhada e nivelada. Vigas e juntas regulares, sem trincas ativas ou desvios de prumo. Obra conforme diretrizes de engenharia do Banco do Brasil.';
           txtArea.value = fallbackTxt;
-          respostas[currentQ.chaveResposta] = fallbackTxt;
+          respostas[chave] = fallbackTxt;
           toast.info('Parecer Técnico', 'Parecer gerado com base no padrão normativo BB.');
         } finally {
           btnIaGerar.disabled = false;
@@ -608,11 +651,11 @@ export function bindChecklistPerguntaEvents() {
   const btnProxima = document.getElementById('btnProximaPergunta');
   if (btnProxima) {
     btnProxima.addEventListener('click', () => {
-      if (currentIndex < PERGUNTAS_CHECKLIST.length - 1) {
+      if (currentIndex < totalPerguntas - 1) {
         state.checklistQuestionIndex = currentIndex + 1;
         state.notify();
       } else {
-        // Concluiu as 4 perguntas -> Avança para o Checklist Dinâmico com IA
+        // Concluiu as perguntas configuradas pelo fiscal -> Avança para o Checklist Dinâmico com IA
         state.checklistQuestionIndex = 0;
         state.navigate('checklist-dinamico');
       }

@@ -6,9 +6,12 @@
 
 import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
+import { modal } from '../components/modal.js';
 
 export function renderObraDetalhe() {
   const vistoria = state.currentVistoria;
+  const isFiscal = state.user?.cargo === 'fiscal';
+  const perguntasObra = state.getPerguntasParaObra(vistoria.obraId);
   const user = state.user || { nome: 'Responsável Técnico', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' };
   const responsavelNome = state.user?.nome || vistoria.responsavel || 'Responsável Técnico';
 
@@ -62,6 +65,20 @@ export function renderObraDetalhe() {
             <span class="detalhe-sub">Etapa da obra: ${vistoria.etapa}</span>
           </div>
         </div>
+
+        ${isFiscal ? `
+          <div class="detalhe-divider"></div>
+          <div class="detalhe-item-row" id="btnFiscalEditarChecklistObra" style="cursor: pointer; background: #F8FAFC; border: 1.5px solid #002D62; padding: 12px 14px; border-radius: 8px; margin-top: 6px; display: flex; align-items: center; justify-content: space-between;" title="Clique para gerenciar as perguntas do checklist desta obra">
+            <div class="detalhe-text-group">
+              <span class="detalhe-label" style="color: #002D62; font-weight: 700;">📋 Checklist Técnico Desta Obra</span>
+              <strong class="detalhe-val" style="color: #002D62; font-size: 13px;">${perguntasObra.length} perguntas configuradas</strong>
+              <span class="detalhe-sub" style="font-size: 11.5px; color: #475569;">Clique para visualizar ou alterar perguntas exclusivas desta unidade</span>
+            </div>
+            <div class="detalhe-action-icon" style="color: #002D62; font-size: 18px;">
+              ✏️
+            </div>
+          </div>
+        ` : ''}
       </div>
 
       <!-- Botão Amarelo de Ação Principal -->
@@ -87,6 +104,16 @@ export function bindObraDetalheEvents() {
     btnAtualizar.addEventListener('click', () => {
       // Avança para a seleção de Tipo de Local conforme o fluxo oficial
       state.navigate('tipo-local');
+    });
+  }
+
+  const btnFiscalEditarChecklist = document.getElementById('btnFiscalEditarChecklistObra');
+  if (btnFiscalEditarChecklist) {
+    btnFiscalEditarChecklist.addEventListener('click', () => {
+      modal.openGerenciadorPerguntasModal({
+        fiscalUser: state.user,
+        obra: state.selectedObra
+      });
     });
   }
 }

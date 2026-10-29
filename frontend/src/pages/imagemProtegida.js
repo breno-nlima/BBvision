@@ -90,10 +90,10 @@ export function renderImagemProtegida() {
         </div>
       </div>
 
-      <!-- Botão Amarelo de Continuação -->
+      <!-- Botão Amarelo de Continuação (Leva à Assinatura Digital) -->
       <div class="protegida-action-footer">
         <button class="btn-primary-bb-yellow" id="btnContinuarChecklist">
-          Continuar
+          Avançar para Assinatura →
         </button>
       </div>
     </div>
@@ -111,8 +111,8 @@ export function bindImagemProtegidaEvents() {
   const btnContinuar = document.getElementById('btnContinuarChecklist');
   if (btnContinuar) {
     btnContinuar.addEventListener('click', () => {
-      // Avança para a tela de Pergunta do Checklist
-      state.navigate('checklist-pergunta');
+      // Avança para a tela de Assinatura do Responsável
+      state.navigate('assinatura-responsavel');
     });
   }
 

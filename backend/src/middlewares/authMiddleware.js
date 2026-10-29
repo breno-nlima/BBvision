@@ -76,7 +76,13 @@ async function optionalAuth(req, res, next) {
     return requireAuth(req, res, next);
   }
 
-  // Fallback dev: Rodrigo Silva (Empreiteira)
+  // Em ambiente de produção, sem token não há injeção de usuário simulado
+  if (process.env.NODE_ENV === 'production') {
+    req.user = null;
+    return next();
+  }
+
+  // Fallback dev/sandbox para facilidade de testes locais
   req.user = {
     id: '11111111-1111-4111-8111-111111111111',
     nome: 'Rodrigo Silva (Empreiteira)',

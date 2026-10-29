@@ -110,10 +110,16 @@ class OfflineSyncService {
           }] : [],
         };
 
-        // Envia para o endpoint oficial de sincronização offline
+        // Envia para o endpoint oficial de sincronização offline com autenticação
+        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('bbvision_token') : null;
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch('/api/relatorios/sincronizar-offline', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(payload),
         });
 

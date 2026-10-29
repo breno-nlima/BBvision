@@ -95,7 +95,7 @@ export function bindAssinaturaResponsavelEvents() {
   const btnVoltar = document.getElementById('btnVoltarVerificacao');
   if (btnVoltar) {
     btnVoltar.addEventListener('click', () => {
-      state.navigate('checklist-verificacao');
+      state.navigate('imagem-protegida');
     });
   }
 

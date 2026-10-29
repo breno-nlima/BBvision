@@ -26,11 +26,11 @@ export function renderChecklistVerificacao() {
             </button>
             <h1 class="verificacao-title">Checklist de Verificação</h1>
           </div>
-          <span class="etapa-indicator-text">etapa 2 de 3</span>
+          <span class="etapa-indicator-text">etapa 1 de 3</span>
         </div>
 
         <div class="progress-bar-track">
-          <div class="progress-bar-fill-yellow" style="width: 66%;"></div>
+          <div class="progress-bar-fill-yellow" style="width: 35%;"></div>
         </div>
       </header>
 
@@ -119,10 +119,10 @@ export function renderChecklistVerificacao() {
         </div>
       </div>
 
-      <!-- Botão Amarelo de Finalização (Leva à Assinatura) -->
+      <!-- Botão Amarelo de Continuação (Leva à Validação com Câmera & IA) -->
       <div class="verificacao-action-footer">
         <button class="btn-primary-bb-yellow" id="btnFinalizarChecklist">
-          FINALIZAR
+          Avançar para Câmera & IA →
         </button>
       </div>
     </div>
@@ -148,8 +148,8 @@ export function bindChecklistVerificacaoEvents() {
   const btnFinalizar = document.getElementById('btnFinalizarChecklist');
   if (btnFinalizar) {
     btnFinalizar.addEventListener('click', () => {
-      // Avança para a tela de Assinatura do Responsável
-      state.navigate('assinatura-responsavel');
+      // Avança para a tela de Câmera & Validação com IA conforme o novo fluxo
+      state.navigate('camera-ia');
     });
   }
 }

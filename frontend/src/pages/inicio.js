@@ -60,9 +60,12 @@ export function renderInicio() {
             <span class="bb-institucional-tag">Banco do Brasil S.A. • Fiscalização e Auditoria Remota</span>
             <h2 class="hero-fiscal-title">Centro de Controle & Governança</h2>
             <p class="hero-fiscal-sub">${userName} — Fiscal de Serviço / Engenharia BB</p>
-            <div style="margin-top: 12px;">
+            <div style="margin-top: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
               <button class="btn-pill-yellow" id="btnHeroNovaObra" title="Cadastrar Nova Obra (Exclusivo Fiscal BB)">
                 + Nova Obra
+              </button>
+              <button class="btn-pill-navy" id="btnHeroGerenciarPerguntas" title="Gerenciar Perguntas do Checklist Oficial BB" style="background: rgba(255, 255, 255, 0.15); color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.3); padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background 0.15s ease;">
+                📋 Perguntas Checklist
               </button>
             </div>
           </div>
@@ -125,6 +128,13 @@ export function renderInicio() {
               ${Icons.reportsHex(28)}
             </div>
             <span class="quick-action-label">PDFs Oficiais</span>
+          </div>
+
+          <div class="quick-action-card" id="btnAtalhoChecklistFiscal" title="Visualizar e Editar Perguntas do Checklist Oficial BB">
+            <div class="quick-action-icon-badge" style="background: rgba(0, 45, 98, 0.08); color: #002D62; font-size: 20px;">
+              📋
+            </div>
+            <span class="quick-action-label" style="font-weight: 700; color: #002D62;">Checklist BB</span>
           </div>
 
           <div class="quick-action-card" id="btnAtalhoValidadorGrid">
@@ -262,9 +272,25 @@ export function bindInicioEvents() {
       btnHeroNovaObra.addEventListener('click', triggerNovaObra);
     }
 
+    const triggerGerenciarChecklist = () => {
+      modal.openGerenciadorPerguntasModal({
+        fiscalUser: state.user
+      });
+    };
+
+    const btnHeroGerenciarPerguntas = document.getElementById('btnHeroGerenciarPerguntas');
+    if (btnHeroGerenciarPerguntas) {
+      btnHeroGerenciarPerguntas.addEventListener('click', triggerGerenciarChecklist);
+    }
+
     const btnNovaObraGrid = document.getElementById('btnAtalhoNovaObraGrid');
     if (btnNovaObraGrid) {
       btnNovaObraGrid.addEventListener('click', triggerNovaObra);
+    }
+
+    const btnChecklistGrid = document.getElementById('btnAtalhoChecklistFiscal');
+    if (btnChecklistGrid) {
+      btnChecklistGrid.addEventListener('click', triggerGerenciarChecklist);
     }
 
     const btnCallout = document.getElementById('btnIrAuditoriaDirect');

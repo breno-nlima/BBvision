@@ -16,7 +16,7 @@ Todo desenvolvimento neste repositório DEVE rigorosamente respeitar o documento
    - **Hospedagem**: Hostinger.
 
 2. **Fluxo e Personas**:
-   - **Rodrigo (Empreiteira)**: Vê imagem de referência -> Dispara foto exclusivamente pela câmera -> Gemini valida -> Preenche checklist com sugestões editáveis de IA -> Finaliza vistoria -> Bloqueio imediato do relatório -> Geração de código único e hash SHA-256 -> Disparo de PDF por e-mail.
+   - **Rodrigo (Empreiteira)**: Seleciona tipo de local -> Preenche checklist técnico (passo a passo e dinâmico com sugestões IA) -> Validação com a câmera exclusivamente in-loco -> Gemini valida -> Imagem protegida -> Assinatura digital -> Bloqueio imediato do relatório -> Geração de código único e hash SHA-256 -> Disparo de PDF por e-mail.
    - **Mariana (Fiscal / Engenheira)**: Painel de auditoria -> Análise de PDF com código único e carimbo -> Aprovação (obra 'REGULAR') ou reprovação (obra 'PENDENTE_AJUSTE').
 
 3. **Inviolabilidade**:

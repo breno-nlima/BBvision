@@ -35,13 +35,43 @@ class BVisionApp {
   }
 
   init() {
-    // Escuta mudanças de estado e re-renderiza a tela ativa
+    // 1. Processa rotas diretas via URL ou Hash (ex: QR Code de Validação Pública ou links compartilhados)
+    this.handleInitialRouting();
+
+    window.addEventListener('popstate', () => this.handleInitialRouting());
+    window.addEventListener('hashchange', () => this.handleInitialRouting());
+
+    // 2. Escuta mudanças de estado e re-renderiza a tela ativa
     state.subscribe(() => {
       this.render();
     });
 
     // Render inicial
     this.render();
+  }
+
+  handleInitialRouting() {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const hash = window.location.hash || '';
+      const codigoParam = urlParams.get('codigo') || urlParams.get('validar') || urlParams.get('hash');
+
+      if (codigoParam || hash === '#validador' || hash.includes('validador')) {
+        state.currentPage = 'validador-publico';
+        if (codigoParam) {
+          setTimeout(() => {
+            const input = document.getElementById('inputTermoValidacao');
+            const btn = document.getElementById('btnConsultarIntegridade');
+            if (input && btn) {
+              input.value = codigoParam;
+              btn.click();
+            }
+          }, 250);
+        }
+      }
+    } catch (e) {
+      console.warn('[BBVision App] Erro ao processar rota de URL:', e);
+    }
   }
 
   render(force = false) {

@@ -10,25 +10,25 @@ const { optionalAuth, requireAuth, requireRole } = require('../middlewares/authM
 const { upload } = require('../middlewares/uploadMiddleware');
 
 // Criação e listagem de relatórios
-router.post('/', optionalAuth, relatoriosController.criar);
+router.post('/', requireAuth, relatoriosController.criar);
 router.get('/', optionalAuth, relatoriosController.listar);
-router.get('/painel/resumo', optionalAuth, relatoriosController.obterPainelAuditoria);
+router.get('/painel/resumo', requireAuth, relatoriosController.obterPainelAuditoria);
 
 // Sincronização offline em lote ou individual (HU05) - Antes do parâmetro :id
-router.post('/sincronizar-offline', optionalAuth, relatoriosController.sincronizarOffline);
+router.post('/sincronizar-offline', requireAuth, relatoriosController.sincronizarOffline);
 
 // Detalhamento de relatório por ID
 router.get('/:id', optionalAuth, relatoriosController.obterPorId);
 
 // Checklist e evidências fotográficas
-router.put('/:id/respostas', optionalAuth, relatoriosController.salvarRespostas);
-router.post('/:id/fotos', optionalAuth, upload.single('foto'), relatoriosController.anexarFoto);
+router.put('/:id/respostas', requireAuth, relatoriosController.salvarRespostas);
+router.post('/:id/fotos', requireAuth, upload.single('foto'), relatoriosController.anexarFoto);
 
 // Finalização oficial inviolável e download/stream do PDF
-router.post('/:id/finalizar', optionalAuth, relatoriosController.finalizar);
+router.post('/:id/finalizar', requireAuth, relatoriosController.finalizar);
 router.get('/:id/pdf', relatoriosController.downloadPdf);
 
 // Auditoria do Fiscal / Engenheiro Mariana (Acesso restrito ao perfil fiscal/engenheiro do Banco do Brasil)
-router.patch('/:id/status', requireAuth, requireRole(['fiscal', 'engenheiro']), relatoriosController.atualizarStatusFiscal);
+router.patch('/:id/status', requireAuth, requireRole(['fiscal', 'engenheiro', 'admin']), relatoriosController.atualizarStatusFiscal);
 
 module.exports = router;

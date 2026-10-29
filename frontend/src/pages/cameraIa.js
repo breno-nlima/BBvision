@@ -31,7 +31,7 @@ export function renderCameraIa() {
       <div class="camera-fullview">
         <!-- Barra de Topo da Câmera -->
         <div class="camera-topbar-overlay">
-          <button class="cam-top-btn" id="btnVoltarTipoLocal" title="Voltar para Ambientes">
+          <button class="cam-top-btn" id="btnVoltarTipoLocal" title="Voltar para o Checklist">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="15 18 9 12 15 6"></polyline>
             </svg>
@@ -161,7 +161,7 @@ export function bindCameraIaEvents() {
   if (btnVoltar) {
     btnVoltar.addEventListener('click', () => {
       pararCamera();
-      state.navigate('tipo-local');
+      state.navigate('checklist-verificacao');
     });
   }
 

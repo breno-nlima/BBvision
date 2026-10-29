@@ -12,7 +12,85 @@ const { supabase, isConfigured } = require('./config/supabase');
 const salt = bcrypt.genSaltSync(10);
 const defaultPasswordHash = bcrypt.hashSync('123456', salt);
 
+// Modelo Oficial BB de Perguntas do Checklist da Obra (Editável por Fiscal de Obras)
+const defaultChecklistQuestions = [
+  {
+    id: 'fachadaLegivel',
+    numero: 1,
+    tipo: 'multipla_escolha',
+    tipoLabel: 'Múltipla Escolha',
+    tipoIcon: '🔘',
+    titulo: '1. Fachada da agência está legível e conforme padrão BB?',
+    subtitulo: 'Verifique a visibilidade da marca Banco do Brasil, totem institucional e desobstrução visual frontal.',
+    chaveResposta: 'fachadaLegivel',
+    padrao: 'Sim',
+    opcoes: [
+      { valor: 'Sim', label: 'Sim (Perfeitamente visível)', detalhe: 'Identificação visual BB e acessos sem nenhuma obstrução', tag: 'Conforme', classeTag: 'tag-conforme' },
+      { valor: 'Parcial', label: 'Parcial (Obstrução ou reforma)', detalhe: 'Andaimes, reformas pontuais ou cobertura parcial transitória', tag: 'Atenção', classeTag: 'tag-atencao' },
+      { valor: 'Não', label: 'Não (Inadequada ou ilegível)', detalhe: 'Logomarca ausente, danificada ou severamente encoberta', tag: 'Não Conforme', classeTag: 'tag-erro' }
+    ]
+  },
+  {
+    id: 'segurancaEpc',
+    numero: 2,
+    tipo: 'caixa',
+    tipoLabel: 'Caixas de Seleção',
+    tipoIcon: '☑️',
+    titulo: '2. Quais itens de segurança, proteção coletiva (EPC) e sinalização estão ativos no local?',
+    subtitulo: 'Marque todas as caixas aplicáveis verificadas in loco nesta vistoria técnica:',
+    chaveResposta: 'segurancaEpc',
+    padrao: [
+      'Isolamento perimetral e tapumes íntegros',
+      'Sinalização visual de perigo e rotas de pedestres',
+      'Uso obrigatório de EPIs completos pela equipe'
+    ],
+    opcoes: [
+      { valor: 'Isolamento perimetral e tapumes íntegros', label: 'Isolamento perimetral e tapumes íntegros', detalhe: 'Canteiro devidamente fechado sem brechas para circulação pública de pedestres' },
+      { valor: 'Sinalização visual de perigo e rotas de pedestres', label: 'Sinalização de perigo e rotas de pedestres', detalhe: 'Placas de advertência oficiais do BB e faixas de circulação externa desobstruídas' },
+      { valor: 'Uso obrigatório de EPIs completos pela equipe', label: 'Uso obrigatório de EPIs completos pela equipe', detalhe: 'Capacetes, botinas com biqueira e óculos de proteção em uso pelos operários' },
+      { valor: 'Extintores de incêndio vistoriados e desobstruídos', label: 'Extintores de incêndio vistoriados e acessíveis', detalhe: 'Cargas de água e pó químico pressurizados dentro do prazo de validade' },
+      { valor: 'Proteção contra quedas e telas de contenção em altura', label: 'Linha de vida e telas de contenção em altura', detalhe: 'Guarda-corpos regulamentares e telas fachadeiras montadas sem aberturas' }
+    ]
+  },
+  {
+    id: 'relatoEstrutural',
+    numero: 3,
+    tipo: 'texto',
+    tipoLabel: 'Campo de Texto Descritivo',
+    tipoIcon: '📝',
+    titulo: '3. Relato técnico sobre alvenaria, acabamentos e anomalias estruturais:',
+    subtitulo: 'Descreva o alinhamento, prumo, eventuais fissuras ou conformidade de execução da obra:',
+    chaveResposta: 'relatoEstrutural',
+    padrao: 'Alvenaria aprumada e nivelada com juntas regulares. Fachada frontal e vigas dentro do padrão visual e normativo do Banco do Brasil.',
+    placeholder: 'Digite ou insira sugestões técnicas sobre a alvenaria, vigas e acabamentos...',
+    chipsRapidos: [
+      'Alvenaria aprumada e nivelada',
+      'Ausência de trincas estruturais',
+      'Emboço e revestimento homogêneos',
+      'Instalações embutidas conforme projeto',
+      'Pequena anomalia superficial sem risco'
+    ]
+  },
+  {
+    id: 'acessibilidade',
+    numero: 4,
+    tipo: 'multipla_escolha',
+    tipoLabel: 'Múltipla Escolha',
+    tipoIcon: '🔘',
+    titulo: '4. Condição da calçada externa e acessibilidade da entrada principal:',
+    subtitulo: 'Avaliação de piso tátil, guia rebaixada e rampas de acesso da agência (NBR 9050):',
+    chaveResposta: 'acessibilidade',
+    padrao: 'Totalmente acessível (Piso tátil e rampa nivelada sem degraus)',
+    opcoes: [
+      { valor: 'Totalmente acessível (Piso tátil e rampa nivelada sem degraus)', label: 'Totalmente acessível (NBR 9050)', detalhe: 'Piso tátil direcional/alerta instalado e rampa nivelada sem degraus impeditivos', tag: '100% Conforme', classeTag: 'tag-conforme' },
+      { valor: 'Parcialmente acessível (Pequeno desnível ou adequação em andamento)', label: 'Parcialmente acessível (Em adequação)', detalhe: 'Rampa provisória segura ou acabamento de piso tátil em fase final de execução', tag: 'Com Ressalva', classeTag: 'tag-atencao' },
+      { valor: 'Inacessível / Bloqueado (Necessita intervenção corretiva urgente)', label: 'Inacessível / Bloqueado', detalhe: 'Degraus sem rampa alternativa, calçada esburacada ou obstrução total de acesso', tag: 'Crítico', classeTag: 'tag-erro' }
+    ]
+  }
+];
+
 const mockData = {
+  checklist_template: JSON.parse(JSON.stringify(defaultChecklistQuestions)),
   usuarios: [
     {
       id: '11111111-1111-4111-8111-111111111111',
@@ -391,6 +469,32 @@ const mockData = {
     return this.findObraById(id);
   },
 
+  getChecklistTemplate() {
+    return JSON.parse(JSON.stringify(this.checklist_template || defaultChecklistQuestions));
+  },
+
+  updateChecklistTemplate(perguntas) {
+    if (Array.isArray(perguntas) && perguntas.length > 0) {
+      this.checklist_template = JSON.parse(JSON.stringify(perguntas));
+    }
+    return this.getChecklistTemplate();
+  },
+
+  getChecklistObra(obraId) {
+    const obra = this.obras.find(o => o.id === obraId);
+    if (!obra) return null;
+    return obra.checklist_perguntas || this.getChecklistTemplate();
+  },
+
+  updateChecklistObra(obraId, perguntas) {
+    const obra = this.obras.find(o => o.id === obraId);
+    if (!obra) return null;
+    if (Array.isArray(perguntas) && perguntas.length > 0) {
+      obra.checklist_perguntas = JSON.parse(JSON.stringify(perguntas));
+    }
+    return obra.checklist_perguntas || this.getChecklistTemplate();
+  },
+
   async createObraAsync(dados) {
     const novaObra = {
       id: `obr-${Date.now()}`,
@@ -400,6 +504,7 @@ const mockData = {
       empreiteira_id: dados.empreiteira_id || '11111111-1111-4111-8111-111111111111',
       cadastrado_por_fiscal_id: dados.cadastrado_por_fiscal_id || '22222222-2222-4222-8222-222222222222',
       fiscal_responsavel_id: dados.fiscal_responsavel_id || dados.cadastrado_por_fiscal_id || '22222222-2222-4222-8222-222222222222',
+      checklist_perguntas: dados.checklist_perguntas || dados.perguntasChecklist || this.getChecklistTemplate(),
       ...dados,
     };
 
@@ -425,6 +530,7 @@ const mockData = {
       empreiteira_id: dados.empreiteira_id || '11111111-1111-4111-8111-111111111111',
       cadastrado_por_fiscal_id: dados.cadastrado_por_fiscal_id || '22222222-2222-4222-8222-222222222222',
       fiscal_responsavel_id: dados.fiscal_responsavel_id || dados.cadastrado_por_fiscal_id || '22222222-2222-4222-8222-222222222222',
+      checklist_perguntas: dados.checklist_perguntas || dados.perguntasChecklist || this.getChecklistTemplate(),
       ...dados,
     };
     this.obras.push(novaObra);
@@ -445,10 +551,93 @@ const mockData = {
     return lista.map(r => this.formatRelatorio(r));
   },
 
+  async listRelatoriosAsync(filtros = {}) {
+    if (isConfigured && supabase) {
+      try {
+        let query = supabase.from('relatorios').select('*').order('created_at', { ascending: false });
+        if (filtros.obra_id) query = query.eq('obra_id', filtros.obra_id);
+        if (filtros.status) query = query.eq('status', filtros.status);
+        const { data, error } = await query;
+        if (!error && data && data.length > 0) {
+          return data.map(r => this.formatRelatorio(r));
+        }
+      } catch (e) {
+        // Fallback
+      }
+    }
+    return this.listRelatorios(filtros);
+  },
+
   findRelatorioById(id) {
     const relatorio = this.relatorios.find(r => r.id === id);
     if (!relatorio) return null;
     return this.formatRelatorio(relatorio);
+  },
+
+  async findRelatorioByIdAsync(id) {
+    if (isConfigured && supabase) {
+      try {
+        const { data, error } = await supabase.from('relatorios').select('*').eq('id', id).maybeSingle();
+        if (!error && data) {
+          const [{ data: fotos }, { data: respostas }] = await Promise.all([
+            supabase.from('fotos').select('*').eq('relatorio_id', data.id),
+            supabase.from('respostas').select('*').eq('relatorio_id', data.id),
+          ]);
+          return this.formatRelatorio({
+            ...data,
+            fotos: fotos || [],
+            respostas: respostas || [],
+          });
+        }
+      } catch (e) {
+        // Fallback
+      }
+    }
+    return this.findRelatorioById(id);
+  },
+
+  findRelatorioByCodigoOuHash(termo) {
+    if (!termo) return null;
+    const cleanTermo = String(termo).trim().toUpperCase();
+    return this.relatorios.find(r => 
+      (r.codigo_unico && r.codigo_unico.toUpperCase() === cleanTermo) ||
+      (r.hash_integridade && r.hash_integridade.toUpperCase() === cleanTermo)
+    ) || null;
+  },
+
+  async findRelatorioByCodigoOuHashAsync(termo) {
+    if (!termo) return null;
+    const cleanTermo = String(termo).trim().toUpperCase();
+
+    if (isConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('relatorios')
+          .select('*')
+          .or(`codigo_unico.eq.${cleanTermo},hash_integridade.ilike.${cleanTermo}`)
+          .maybeSingle();
+
+        if (!error && data) {
+          const [{ data: fotos }, { data: respostas }, { data: obra }] = await Promise.all([
+            supabase.from('fotos').select('*').eq('relatorio_id', data.id),
+            supabase.from('respostas').select('*').eq('relatorio_id', data.id),
+            data.obra_id ? supabase.from('obras').select('*').eq('id', data.obra_id).maybeSingle() : Promise.resolve({ data: null })
+          ]);
+
+          return this.formatRelatorio({
+            ...data,
+            obra: obra || null,
+            fotos: fotos || [],
+            respostas: respostas || [],
+          });
+        }
+      } catch (e) {
+        // Fallback para mock local
+      }
+    }
+
+    const relatorioMem = this.findRelatorioByCodigoOuHash(cleanTermo);
+    return relatorioMem ? this.formatRelatorio(relatorioMem) : null;
   },
 
   createRelatorio(dados) {

@@ -137,8 +137,9 @@ export function bindTipoLocalEvents() {
   const btnConfirmar = document.getElementById('btnConfirmarTipo');
   if (btnConfirmar) {
     btnConfirmar.addEventListener('click', () => {
-      // Avança para a tela de Câmera & IA conforme o fluxo
-      state.navigate('camera-ia');
+      // Avança para o Checklist antes da Câmera conforme nova ordem do fluxo
+      state.checklistQuestionIndex = 0;
+      state.navigate('checklist-pergunta');
     });
   }
 }

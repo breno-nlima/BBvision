@@ -31,6 +31,21 @@ const fotosController = {
         relativePath = path.join('uploads', 'evidencias', path.basename(req.file.path)).replace(/\\/g, '/');
       } else if (req.body.imagemBase64) {
         let base64Data = req.body.imagemBase64;
+        if (typeof base64Data !== 'string' || base64Data.trim() === '') {
+          return res.status(400).json({
+            status: 400,
+            erro: 'Formato inválido do campo imagemBase64.',
+          });
+        }
+
+        // Limite defensivo de payload base64 (máximo 25MB)
+        if (base64Data.length > 25 * 1024 * 1024) {
+          return res.status(400).json({
+            status: 400,
+            erro: 'A evidência fotográfica excede o limite máximo permitido de 15MB.',
+          });
+        }
+
         if (base64Data.includes(',')) {
           const parts = base64Data.split(',');
           const mimeMatch = parts[0].match(/:(.*?);/);
@@ -38,7 +53,14 @@ const fotosController = {
           base64Data = parts[1];
         }
 
-        imageBuffer = Buffer.from(base64Data, 'base64');
+        try {
+          imageBuffer = Buffer.from(base64Data, 'base64');
+        } catch (e) {
+          return res.status(400).json({
+            status: 400,
+            erro: 'Falha ao decodificar dados binários da imagem Base64.',
+          });
+        }
 
         // Validação de integridade do formato de imagem (Magic Bytes)
         const magicCheck = validateImageMagicBytes(imageBuffer);

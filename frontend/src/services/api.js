@@ -155,6 +155,36 @@ class BBVisionApiClient {
     });
   }
 
+  async getChecklistTemplate() {
+    return this.request('/api/obras/checklist-template', {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+  }
+
+  async salvarChecklistTemplate(perguntas) {
+    return this.request('/api/obras/checklist-template', {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ perguntas }),
+    });
+  }
+
+  async getChecklistObra(obraId) {
+    return this.request(`/api/obras/${obraId}/checklist`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+  }
+
+  async salvarChecklistObra(obraId, perguntas) {
+    return this.request(`/api/obras/${obraId}/checklist`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ perguntas }),
+    });
+  }
+
   // ----------------------------------------------------------------------------
   // FOTOS E IA GEMINI
   // ----------------------------------------------------------------------------

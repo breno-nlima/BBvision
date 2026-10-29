@@ -939,6 +939,45 @@ html, body {
 }
 
 /* ==========================================================================
+   ESTILOS DO GERENCIADOR E EDITOR DE PERGUNTAS DO CHECKLIST (FISCAL BB)
+   ========================================================================== */
+.pergunta-item-card {
+  transition: all 0.2s ease;
+}
+.pergunta-item-card:hover {
+  border-color: #94A3B8 !important;
+  box-shadow: 0 4px 12px rgba(0, 45, 98, 0.06) !important;
+}
+
+.btn-mover-pergunta {
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.btn-mover-pergunta:hover:not(:disabled) {
+  background: #E2E8F0 !important;
+  color: #002D62 !important;
+}
+
+.btn-editar-pergunta-obra,
+.btn-editar-gerenciador {
+  transition: all 0.15s ease;
+}
+.btn-editar-pergunta-obra:hover,
+.btn-editar-gerenciador:hover {
+  filter: brightness(0.95);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.btn-remover-pergunta-obra,
+.btn-remover-gerenciador {
+  transition: all 0.15s ease;
+}
+.btn-remover-pergunta-obra:hover,
+.btn-remover-gerenciador:hover {
+  background: #FCA5A5 !important;
+  color: #991B1B !important;
+}
+
+/* ==========================================================================
    ADAPTAÇÃO RESPONSIVA E POLIMENTO VISUAL CORPORATIVO
    ========================================================================== */
 

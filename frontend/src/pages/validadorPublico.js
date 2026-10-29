@@ -181,6 +181,12 @@ function renderResultadoConteudo() {
         <button class="btn-download-pdf-valid" id="btnAbrirPdfValidador">
           📄 Visualizar PDF Oficial com Carimbo Criptográfico
         </button>
+        <button class="btn-download-pdf-valid" id="btnCopiarLinkValidador" style="background: rgba(254, 211, 4, 0.15); color: #003882; border: 1px solid rgba(0, 56, 130, 0.3);">
+          🔗 Copiar Link de Validação Pública
+        </button>
+        <button class="btn-download-pdf-valid" id="btnImprimirCertidao" style="background: #F8FAFC; color: #475569; border: 1px solid #CBD5E1;">
+          🖨️ Imprimir Certidão de Fé Pública
+        </button>
       </div>
     </div>
   `;
@@ -190,8 +196,11 @@ export function bindValidadorPublicoEvents() {
   const btnVoltar = document.getElementById('btnVoltarValidador');
   if (btnVoltar) {
     btnVoltar.addEventListener('click', () => {
-      const prev = state.user?.cargo === 'fiscal' ? 'inicio' : 'inicio';
-      state.navigate(prev, prev);
+      if (state.user) {
+        state.navigate('inicio', 'inicio');
+      } else {
+        state.navigate('login');
+      }
     });
   }
 
@@ -206,7 +215,6 @@ export function bindValidadorPublicoEvents() {
       state.notify();
     });
   }
-
 
   const btnConsultar = document.getElementById('btnConsultarIntegridade');
   if (btnConsultar && inputTermo) {
@@ -239,6 +247,29 @@ export function bindValidadorPublicoEvents() {
         codigo: rel.codigo_unico,
         hash: rel.hash_integridade
       });
+    });
+  }
+
+  // Copiar link de validação pública para a área de transferência
+  const btnCopiarLink = document.getElementById('btnCopiarLinkValidador');
+  if (btnCopiarLink && resultadoConsulta) {
+    btnCopiarLink.addEventListener('click', () => {
+      const rel = resultadoConsulta.relatorio || resultadoConsulta;
+      const cod = rel.codigo_unico || rel.codigoUnico;
+      const url = `${window.location.origin}/?codigo=${encodeURIComponent(cod)}`;
+      navigator.clipboard.writeText(url).then(() => {
+        toast.success('Link Copiado!', 'Link direto de fé pública copiado para a área de transferência.');
+      }).catch(() => {
+        toast.info('Link para Compartilhar', url);
+      });
+    });
+  }
+
+  // Imprimir Certidão de Fé Pública
+  const btnImprimir = document.getElementById('btnImprimirCertidao');
+  if (btnImprimir && resultadoConsulta) {
+    btnImprimir.addEventListener('click', () => {
+      window.print();
     });
   }
 }

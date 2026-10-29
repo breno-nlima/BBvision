@@ -7,6 +7,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const dotenv = require('dotenv');
+const compression = require('compression');
 
 // Carrega variáveis de ambiente
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -20,38 +21,55 @@ const { generalLimiter } = require('./middlewares/rateLimiter');
 
 const app = express();
 
-// 1. Headers de Segurança HTTP (Defense-in-Depth)
+// 1. Compressão HTTP (Gzip / Deflate) para máxima escalabilidade e economia de banda
+app.use(compression({
+  threshold: 1024, // Comprime respostas maiores que 1KB
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) return false;
+    return compression.filter(req, res);
+  },
+}));
+
+// 2. Headers de Segurança HTTP (Defense-in-Depth, CSP, HSTS, X-Frame)
 app.use(securityHeaders);
 
-// 2. Logger Estruturado de Requisições
+// 3. Logger Estruturado de Requisições
 app.use(requestLogger);
 
-// 3. CORS Flexível e Seguro
+// 4. CORS Flexível e Seguro
+const allowedOriginEnv = process.env.CORS_ORIGIN || '*';
 const corsOptions = {
-  origin: '*', // Em desenvolvimento e teste local permite todos; pode ser restrito via CORS_ORIGIN no .env
+  origin: allowedOriginEnv === '*' ? '*' : allowedOriginEnv.split(',').map(s => s.trim()),
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset', 'Retry-After'],
 };
 app.use(cors(corsOptions));
 
-// 4. Parser de Requisições com limites seguros
+// 5. Parser de Requisições com limites seguros
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
-// 5. Servir Arquivos de Uploads com cabeçalhos de segurança
+// 6. Servir Arquivos de Uploads com cache imutável (fotos com SHA-256 nunca mudam)
 const uploadsPath = path.resolve(__dirname, '..', 'uploads');
 app.use('/uploads', express.static(uploadsPath, {
-  maxAge: '1h',
+  maxAge: '365d',
+  immutable: true,
   setHeaders: (res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
   },
 }));
 
-// 6. Servir Frontend Estático
+// 7. Servir Frontend Estático com ETag e cache inteligente
 const frontendPath = path.resolve(__dirname, '..', '..', 'frontend');
 app.use(express.static(frontendPath, {
-  maxAge: '1h',
+  maxAge: process.env.NODE_ENV === 'production' ? '1d' : '0',
+  etag: true,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  },
 }));
 
 // 7. Rota de Informações da API

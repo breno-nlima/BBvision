@@ -9,6 +9,7 @@ class RateLimiter {
     this.windowMs = options.windowMs || 60 * 1000; // 1 minuto
     this.max = options.max || 100; // Requisições máximas por janela
     this.message = options.message || 'Muitas requisições. Por favor, tente novamente em instantes.';
+    this.maxEntries = options.maxEntries || 10000; // Cap para proteção de memória (OOM prevention)
     this.hits = new Map();
 
     // Limpeza periódica de memória a cada 2 minutos
@@ -33,6 +34,12 @@ class RateLimiter {
       const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket?.remoteAddress || '127.0.0.1';
       const key = `${ip}:${req.baseUrl || req.path}`;
       const now = Date.now();
+
+      // Evita vazamento de memória por rotação massiva de IPs (ataque de spoofing)
+      if (this.hits.size > this.maxEntries) {
+        const firstKey = this.hits.keys().next().value;
+        if (firstKey) this.hits.delete(firstKey);
+      }
 
       let record = this.hits.get(key);
 
@@ -68,7 +75,7 @@ class RateLimiter {
   }
 }
 
-// Limitador estrito para login/registro (15 tentativas por minuto por IP)
+// Limitador estrito para login/registro (20 tentativas por minuto por IP)
 const authLimiter = new RateLimiter({
   windowMs: 60 * 1000,
   max: 20,
@@ -82,6 +89,13 @@ const aiLimiter = new RateLimiter({
   message: 'Limite de processamento de IA/Uploads atingido. Aguarde alguns instantes.',
 }).middleware();
 
+// Limitador para o Validador Público de Autenticidade (60 consultas por minuto por IP)
+const validatorLimiter = new RateLimiter({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: 'Limite de consultas ao validador público de autenticidade excedido. Aguarde alguns instantes.',
+}).middleware();
+
 // Limitador geral da API (300 requisições por minuto por IP)
 const generalLimiter = new RateLimiter({
   windowMs: 60 * 1000,
@@ -93,5 +107,6 @@ module.exports = {
   RateLimiter,
   authLimiter,
   aiLimiter,
+  validatorLimiter,
   generalLimiter,
 };

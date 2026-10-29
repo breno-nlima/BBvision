@@ -329,8 +329,39 @@ async function runTests() {
     assert(rota404.status === 404, 'Rota inexistente retornou HTTP 404');
     assert(rota404.body.erro && typeof rota404.body.erro === 'string', 'Retornou mensagem de erro em JSON padronizado');
 
+    // 19. Readiness Probe e Telemetria para Orquestradores
+    console.log('\n19. Testando Readiness Probe e Telemetria (/api/ready e /api/health)...');
+    const readyRes = await request('GET', '/api/ready');
+    assert(readyRes.status === 200, 'Readiness probe respondeu HTTP 200');
+    assert(readyRes.body.status === 'ready', 'Status do readiness é ready');
+
+    const healthMetrics = await request('GET', '/api/health');
+    assert(healthMetrics.body.versao === '1.2.0', 'Versão atualizada é 1.2.0');
+    assert(healthMetrics.body.ambiente, 'Ambiente de execução registrado');
+    assert(typeof healthMetrics.body.memoria.rssMb === 'number', 'Métricas de memória presentes');
+
+    // 20. Validador Público: Bloqueio de Injeção de Scripts / XSS / Comandos
+    console.log('\n20. Testando Validador Público contra Payloads Maliciosos (/api/validador/<script>)...');
+    const xssAttempt = await request('GET', '/api/validador/%3Cscript%3E');
+    assert(xssAttempt.status === 400, 'Identificador malicioso rejeitado com HTTP 400');
+    assert(xssAttempt.body.autentico === false, 'Resposta atesta que documento é inautêntico');
+
+    // 21. Proteção contra Requisições Mutantes Não Autenticadas
+    console.log('\n21. Testando Rejeição de Mutação sem Autenticação (/api/relatorios sem Bearer)...');
+    const unauthReport = await request('POST', '/api/relatorios', { obra_id: obraId });
+    assert(unauthReport.status === 401, 'Criação de relatório sem token bloqueada com HTTP 401');
+
+    // 22. Compressão HTTP para Escalabilidade e Redução de Banda
+    console.log('\n22. Testando Suporte a Compressão HTTP (Accept-Encoding: gzip)...');
+    const compRes = await request('GET', '/api/obras', null, {
+      'Accept-Encoding': 'gzip, deflate',
+      Authorization: `Bearer ${tokenRodrigo}`,
+    });
+    assert(compRes.status === 200, 'Endpoint com suporte a compressão respondeu HTTP 200');
+    assert(compRes.headers['vary'] && compRes.headers['vary'].includes('Accept-Encoding'), 'Header Vary: Accept-Encoding presente');
+
     console.log('\n======================================================');
-    console.log('  TODOS OS 18 GRUPOS DE TESTES PASSARAM COM SUCESSO!');
+    console.log('  TODOS OS 22 GRUPOS DE TESTES PASSARAM COM SUCESSO!');
     console.log('======================================================\n');
   } catch (err) {
     console.error('\n❌ ERRO DURANTE A EXECUÇÃO DOS TESTES:', err);

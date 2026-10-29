@@ -105,7 +105,7 @@ const obrasController = {
         });
       }
 
-      const { nome, endereco, responsavel, status, tipo, empreiteira_id, fiscal_responsavel_id } = req.body;
+      const { nome, endereco, responsavel, status, tipo, empreiteira_id, fiscal_responsavel_id, checklist_perguntas, perguntasChecklist } = req.body;
 
       if (!nome || !endereco) {
         return res.status(400).json({
@@ -123,6 +123,10 @@ const obrasController = {
       // Empreiteira encarregada da execução da obra (1 empreiteira pode ter N obras)
       const empreiteiraRespId = empreiteira_id || '11111111-1111-4111-8111-111111111111';
 
+      const perguntasParaSalvar = Array.isArray(checklist_perguntas) && checklist_perguntas.length > 0
+        ? checklist_perguntas
+        : (Array.isArray(perguntasChecklist) && perguntasChecklist.length > 0 ? perguntasChecklist : mockData.getChecklistTemplate());
+
       const novaObra = await mockData.createObraAsync({
         nome: sanitizeString(nome),
         endereco: sanitizeString(endereco),
@@ -132,11 +136,116 @@ const obrasController = {
         empreiteira_id: empreiteiraRespId,
         cadastrado_por_fiscal_id: cadastradoPorId,
         fiscal_responsavel_id: fiscalRespId,
+        checklist_perguntas: perguntasParaSalvar,
       });
 
       return res.status(201).json({
-        mensagem: 'Obra cadastrada com sucesso para fiscalização remota.',
+        mensagem: 'Obra cadastrada com sucesso para fiscalização remota com checklist customizado.',
         obra: novaObra,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /**
+   * GET /api/obras/checklist-template
+   * Retorna o template oficial de perguntas do checklist Banco do Brasil
+   */
+  async obterTemplateChecklist(req, res, next) {
+    try {
+      const template = mockData.getChecklistTemplate();
+      return res.status(200).json(template);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /**
+   * PUT /api/obras/checklist-template
+   * Atualiza o template padrão de perguntas para novas obras (Acesso do Fiscal de Obras)
+   */
+  async atualizarTemplateChecklist(req, res, next) {
+    try {
+      if (req.user && req.user.cargo === 'empreiteira') {
+        return res.status(403).json({
+          status: 403,
+          erro: 'Acesso restrito à fiscalização e engenharia do Banco do Brasil.',
+        });
+      }
+
+      const { perguntas } = req.body;
+      if (!Array.isArray(perguntas) || perguntas.length === 0) {
+        return res.status(400).json({
+          status: 400,
+          erro: 'A lista de perguntas do checklist é obrigatória e deve conter ao menos 1 item.',
+        });
+      }
+
+      const atualizado = mockData.updateChecklistTemplate(perguntas);
+      return res.status(200).json({
+        mensagem: 'Modelo padrão de perguntas do checklist atualizado com sucesso.',
+        template: atualizado,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /**
+   * GET /api/obras/:id/checklist
+   * Retorna a lista de perguntas do checklist configurada especificamente para uma obra
+   */
+  async obterChecklistObra(req, res, next) {
+    try {
+      const { id } = req.params;
+      const perguntas = mockData.getChecklistObra(id);
+      if (!perguntas) {
+        return res.status(404).json({
+          status: 404,
+          erro: 'Obra não encontrada para consulta do checklist.',
+        });
+      }
+      return res.status(200).json(perguntas);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /**
+   * PUT /api/obras/:id/checklist
+   * Atualiza as perguntas do checklist de uma obra específica (Fiscal de Obras)
+   */
+  async atualizarChecklistObra(req, res, next) {
+    try {
+      if (req.user && req.user.cargo === 'empreiteira') {
+        return res.status(403).json({
+          status: 403,
+          erro: 'Apenas fiscais de obra têm permissão para editar as perguntas do checklist.',
+        });
+      }
+
+      const { id } = req.params;
+      const { perguntas } = req.body;
+
+      if (!Array.isArray(perguntas) || perguntas.length === 0) {
+        return res.status(400).json({
+          status: 400,
+          erro: 'Lista de perguntas inválida.',
+        });
+      }
+
+      const perguntasAtualizadas = mockData.updateChecklistObra(id, perguntas);
+      if (!perguntasAtualizadas) {
+        return res.status(404).json({
+          status: 404,
+          erro: 'Obra não localizada.',
+        });
+      }
+
+      return res.status(200).json({
+        mensagem: 'Perguntas do checklist da obra atualizadas com sucesso.',
+        perguntas: perguntasAtualizadas,
       });
     } catch (err) {
       next(err);
