@@ -56,12 +56,16 @@ export function renderFiscalAuditoria() {
                 <polyline points="15 18 9 12 15 6"></polyline>
               </svg>
             </button>
-            <h1 class="fiscal-main-title">Auditoria e Julgamento Técnico</h1>
+            <h1 class="fiscal-main-title" style="display: flex; align-items: center; gap: 8px;">
+              ${Icons.iconeControle(24)} Auditoria e Julgamento Técnico
+            </h1>
           </div>
           <span class="fiscal-sub-location">Centro de Governança BB • ${vistoria.obraNome}</span>
         </div>
         <div class="fiscal-topbar-actions">
-          <span class="badge-role-tag">👩‍💼 ${state.user?.nome || 'Fiscal de Obra (BB)'}</span>
+          <span class="badge-role-tag" style="display: inline-flex; align-items: center; gap: 6px;">
+            ${Icons.perfilBb(18)} ${state.user?.nome || 'Fiscal de Obra (BB)'}
+          </span>
         </div>
       </header>
 

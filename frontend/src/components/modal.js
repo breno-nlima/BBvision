@@ -184,8 +184,8 @@ class BBVisionModal {
     const isFiscal = user?.cargo === 'fiscal';
     const cargoLabel = isFiscal ? 'Fiscalização e Engenharia BB' : 'Empreiteira de Campo & Vistorias';
     const avatarUrl = user?.avatar || (isFiscal
-      ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
-      : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80');
+      ? 'src/assets/icons/perfil_bb.png'
+      : 'src/assets/icons/perfil_obras.png');
 
     const overlay = document.createElement('div');
     overlay.className = 'bb-modal-overlay fade-in';
@@ -665,8 +665,8 @@ class BBVisionModal {
       <div class="bb-modal-dialog bb-nova-obra-dialog" style="max-width: 640px; width: 95%;">
         <header class="bb-modal-header" style="background: #001B3D; border-bottom: 3px solid #FED304; padding: 16px 20px;">
           <div class="bb-modal-header-brand">
-            <span class="bb-stamp-icon" style="color: #FED304; display: flex; align-items: center; font-size: 22px;">
-              🏛️
+            <span class="bb-stamp-icon" style="color: #FED304; display: flex; align-items: center;">
+              ${Icons.iconeCadastro(28)}
             </span>
             <div>
               <h3 class="bb-modal-title" style="color: #FFFFFF; font-size: 16px;">Cadastrar Nova Obra BB</h3>
@@ -680,7 +680,9 @@ class BBVisionModal {
           <div style="padding: 20px 22px; display: flex; flex-direction: column; gap: 16px;">
             <!-- Badge de fiscal responsável cadastrador -->
             <div style="background: #F1F5F9; border-left: 3px solid #002D62; padding: 10px 14px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
-              <span style="color: #002D62; font-weight: 700;">👩‍💼 Fiscal Cadastrador(a):</span>
+              <span style="color: #002D62; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                ${Icons.perfilBb(18)} Fiscal Cadastrador(a):
+              </span>
               <span style="color: #334155; font-weight: 600;">${fiscalNome} (${fiscalMatricula})</span>
             </div>
 

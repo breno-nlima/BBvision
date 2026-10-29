@@ -749,8 +749,8 @@ class AppState {
           registro_profissional: res.usuario.registro_profissional || '',
           created_at: res.usuario.created_at || new Date().toISOString(),
           avatar: res.usuario.cargo === 'fiscal'
-            ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
-            : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+            ? 'src/assets/icons/perfil_bb.png'
+            : 'src/assets/icons/perfil_obras.png'
         };
         localStorage.setItem('bbvision_user', JSON.stringify(this.user));
         this.currentVistoria.responsavel = this.user.nome;
@@ -788,7 +788,7 @@ class AppState {
               empresa: 'Silva Engenharia & Reformas',
               registro_profissional: 'CREA-SP 987654/D',
               created_at: new Date().toISOString(),
-              avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+              avatar: 'src/assets/icons/perfil_obras.png'
             };
           } else if (normEmail === 'mariana@bb.com.br' || normEmail === 'fiscal@bbvision.com') {
             offlineUser = {
@@ -799,7 +799,7 @@ class AppState {
               empresa: 'Banco do Brasil S.A. - DIESE',
               registro_profissional: 'CREA-DF 123456/D - Matrícula BB 459812-X',
               created_at: new Date().toISOString(),
-              avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
+              avatar: 'src/assets/icons/perfil_bb.png'
             };
           }
 
@@ -844,8 +844,8 @@ class AppState {
           registro_profissional: res.usuario.registro_profissional || '',
           created_at: res.usuario.created_at || new Date().toISOString(),
           avatar: res.usuario.cargo === 'fiscal'
-            ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
-            : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+            ? 'src/assets/icons/perfil_bb.png'
+            : 'src/assets/icons/perfil_obras.png'
         };
         localStorage.setItem('bbvision_user', JSON.stringify(this.user));
         this.currentVistoria.responsavel = this.user.nome;

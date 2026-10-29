@@ -16,7 +16,7 @@ export function renderBottomNav() {
       <nav class="bottom-nav-bar fiscal-theme" id="bottomNav">
         <button class="nav-item-btn ${current === 'inicio' ? 'active' : ''}" data-nav="inicio" id="navItemInicio">
           <div class="nav-icon-container">
-            ${Icons.navInicio(20)}
+            ${Icons.iconeControle(22)}
           </div>
           <span class="nav-item-label">Controle</span>
         </button>
@@ -37,7 +37,7 @@ export function renderBottomNav() {
 
         <button class="nav-item-btn ${current === 'perfil' ? 'active' : ''}" data-nav="perfil" id="navItemPerfil">
           <div class="nav-icon-container">
-            ${Icons.navPerfil(20)}
+            ${Icons.perfilBb(22)}
           </div>
           <span class="nav-item-label">Perfil BB</span>
         </button>
@@ -71,7 +71,7 @@ export function renderBottomNav() {
 
       <button class="nav-item-btn ${current === 'perfil' ? 'active' : ''}" data-nav="perfil" id="navItemPerfil">
         <div class="nav-icon-container">
-          ${Icons.navPerfil(20)}
+          ${Icons.perfilObras(22)}
         </div>
         <span class="nav-item-label">Perfil</span>
       </button>

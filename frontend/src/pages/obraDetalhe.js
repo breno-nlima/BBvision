@@ -11,8 +11,9 @@ import { modal } from '../components/modal.js';
 export function renderObraDetalhe() {
   const vistoria = state.currentVistoria;
   const isFiscal = state.user?.cargo === 'fiscal';
+  const defaultAvatar = isFiscal ? 'src/assets/icons/perfil_bb.png' : 'src/assets/icons/perfil_obras.png';
   const perguntasObra = state.getPerguntasParaObra(vistoria.obraId);
-  const user = state.user || { nome: 'Responsável Técnico', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' };
+  const user = state.user || { nome: 'Responsável Técnico', avatar: defaultAvatar };
   const responsavelNome = state.user?.nome || vistoria.responsavel || 'Responsável Técnico';
 
   return `

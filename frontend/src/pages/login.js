@@ -32,8 +32,8 @@ export function renderLogin() {
           <button type="button" class="auth-tab-btn ${abaAtiva === 'login' ? 'active' : ''}" id="tabBtnLogin">
             Entrar
           </button>
-          <button type="button" class="auth-tab-btn ${abaAtiva === 'cadastro' ? 'active' : ''}" id="tabBtnCadastro">
-            Criar Nova Conta
+          <button type="button" class="auth-tab-btn ${abaAtiva === 'cadastro' ? 'active' : ''}" id="tabBtnCadastro" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+            ${Icons.iconeCadastro(16)} Criar Nova Conta
           </button>
         </div>
 
@@ -81,7 +81,9 @@ export function renderLogin() {
               <div class="role-selector-grid">
                 <label class="role-option-card ${cargoCadastro === 'empreiteira' ? 'selected' : ''}" id="cardRoleEmpreiteira">
                   <input type="radio" name="cargoCadastroRadio" value="empreiteira" ${cargoCadastro === 'empreiteira' ? 'checked' : ''} />
-                  <div class="role-icon">👷‍♂️</div>
+                  <div class="role-icon">
+                    ${Icons.perfilObras(36)}
+                  </div>
                   <div class="role-meta">
                     <strong>Empreiteira</strong>
                     <span>Vistoria de campo, fotos in-loco e checklists</span>
@@ -90,7 +92,9 @@ export function renderLogin() {
 
                 <label class="role-option-card ${cargoCadastro === 'fiscal' ? 'selected' : ''}" id="cardRoleFiscal">
                   <input type="radio" name="cargoCadastroRadio" value="fiscal" ${cargoCadastro === 'fiscal' ? 'checked' : ''} />
-                  <div class="role-icon">👩‍💼</div>
+                  <div class="role-icon">
+                    ${Icons.perfilBb(36)}
+                  </div>
                   <div class="role-meta">
                     <strong>Fiscal de Obra (BB)</strong>
                     <span>Auditoria, laudos, conferência e parecer</span>
@@ -115,7 +119,9 @@ export function renderLogin() {
                 <input type="text" id="cadEmpresa" class="auth-input-field" placeholder="Nome da empresa ou agência" />
               </div>
               <div class="auth-field-group">
-                <label for="cadDoc" class="auth-field-label">CREA / CAU / Matrícula</label>
+                <label for="cadDoc" class="auth-field-label" style="display: flex; align-items: center; gap: 6px;">
+                  ${Icons.iconeCrea(16)} CREA / CAU / Matrícula
+                </label>
                 <input type="text" id="cadDoc" class="auth-input-field" placeholder="Ex: CREA-SP 123456/D" />
               </div>
             </div>
@@ -131,8 +137,8 @@ export function renderLogin() {
               </div>
             </div>
 
-            <button type="submit" class="btn-auth-submit" id="btnSubmitCadastro">
-              Criar Conta e Acessar
+            <button type="submit" class="btn-auth-submit" id="btnSubmitCadastro" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+              ${Icons.iconeCadastro(18)} Criar Conta e Acessar
             </button>
           </form>
         </div>

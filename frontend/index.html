@@ -102,13 +102,13 @@
         const isFiscal = user.cargo === 'fiscal';
         const roleLabel = isFiscal ? 'Fiscal BB' : 'Empreiteira';
         const avatarUrl = user.avatar || (isFiscal
-          ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
-          : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80');
+          ? 'src/assets/icons/perfil_bb.png'
+          : 'src/assets/icons/perfil_obras.png');
 
         userArea.innerHTML = `
           ${isFiscal ? `
-            <button class="bb-nav-link" id="btnNavNovaObra" style="background: rgba(254, 211, 4, 0.18); color: #FED304; border: 1px solid rgba(254, 211, 4, 0.45); border-radius: var(--radius-full); padding: 5px 12px; font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;" title="Cadastrar Nova Obra (Exclusivo Fiscal BB)">
-              <span>➕</span> Nova Obra
+            <button class="bb-nav-link" id="btnNavNovaObra" style="background: rgba(254, 211, 4, 0.18); color: #FED304; border: 1px solid rgba(254, 211, 4, 0.45); border-radius: var(--radius-full); padding: 5px 12px; font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;" title="Cadastrar Nova Obra (Exclusivo Fiscal BB)">
+              <img src="src/assets/icons/icone_cadastro.png" style="width: 16px; height: 16px; object-fit: contain; vertical-align: middle;" alt="Nova Obra" /> Nova Obra
             </button>
           ` : ''}
           <div class="bb-user-profile-badge" id="btnNavUserProfile" title="Ver Perfil de ${user.nome}">

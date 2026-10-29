@@ -106,11 +106,16 @@ export function renderChecklistVerificacao() {
       </div>
 
       <!-- Card do Responsável Técnico / Empreiteira -->
-      <div class="responsavel-info-card">
-        <div class="resp-text-group">
-          <span class="resp-card-title">Responsável</span>
+      <div class="responsavel-info-card" style="display: flex; align-items: center;">
+        <div class="resp-avatar-badge" style="margin-right: 12px; display: flex; align-items: center;">
+          ${Icons.perfilObras(42)}
+        </div>
+        <div class="resp-text-group" style="flex: 1;">
+          <span class="resp-card-title">Responsável Técnico</span>
           <strong class="resp-nome">Nome: ${responsavelNome}</strong>
-          <span class="resp-matricula">Registro/Doc: ${responsavelDoc}</span>
+          <span class="resp-matricula" style="display: inline-flex; align-items: center; gap: 4px;">
+            ${Icons.iconeCrea(14)} Registro/Doc: ${responsavelDoc}
+          </span>
         </div>
         <div class="resp-arrow">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

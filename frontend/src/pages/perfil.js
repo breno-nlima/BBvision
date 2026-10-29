@@ -14,6 +14,7 @@ export function renderPerfil() {
   const isEmpreiteira = user?.cargo === 'empreiteira';
   const roleLabel = isEmpreiteira ? '👷‍♂️ Empreiteira (Campo & Vistorias)' : '👩‍💼 Fiscal de Obra (Banco do Brasil)';
   const dataCadastro = user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : '10/10/2026';
+  const defaultAvatar = isEmpreiteira ? 'src/assets/icons/perfil_obras.png' : 'src/assets/icons/perfil_bb.png';
 
   return `
     <div class="page-container fade-in" id="perfilPage">
@@ -23,7 +24,7 @@ export function renderPerfil() {
       <div class="profile-card-top">
         <div class="profile-avatar-large">
           <img 
-            src="${user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}" 
+            src="${user?.avatar || defaultAvatar}" 
             alt="${user?.nome || 'Usuário'}"
           >
         </div>
@@ -38,12 +39,12 @@ export function renderPerfil() {
             🏢 ${user?.empresa || (isEmpreiteira ? 'Empreiteira Contratada' : 'Banco do Brasil - DIPAT')}
           </span>
           ${user?.registro_profissional ? `
-            <span style="background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #94A3B8;">
-              📜 ${user.registro_profissional}
+            <span style="background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #94A3B8; display: inline-flex; align-items: center; gap: 6px;">
+              ${Icons.iconeCrea(16)} ${user.registro_profissional}
             </span>
           ` : ''}
-          <span style="background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #94A3B8;">
-            📅 Cadastro: ${dataCadastro}
+          <span style="background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #94A3B8; display: inline-flex; align-items: center; gap: 6px;">
+            ${Icons.iconeCadastro(16)} Cadastro: ${dataCadastro}
           </span>
         </div>
       </div>
@@ -63,8 +64,8 @@ export function renderPerfil() {
           </ul>
         ` : `
           <ul class="perm-list">
-            <li>✓ Acesso ao Centro de Controle e Governança do Banco do Brasil</li>
-            <li>✓ Cadastro e credenciamento de novas obras e agências BB</li>
+            <li style="display: flex; align-items: center; gap: 6px;">✓ ${Icons.iconeControle(16)} Acesso ao Centro de Controle e Governança do Banco do Brasil</li>
+            <li style="display: flex; align-items: center; gap: 6px;">✓ ${Icons.iconeCadastro(16)} Cadastro e credenciamento de novas obras e agências BB</li>
             <li>✓ Auditoria de evidências com verificação de hashes SHA-256</li>
             <li>✓ Inspeção e download de PDFs oficiais certificados</li>
             <li>✓ Julgamento técnico com Fé Pública: Aprovação (Regular) ou Reprovação (Pendente de Ajuste)</li>

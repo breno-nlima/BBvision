@@ -82,8 +82,8 @@ export function renderObras() {
           />
         </div>
         ${isFiscal ? `
-          <button class="btn-pill-yellow" id="btnNovaObraBar" title="Cadastrar Nova Obra (Exclusivo Fiscal BB)">
-            + Nova Obra
+          <button class="btn-pill-yellow" id="btnNovaObraBar" title="Cadastrar Nova Obra (Exclusivo Fiscal BB)" style="display: inline-flex; align-items: center; gap: 6px;">
+            ${Icons.iconeCadastro(16)} Nova Obra
           </button>
         ` : ''}
       </section>

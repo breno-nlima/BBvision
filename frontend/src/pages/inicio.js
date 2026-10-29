@@ -58,11 +58,14 @@ export function renderInicio() {
         <section class="hero-fiscal-card">
           <div class="hero-fiscal-header">
             <span class="bb-institucional-tag">Banco do Brasil S.A. • Fiscalização e Auditoria Remota</span>
-            <h2 class="hero-fiscal-title">Centro de Controle & Governança</h2>
+            <div style="display: flex; align-items: center; gap: 8px; margin: 4px 0 2px 0;">
+              ${Icons.iconeControle(28)}
+              <h2 class="hero-fiscal-title" style="margin: 0;">Centro de Controle & Governança</h2>
+            </div>
             <p class="hero-fiscal-sub">${userName} — Fiscal de Serviço / Engenharia BB</p>
             <div style="margin-top: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <button class="btn-pill-yellow" id="btnHeroNovaObra" title="Cadastrar Nova Obra (Exclusivo Fiscal BB)">
-                + Nova Obra
+              <button class="btn-pill-yellow" id="btnHeroNovaObra" title="Cadastrar Nova Obra (Exclusivo Fiscal BB)" style="display: inline-flex; align-items: center; gap: 6px;">
+                ${Icons.iconeCadastro(16)} Nova Obra
               </button>
               <button class="btn-pill-navy" id="btnHeroGerenciarPerguntas" title="Gerenciar Perguntas do Checklist Oficial BB" style="background: rgba(255, 255, 255, 0.15); color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.3); padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background 0.15s ease;">
                 📋 Perguntas Checklist

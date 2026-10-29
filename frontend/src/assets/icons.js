@@ -242,6 +242,32 @@ export const Icons = {
       <polyline points="16 17 21 12 16 7"></polyline>
       <line x1="21" y1="12" x2="9" y2="12"></line>
     </svg>
+  `,
+
+  // 1. Ícone Oficial de Cadastro (Documento + Silhueta + Badge +)
+  iconeCadastro: (size = 24, className = '') => `
+    <img src="src/assets/icons/icone_cadastro.png" width="${size}" height="${size}" alt="Cadastro" class="${className}" style="width: ${size}px; height: ${size}px; object-fit: contain; display: inline-block; vertical-align: middle;" />
+  `,
+
+  // 2. Ícone Oficial CREA-DF (Documento Oficial + Capacete + Checkmark de Fé Pública)
+  iconeCrea: (size = 24, className = '') => `
+    <img src="src/assets/icons/icone_crea.png" width="${size}" height="${size}" alt="CREA-DF" class="${className}" style="width: ${size}px; height: ${size}px; object-fit: contain; display: inline-block; vertical-align: middle;" />
+  `,
+
+  // 3. Perfil Oficial Fiscal BB (Mariana - Silhueta Azul + Brasão BB Amarelo)
+  perfilBb: (size = 24, className = '') => `
+    <img src="src/assets/icons/perfil_bb.png" width="${size}" height="${size}" alt="Perfil Fiscal BB" class="${className}" style="width: ${size}px; height: ${size}px; object-fit: contain; display: inline-block; vertical-align: middle;" />
+  `,
+
+  // 4. Ícone Oficial de Controle (Sliders + Engrenagem de Governança / Auditoria)
+  iconeControle: (size = 24, className = '') => `
+    <img src="src/assets/icons/icone_controle.png" width="${size}" height="${size}" alt="Controle" class="${className}" style="width: ${size}px; height: ${size}px; object-fit: contain; display: inline-block; vertical-align: middle;" />
+  `,
+
+  // 5. Perfil Oficial Obras / Empreiteira (Rodrigo - Responsável Técnico de Campo com Capacete e Prancheta)
+  perfilObras: (size = 24, className = '') => `
+    <img src="src/assets/icons/perfil_obras.png" width="${size}" height="${size}" alt="Perfil Obras" class="${className}" style="width: ${size}px; height: ${size}px; object-fit: contain; display: inline-block; vertical-align: middle;" />
   `
 };
+
 
