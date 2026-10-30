@@ -41,6 +41,12 @@ export function renderImagemProtegida() {
         <h3 class="protegida-subtitle">
           Foto registrada com proteção digital inviolável
         </h3>
+
+        ${vistoria.fotoCamera ? `
+          <div style="margin: 12px auto 6px; max-width: 240px; border-radius: 10px; overflow: hidden; border: 2px solid #FED304; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+            <img src="${vistoria.fotoCamera}" alt="Foto protegida" style="width: 100%; height: 120px; object-fit: cover; display: block;" />
+          </div>
+        ` : ''}
         
         <div class="carousel-dots-mini">
           <span class="dot-mini active"></span>

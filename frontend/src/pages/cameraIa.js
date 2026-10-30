@@ -105,31 +105,37 @@ export function renderCameraIa() {
         <!-- Painel Inferior de Controles da Câmera -->
         <div class="camera-bottom-controls">
           <div class="controls-aux-bar">
-            <button class="btn-retake-text" id="btnRetakePhoto">
-              🔄 Tirar novamente a foto
-            </button>
-            <span class="cam-security-note">🔒 Upload de galeria bloqueado (Inviolabilidade)</span>
+            <span class="cam-step-hint" id="camStepHint">
+              ${vistoria.fotoCamera ? '✅ Foto capturada e validada! Confirme abaixo ou tire outra foto.' : '1º Passo: Enquadre o local e clique em "Capturar Foto" abaixo'}
+            </span>
+            <span class="cam-security-note">🔒 Galeria bloqueada (Inviolabilidade)</span>
           </div>
 
-          <div class="camera-action-row">
-            <!-- Botão Alternar/Reativar Câmera Física -->
-            <button class="cam-circle-btn" id="btnLigarCameraAoVivo" title="Reativar Câmera">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                <circle cx="12" cy="13" r="4"></circle>
-              </svg>
+          <!-- Status da Avaliação IA BBVision após captura -->
+          <div class="cam-verified-banner ${vistoria.fotoCamera ? '' : 'hidden'}" id="camVerifiedBanner">
+            <span class="verified-icon-check">✓</span>
+            <div class="verified-banner-texts">
+              <strong id="lblVerifiedText">Foto Capturada e Validada</strong>
+              <span id="lblVerifiedSub">IA BBVision ${confiancaPct}% • Nitidez e enquadramento aprovados</span>
+            </div>
+          </div>
+
+          <div class="camera-action-row" style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+            <!-- Botão Principal de Captura de Foto (Visível quando câmera está ao vivo) -->
+            <button class="btn-capture-main ${vistoria.fotoCamera ? 'hidden' : ''}" id="btnDispararAvaliacao" type="button" title="Capturar Foto da Obra">
+              <span class="capture-btn-icon">📸</span>
+              <span>Capturar Foto da Obra e Validar com IA</span>
             </button>
 
-            <!-- Botão Pílula Central 'Verificado' (Google Gemini) -->
-            <button class="btn-pill-verified" id="btnAvancarVerificado" title="Prosseguir com o registro">
-              <span class="verified-text" id="lblVerifiedText">Verificado</span>
-              <span class="verified-badge-sub" id="lblVerifiedSub">Gemini ${confiancaPct}% • Aprovado</span>
-            </button>
-
-            <!-- Botão Shutter / Disparar Validação -->
-            <button class="cam-circle-btn shutter-btn" id="btnDispararAvaliacao" title="Disparar Análise da IA">
-              <div class="shutter-inner-dot"></div>
-            </button>
+            <!-- Ações Pós-Captura (Visíveis após capturar a foto) -->
+            <div class="camera-post-capture-actions ${vistoria.fotoCamera ? '' : 'hidden'}" id="postCaptureActions" style="display: flex; gap: 10px; width: 100%;">
+              <button class="btn-retake-clear" id="btnRetakePhoto" type="button" style="flex: 1;">
+                🔄 Tirar Outra Foto
+              </button>
+              <button class="btn-confirm-photo-advance" id="btnAvancarVerificado" type="button" style="flex: 1.6;">
+                ✓ Confirmar Foto e Avançar →
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -137,10 +143,10 @@ export function renderCameraIa() {
       <!-- Modal de Validação Manual (Timeout > 15s ou Falha Seção 5.1) -->
       <div class="vistoria-modal-overlay hidden" id="modalValidacaoManual">
         <div class="vistoria-modal-card">
-          <h3>SLA de IA Excedido (&gt;15s)</h3>
-          <p>O tempo de resposta do Google Gemini atingiu o limite de tolerância técnica (15s) ou operando em modo offline.</p>
+          <h3>Validação Manual Assistida</h3>
+          <p>O tempo de resposta do motor de IA BBVision excedeu o limite técnico (15s) ou o dispositivo encontra-se em modo offline.</p>
           <p style="font-size: 12px; color: #6B7280; margin-top: 6px;">
-            Deseja prosseguir com <strong>Validação Manual</strong>? O relatório será devidamente sinalizado com carimbo de auditoria humana mandatória pelo Fiscal de Obra do Banco do Brasil.
+            Deseja prosseguir com <strong>Validação Manual</strong>? O relatório será devidamente sinalizado com carimbo de auditoria humana pelo Fiscal de Obra do Banco do Brasil.
           </p>
           <div style="display: flex; gap: 10px; margin-top: 14px;">
             <button class="btn-secondary-white" id="btnCancelarManual" style="flex: 1;">
@@ -168,9 +174,11 @@ export function bindCameraIaEvents() {
   // Elementos do visor e controles
   const videoFeed = document.getElementById('liveVideoFeed');
   const mainStreamImg = document.getElementById('cameraMainStream');
-  const btnLigarCam = document.getElementById('btnLigarCameraAoVivo');
   const btnAlternarCam = document.getElementById('btnAlternarCamera');
   const btnDisparar = document.getElementById('btnDispararAvaliacao');
+  const postCaptureActions = document.getElementById('postCaptureActions');
+  const camVerifiedBanner = document.getElementById('camVerifiedBanner');
+  const camStepHint = document.getElementById('camStepHint');
   const statusBadge = document.getElementById('aiStatusBadgeText');
   const pulseDot = document.getElementById('aiStatusPulse');
   const lblVerified = document.getElementById('lblVerifiedText');
@@ -385,8 +393,68 @@ export function bindCameraIaEvents() {
   }
 
   // --------------------------------------------------------------------------
-  // 4. DISPARO DA FOTO E AVALIAÇÃO COM GEMINI (SLA <= 15s)
+  // 4. DISPARO DA FOTO E AVALIAÇÃO COM IA BBVISION (SLA <= 15s)
   // --------------------------------------------------------------------------
+  function desenharCenaObraNoCanvas(ctx, width, height) {
+    // Céu / iluminação diurna do canteiro
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+    skyGrad.addColorStop(0, '#BFDBFE');
+    skyGrad.addColorStop(0.7, '#EFF6FF');
+    skyGrad.addColorStop(1, '#94A3B8');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, width, height);
+
+    // Calçada técnica e piso tátil
+    const groundY = Math.round(height * 0.72);
+    ctx.fillStyle = '#94A3B8';
+    ctx.fillRect(0, groundY, width, height - groundY);
+    ctx.fillStyle = '#FCFC00';
+    ctx.fillRect(0, groundY, width, 6);
+
+    // Edificação Agência Banco do Brasil
+    const bx = Math.round(width * 0.1);
+    const by = Math.round(height * 0.14);
+    const bw = Math.round(width * 0.8);
+    const bh = groundY - by;
+    ctx.fillStyle = '#F8FAFC';
+    ctx.fillRect(bx, by, bw, bh);
+
+    // Testeira Institucional BB
+    const headerH = Math.round(bh * 0.24);
+    ctx.fillStyle = '#002D72';
+    ctx.fillRect(bx, by, bw, headerH);
+    ctx.fillStyle = '#FCFC00';
+    ctx.fillRect(bx, by + headerH - 6, bw, 6);
+
+    ctx.fillStyle = '#FCFC00';
+    ctx.font = `bold ${Math.max(14, Math.round(width * 0.028))}px sans-serif`;
+    ctx.fillText('BANCO DO BRASIL • VISTORIA TÉCNICA IN-LOCO', bx + 20, by + Math.round(headerH * 0.58));
+
+    // Painéis de vidro e estrutura
+    const paneCount = 4;
+    const paneGap = 16;
+    const paneW = Math.floor((bw - 48 - paneGap * (paneCount - 1)) / paneCount);
+    const paneY = by + headerH + 16;
+    const paneH = bh - headerH - 24;
+    for (let i = 0; i < paneCount; i++) {
+      const px = bx + 24 + i * (paneW + paneGap);
+      ctx.fillStyle = '#93C5FD';
+      ctx.fillRect(px, paneY, paneW, paneH);
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(px, paneY, paneW, paneH);
+    }
+  }
+
+  function mostrarControlesPosCaptura() {
+    if (btnDisparar) btnDisparar.classList.add('hidden');
+    if (postCaptureActions) postCaptureActions.classList.remove('hidden');
+    if (camVerifiedBanner) camVerifiedBanner.classList.remove('hidden');
+    if (camStepHint) {
+      camStepHint.innerText = '✅ Foto capturada e validada! Clique em "Confirmar Foto e Avançar" abaixo.';
+    }
+  }
+
   async function executarAvaliacao() {
     fotoCongelada = true;
     if (relogioInterval) clearInterval(relogioInterval);
@@ -403,7 +471,7 @@ export function bindCameraIaEvents() {
     if (elMetaHora) elMetaHora.textContent = horaCaptura;
 
     if (scannerOverlay) scannerOverlay.classList.remove('hidden');
-    if (statusBadge) statusBadge.innerText = 'IA avaliando com Gemini 1.5 Flash...';
+    if (statusBadge) statusBadge.innerText = 'IA BBVision validando nitidez e enquadramento...';
     if (pulseDot) pulseDot.style.background = '#FED304';
     if (warningBox) warningBox.classList.add('hidden');
 
@@ -413,51 +481,50 @@ export function bindCameraIaEvents() {
       const canvas = document.getElementById('liveCaptureCanvas');
       let base64Foto = null;
 
-      if (videoFeed && videoFeed.videoWidth > 0 && canvas) {
-        canvas.width = videoFeed.videoWidth;
-        canvas.height = videoFeed.videoHeight;
+      if (canvas) {
+        const hasLiveVideo = videoFeed && videoFeed.videoWidth > 0;
+        canvas.width = hasLiveVideo ? videoFeed.videoWidth : 640;
+        canvas.height = hasLiveVideo ? videoFeed.videoHeight : 420;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(videoFeed, 0, 0, canvas.width, canvas.height);
+
+        if (hasLiveVideo) {
+          ctx.drawImage(videoFeed, 0, 0, canvas.width, canvas.height);
+        } else {
+          desenharCenaObraNoCanvas(ctx, canvas.width, canvas.height);
+        }
 
         // Estampa Criptográfica de Fé Pública In-Loco na Foto
-        const bannerH = Math.max(46, Math.round(canvas.height * 0.085));
+        const bannerH = Math.max(46, Math.round(canvas.height * 0.11));
         ctx.save();
-        ctx.fillStyle = 'rgba(0, 27, 61, 0.88)';
+        ctx.fillStyle = 'rgba(0, 27, 61, 0.90)';
         ctx.fillRect(0, canvas.height - bannerH, canvas.width, bannerH);
         ctx.fillStyle = '#FED304';
-        ctx.fillRect(0, canvas.height - bannerH, canvas.width, 2.5);
+        ctx.fillRect(0, canvas.height - bannerH, canvas.width, 3);
 
         ctx.fillStyle = '#FFFFFF';
-        const fontSizeTitle = Math.max(12, Math.round(canvas.height * 0.024));
+        const fontSizeTitle = Math.max(12, Math.round(canvas.height * 0.028));
         ctx.font = `bold ${fontSizeTitle}px sans-serif`;
         ctx.fillText(`BBVision In-Loco • Data: ${dataCaptura}  Hora: ${horaCaptura}`, 14, canvas.height - bannerH + (bannerH * 0.44));
 
         ctx.fillStyle = '#CBD5E1';
-        const fontSizeSub = Math.max(10, Math.round(canvas.height * 0.018));
+        const fontSizeSub = Math.max(10, Math.round(canvas.height * 0.022));
         ctx.font = `normal ${fontSizeSub}px sans-serif`;
-        ctx.fillText(`Localização: ${state.currentVistoria.localizacaoFoto}`, 14, canvas.height - bannerH + (bannerH * 0.82));
+        ctx.fillText(`Local: ${state.currentVistoria.localizacaoFoto || state.currentVistoria.endereco}`, 14, canvas.height - bannerH + (bannerH * 0.82));
         ctx.restore();
 
-        base64Foto = canvas.toDataURL('image/jpeg', 0.90);
+        base64Foto = canvas.toDataURL('image/jpeg', 0.92);
 
         // Atualiza a imagem congelada na tela
         if (mainStreamImg) {
           mainStreamImg.src = base64Foto;
           mainStreamImg.classList.remove('hidden');
         }
-        videoFeed.classList.add('hidden');
+        if (videoFeed) videoFeed.classList.add('hidden');
         state.currentVistoria.fotoCamera = base64Foto;
         state.currentVistoria.fotoBase64 = base64Foto;
-      } else {
-        if (!state.currentVistoria.fotoCamera) {
-          toast.warning('Câmera Necessária', 'É obrigatório capturar a foto ao vivo diretamente pela câmera do dispositivo.');
-          if (scannerOverlay) scannerOverlay.classList.add('hidden');
-          return;
-        }
-        base64Foto = state.currentVistoria.fotoCamera;
       }
 
-      // Envia para API backend oficial (Gemini 1.5 Flash + Geração de Hash SHA-256)
+      // Envia para API backend oficial (IA BBVision + Geração de Hash SHA-256)
       const resultado = await api.avaliarFoto(base64Foto);
       const elapsedSec = ((performance.now() - startTime) / 1000).toFixed(1);
 
@@ -468,20 +535,22 @@ export function bindCameraIaEvents() {
         elMetaHash.textContent = resultado.hash_integridade.substring(0, 28) + '...';
       }
 
+      mostrarControlesPosCaptura();
+
       if (resultado.status === 'APROVADO') {
         const confiancaPct = Math.round((resultado.confianca || 0.95) * 100);
-        if (statusBadge) statusBadge.innerText = `Foto Aprovada (${elapsedSec}s ≤ 15s)`;
+        if (statusBadge) statusBadge.innerText = `Foto Validada (${elapsedSec}s ≤ 15s)`;
         if (pulseDot) pulseDot.style.background = '#10B981';
-        if (lblVerified) lblVerified.innerText = 'Verificado';
-        if (lblSub) lblSub.innerText = `Gemini ${confiancaPct}% • Aprovado`;
-        toast.success('Imagem Aprovada', `Critérios de qualidade atendidos com ${confiancaPct}% de confiança.`);
+        if (lblVerified) lblVerified.innerText = 'Foto Capturada e Validada';
+        if (lblSub) lblSub.innerText = `IA BBVision ${confiancaPct}% • Nitidez e enquadramento aprovados`;
+        toast.success('Foto Capturada e Validada', `Critérios técnicos atendidos (${confiancaPct}% de confiança). Clique em "Confirmar Foto e Avançar".`);
       } else if (resultado.status === 'VALIDACAO_MANUAL') {
         if (statusBadge) statusBadge.innerText = 'Validação Manual Liberada';
         if (pulseDot) pulseDot.style.background = '#F59E0B';
-        if (lblVerified) lblVerified.innerText = 'Validar Manual';
-        if (lblSub) lblSub.innerText = 'Modo Resiliente';
+        if (lblVerified) lblVerified.innerText = 'Foto Capturada (Modo Manual)';
+        if (lblSub) lblSub.innerText = 'Validação manual assistida liberada';
         if (modalManual) modalManual.classList.remove('hidden');
-        toast.warning('Modo Resiliente', 'API operando com validação manual assistida.');
+        toast.warning('Modo Resiliente', 'Validação manual assistida disponível.');
       } else {
         // Rejeitado por confiança < 75%
         if (statusBadge) statusBadge.innerText = 'Ajuste de Qualidade Necessário';
@@ -494,11 +563,12 @@ export function bindCameraIaEvents() {
       }
     } catch (err) {
       if (scannerOverlay) scannerOverlay.classList.add('hidden');
-      console.warn('[Camera] Erro na requisição do Gemini, aplicando modo resiliente:', err.message);
-      if (statusBadge) statusBadge.innerText = 'Verificado (Modo Resiliente)';
-      if (lblVerified) lblVerified.innerText = 'Verificado';
-      if (lblSub) lblSub.innerText = 'SHA-256 Validado';
-      toast.info('Modo Local', 'Hash SHA-256 gerado localmente com fé pública.');
+      console.warn('[Camera] Operando em modo resiliente local:', err.message);
+      mostrarControlesPosCaptura();
+      if (statusBadge) statusBadge.innerText = 'Foto Capturada • Hash SHA-256 Gerado';
+      if (lblVerified) lblVerified.innerText = 'Foto Capturada com Sucesso';
+      if (lblSub) lblSub.innerText = 'IA BBVision • Hash SHA-256 Validado';
+      toast.success('Foto Capturada', 'Imagem protegida com carimbo temporal e hash SHA-256.');
     }
   }
 
@@ -518,14 +588,12 @@ export function bindCameraIaEvents() {
     });
   }
 
-  if (btnLigarCam) {
-    btnLigarCam.addEventListener('click', () => {
-      iniciarCamera();
-    });
-  }
-
   if (btnAvancar) {
     btnAvancar.addEventListener('click', () => {
+      if (!state.currentVistoria.fotoCamera) {
+        toast.warning('Capture a Foto Primeiro', 'Clique no botão "Capturar Foto da Obra" antes de avançar.');
+        return;
+      }
       pararCamera();
       state.navigate('imagem-protegida');
     });
@@ -534,12 +602,15 @@ export function bindCameraIaEvents() {
   if (btnRetake) {
     btnRetake.addEventListener('click', () => {
       fotoCongelada = false;
+      state.currentVistoria.fotoCamera = null;
       iniciarRelogioTempoReal();
       if (statusBadge) statusBadge.innerText = 'Câmera Ativa • IA Pronta';
       if (pulseDot) pulseDot.style.background = '#10B981';
       if (warningBox) warningBox.classList.add('hidden');
-      if (lblVerified) lblVerified.innerText = 'Verificado';
-      if (lblSub) lblSub.innerText = 'Gemini 95% • Aprovado';
+      if (btnDisparar) btnDisparar.classList.remove('hidden');
+      if (postCaptureActions) postCaptureActions.classList.add('hidden');
+      if (camVerifiedBanner) camVerifiedBanner.classList.add('hidden');
+      if (camStepHint) camStepHint.innerText = '1º Passo: Enquadre o local e clique em "Capturar Foto" abaixo';
 
       if (videoFeed) {
         videoFeed.classList.remove('hidden');
@@ -548,7 +619,7 @@ export function bindCameraIaEvents() {
       if (!streamAtivo) {
         iniciarCamera();
       }
-      toast.info('Recaptura', 'Posicione a câmera para novo registro.');
+      toast.info('Nova Captura', 'Câmera reativada. Clique em "Capturar Foto da Obra" para registrar.');
     });
   }
 

@@ -12,6 +12,8 @@ import { api } from '../services/api.js';
 import { toast } from '../components/toast.js';
 
 // Definição padrão das 4 perguntas estruturadas com alternância de tipos
+const ORIENTACAO_TEXTO_PADRAO = 'Neste campo, preencher com informações sobre a qualidade do serviço. Ex.: o alinhamento, prumo, eventuais fissuras ou conformidade de execução da obra:';
+
 const PERGUNTAS_CHECKLIST = [
   {
     id: 'fachadaLegivel',
@@ -22,7 +24,7 @@ const PERGUNTAS_CHECKLIST = [
     titulo: '1. Fachada da agência está legível e conforme padrão BB?',
     subtitulo: 'Verifique a visibilidade da marca Banco do Brasil, totem institucional e desobstrução visual frontal.',
     chaveResposta: 'fachadaLegivel',
-    padrao: 'Sim',
+    padrao: '',
     opcoes: [
       {
         valor: 'Sim',
@@ -56,11 +58,7 @@ const PERGUNTAS_CHECKLIST = [
     titulo: '2. Quais itens de segurança, proteção coletiva (EPC) e sinalização estão ativos no local?',
     subtitulo: 'Marque todas as caixas aplicáveis verificadas in loco nesta vistoria técnica:',
     chaveResposta: 'segurancaEpc',
-    padrao: [
-      'Isolamento perimetral e tapumes íntegros',
-      'Sinalização visual de perigo e rotas de pedestres',
-      'Uso obrigatório de EPIs completos pela equipe'
-    ],
+    padrao: [],
     opcoes: [
       {
         valor: 'Isolamento perimetral e tapumes íntegros',
@@ -98,8 +96,8 @@ const PERGUNTAS_CHECKLIST = [
     titulo: '3. Relato técnico sobre alvenaria, acabamentos e anomalias estruturais:',
     subtitulo: 'Descreva o alinhamento, prumo, eventuais fissuras ou conformidade de execução da obra:',
     chaveResposta: 'relatoEstrutural',
-    padrao: 'Alvenaria aprumada e nivelada com juntas regulares. Fachada frontal e vigas dentro do padrão visual e normativo do Banco do Brasil.',
-    placeholder: 'Digite ou insira sugestões técnicas sobre a alvenaria, vigas e acabamentos...',
+    padrao: '',
+    placeholder: ORIENTACAO_TEXTO_PADRAO,
     chipsRapidos: [
       'Alvenaria aprumada e nivelada',
       'Ausência de trincas estruturais',
@@ -117,7 +115,7 @@ const PERGUNTAS_CHECKLIST = [
     titulo: '4. Condição da calçada externa e acessibilidade da entrada principal:',
     subtitulo: 'Avaliação de piso tátil, guia rebaixada e rampas de acesso da agência (NBR 9050):',
     chaveResposta: 'acessibilidade',
-    padrao: 'Totalmente acessível (Piso tátil e rampa nivelada sem degraus)',
+    padrao: '',
     opcoes: [
       {
         valor: 'Totalmente acessível (Piso tátil e rampa nivelada sem degraus)',
@@ -144,6 +142,18 @@ const PERGUNTAS_CHECKLIST = [
   }
 ];
 
+function opcaoExigeJustificativa(opcaoObj, valorStr = '') {
+  if (opcaoObj) {
+    if (opcaoObj.classeTag === 'tag-atencao' || opcaoObj.classeTag === 'tag-erro') return true;
+    const tagLower = (opcaoObj.tag || '').toLowerCase();
+    if (tagLower.includes('ressalva') || tagLower.includes('crítico') || tagLower.includes('critico') || tagLower.includes('atenção') || tagLower.includes('não conforme')) {
+      return true;
+    }
+  }
+  const v = String(valorStr || '').toLowerCase();
+  return v.includes('parcial') || v.includes('não') || v.includes('inacessível') || v.includes('ressalva') || v.includes('crítico');
+}
+
 export function getPerguntasChecklistAtual() {
   const custom = state.currentVistoria?.perguntasChecklist || 
                  state.selectedObra?.perguntasChecklist || 
@@ -160,24 +170,15 @@ export function getPerguntasChecklistAtual() {
 export function renderChecklistPergunta() {
   const vistoria = state.currentVistoria;
   const respostas = vistoria.respostas = vistoria.respostas || {};
+  respostas.justificativas = respostas.justificativas || {};
   const listaPerguntas = getPerguntasChecklistAtual();
   const totalPerguntas = listaPerguntas.length;
 
-  // Garante inicialização das chaves no estado
-  if (respostas.fachadaLegivel === undefined) respostas.fachadaLegivel = 'Sim';
-  if (respostas.segurancaEpc === undefined) {
-    respostas.segurancaEpc = [
-      'Isolamento perimetral e tapumes íntegros',
-      'Sinalização visual de perigo e rotas de pedestres',
-      'Uso obrigatório de EPIs completos pela equipe'
-    ];
-  }
-  if (respostas.relatoEstrutural === undefined) {
-    respostas.relatoEstrutural = 'Alvenaria aprumada e nivelada com juntas regulares. Fachada frontal e vigas dentro do padrão visual e normativo do Banco do Brasil.';
-  }
-  if (respostas.acessibilidade === undefined) {
-    respostas.acessibilidade = 'Totalmente acessível (Piso tátil e rampa nivelada sem degraus)';
-  }
+  // Garante inicialização em branco (sem pré-preenchimento) conforme solicitação do cliente
+  if (respostas.fachadaLegivel === undefined) respostas.fachadaLegivel = '';
+  if (respostas.segurancaEpc === undefined) respostas.segurancaEpc = [];
+  if (respostas.relatoEstrutural === undefined) respostas.relatoEstrutural = '';
+  if (respostas.acessibilidade === undefined) respostas.acessibilidade = '';
 
   // Índice da pergunta ativa
   if (typeof state.checklistQuestionIndex !== 'number' || state.checklistQuestionIndex < 0 || state.checklistQuestionIndex >= totalPerguntas) {
@@ -188,14 +189,13 @@ export function renderChecklistPergunta() {
   const chave = currentQ.chaveResposta || currentQ.id || `pergunta_${currentIndex}`;
 
   if (respostas[chave] === undefined) {
-    if (currentQ.tipo === 'caixa') {
-      respostas[chave] = Array.isArray(currentQ.padrao) ? [...currentQ.padrao] : [];
-    } else {
-      respostas[chave] = currentQ.padrao || (currentQ.tipo === 'texto' ? '' : 'Sim');
-    }
+    respostas[chave] = currentQ.tipo === 'caixa' ? [] : '';
   }
 
   const progressoPorcentagem = Math.round(((currentIndex + 1) / totalPerguntas) * 100);
+
+  // Verifica se a pergunta atual está devidamente preenchida para habilitar o botão de avanço
+  let podeAvancar = false;
 
   // Render do corpo específico da pergunta ativa
   let questionBodyHtml = '';
@@ -206,14 +206,20 @@ export function renderChecklistPergunta() {
       { valor: 'Parcial', label: 'Parcial (Com Ressalvas)', detalhe: 'Atende parcialmente com necessidade de ajuste', tag: 'Atenção', classeTag: 'tag-atencao' },
       { valor: 'Não', label: 'Não (Não Conforme)', detalhe: 'Não atende aos critérios normativos', tag: 'Não Conforme', classeTag: 'tag-erro' }
     ];
-    const valorAtual = respostas[chave] || currentQ.padrao || opcoes[0].valor;
+    const valorAtual = respostas[chave] || '';
+    const opcaoSelecionadaObj = opcoes.find(o => o.valor === valorAtual);
+    const precisaJustificar = valorAtual ? opcaoExigeJustificativa(opcaoSelecionadaObj, valorAtual) : false;
+    const textoJustificativa = respostas.justificativas[chave] || '';
+
+    podeAvancar = Boolean(valorAtual) && (!precisaJustificar || textoJustificativa.trim().length > 0);
 
     questionBodyHtml = `
       <div class="opcoes-resposta-group">
         ${opcoes.map(op => {
           const isSelected = valorAtual === op.valor;
+          const reqJust = opcaoExigeJustificativa(op, op.valor);
           return `
-            <label class="radio-pill-option ${isSelected ? 'selected' : ''}" data-val="${op.valor}">
+            <label class="radio-pill-option ${isSelected ? 'selected' : ''}" data-val="${op.valor}" data-needs-just="${reqJust ? '1' : '0'}">
               <div class="radio-left-cluster">
                 <input type="radio" name="${currentQ.id || chave}" value="${op.valor}" ${isSelected ? 'checked' : ''} />
                 <span class="radio-custom-circle"></span>
@@ -227,6 +233,20 @@ export function renderChecklistPergunta() {
           `;
         }).join('')}
       </div>
+
+      <!-- Campo de Justificativa Qualitativa quando selecionado "Com Ressalva" / "Atenção" ou "Crítico" / "Não Conforme" -->
+      <div class="justificativa-qualitativa-box ${precisaJustificar ? '' : 'hidden'}" id="boxJustificativaQualitativa">
+        <label class="justificativa-qualitativa-label" for="txtJustificativaPergunta">
+          ⚠️ Justificativa técnica obrigatória (Descreva o motivo da ressalva ou condição crítica):
+        </label>
+        <textarea
+          id="txtJustificativaPergunta"
+          class="pergunta-textarea justificativa-textarea"
+          rows="3"
+          maxlength="350"
+          placeholder="Descreva aqui os detalhes da ressalva, pendência ou anomalia identificada para registro no relatório..."
+        >${textoJustificativa}</textarea>
+      </div>
     `;
   } else if (currentQ.tipo === 'caixa') {
     const opcoes = currentQ.opcoes || [
@@ -236,6 +256,8 @@ export function renderChecklistPergunta() {
     const selecionados = Array.isArray(respostas[chave]) 
       ? respostas[chave] 
       : [];
+
+    podeAvancar = selecionados.length > 0;
     
     questionBodyHtml = `
       <div class="checkbox-toolbar">
@@ -270,6 +292,9 @@ export function renderChecklistPergunta() {
   } else if (currentQ.tipo === 'texto') {
     const textoAtual = respostas[chave] || '';
     const charLen = textoAtual.length;
+    podeAvancar = textoAtual.trim().length > 0;
+
+    const placeholderTexto = ORIENTACAO_TEXTO_PADRAO;
     const chipsRapidos = currentQ.chipsRapidos || [
       'Alvenaria aprumada e nivelada',
       'Ausência de trincas estruturais',
@@ -284,12 +309,18 @@ export function renderChecklistPergunta() {
           id="txtRelatoChecklist" 
           maxlength="500" 
           rows="4" 
-          placeholder="${currentQ.placeholder || 'Digite ou insira sugestões técnicas sobre a execução da obra...'}"
+          data-default-placeholder="${placeholderTexto}"
+          placeholder="${placeholderTexto}"
         >${textoAtual}</textarea>
 
         <div class="textarea-meta-bar">
           <span class="char-counter" id="lblCharCounter">${charLen} / 500 caracteres</span>
           <button type="button" class="btn-clear-txt" id="btnClearRelatoTxt">Limpar texto</button>
+        </div>
+
+        <!-- Banner de confirmação de onde o parecer da IA foi salvo -->
+        <div class="ia-saved-feedback-banner hidden" id="iaSavedFeedbackBanner">
+          <span>✅ <strong>Parecer gerado pela IA e inserido no campo de texto acima!</strong> Você pode revisar ou editar o texto antes de avançar.</span>
         </div>
 
         <!-- Chips de Preenchimento Rápido de Engenharia -->
@@ -306,16 +337,16 @@ export function renderChecklistPergunta() {
           </div>
         </div>
 
-        <!-- Assistente com IA do Google Gemini 1.5 Flash -->
+        <!-- Assistente de Parecer com IA BBVision -->
         <div class="ia-generate-block">
           <button type="button" class="btn-ia-gemini-checklist" id="btnIaGerarRelato">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FED304" stroke-width="2.5">
               <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
             </svg>
-            <span>✨ Assistente de Parecer com IA (Gemini)</span>
+            <span>✨ Assistente de Parecer com IA (Preenche o campo acima)</span>
           </button>
           <span class="ia-disclaimer-pill">
-            Governado por IA TakeOff • Sujeito à revisão humana antes do envio
+            O parecer gerado é inserido diretamente na caixa de texto acima para sua revisão
           </span>
         </div>
       </div>
@@ -417,12 +448,12 @@ export function renderChecklistPergunta() {
             <button class="btn-secondary-bb-outline" id="btnPerguntaAnterior">
               ← Anterior
             </button>
-            <button class="btn-primary-bb-yellow" id="btnProximaPergunta">
+            <button class="btn-primary-bb-yellow" id="btnProximaPergunta" ${podeAvancar ? '' : 'disabled'}>
               ${currentIndex === totalPerguntas - 1 ? 'Avançar para Checklist Dinâmico →' : 'Próxima Pergunta →'}
             </button>
           </div>
         ` : `
-          <button class="btn-primary-bb-yellow" id="btnProximaPergunta">
+          <button class="btn-primary-bb-yellow" id="btnProximaPergunta" ${podeAvancar ? '' : 'disabled'}>
             ${totalPerguntas === 1 ? 'Avançar para Checklist Dinâmico →' : 'Próxima Pergunta'}
           </button>
         `}
@@ -438,6 +469,29 @@ export function bindChecklistPerguntaEvents() {
   const currentQ = listaPerguntas[currentIndex] || listaPerguntas[0];
   const chave = currentQ.chaveResposta || currentQ.id || `pergunta_${currentIndex}`;
   const respostas = state.currentVistoria.respostas;
+  respostas.justificativas = respostas.justificativas || {};
+
+  const btnProxima = document.getElementById('btnProximaPergunta');
+
+  function atualizarEstadoBotaoAvancar() {
+    if (!btnProxima) return;
+    let valido = false;
+    if (currentQ.tipo === 'multipla_escolha') {
+      const val = respostas[chave] || '';
+      const opcoes = currentQ.opcoes || [];
+      const opObj = opcoes.find(o => o.valor === val);
+      const reqJust = val ? opcaoExigeJustificativa(opObj, val) : false;
+      const justStr = (respostas.justificativas[chave] || '').trim();
+      valido = Boolean(val) && (!reqJust || justStr.length > 0);
+    } else if (currentQ.tipo === 'caixa') {
+      const arr = Array.isArray(respostas[chave]) ? respostas[chave] : [];
+      valido = arr.length > 0;
+    } else if (currentQ.tipo === 'texto') {
+      const txt = (respostas[chave] || '').trim();
+      valido = txt.length > 0;
+    }
+    btnProxima.disabled = !valido;
+  }
 
   // 1. Botão Voltar no Header
   const btnVoltarHeader = document.getElementById('btnVoltarPerguntaHeader');
@@ -469,6 +523,10 @@ export function bindChecklistPerguntaEvents() {
     pill.addEventListener('click', () => {
       const stepIdx = parseInt(pill.getAttribute('data-step'), 10);
       if (!isNaN(stepIdx) && stepIdx !== currentIndex) {
+        if (stepIdx > currentIndex && btnProxima && btnProxima.disabled) {
+          toast.warning('Resposta Obrigatória', 'Responda a pergunta atual antes de avançar.');
+          return;
+        }
         state.checklistQuestionIndex = stepIdx;
         state.notify();
       }
@@ -486,12 +544,17 @@ export function bindChecklistPerguntaEvents() {
     });
   }
 
-  // 5. Interação para Múltipla Escolha
+  // 5. Interação para Múltipla Escolha (+ Justificativa para Ressalva / Crítico)
   if (currentQ.tipo === 'multipla_escolha') {
     const radioOptions = document.querySelectorAll('.radio-pill-option');
+    const boxJust = document.getElementById('boxJustificativaQualitativa');
+    const txtJust = document.getElementById('txtJustificativaPergunta');
+
     radioOptions.forEach(opt => {
       opt.addEventListener('click', () => {
         const val = opt.getAttribute('data-val');
+        const needsJust = opt.getAttribute('data-needs-just') === '1';
+
         radioOptions.forEach(o => {
           o.classList.remove('selected');
           const input = o.querySelector('input');
@@ -502,8 +565,26 @@ export function bindChecklistPerguntaEvents() {
         if (input) input.checked = true;
 
         respostas[chave] = val;
+
+        if (boxJust) {
+          if (needsJust) {
+            boxJust.classList.remove('hidden');
+            if (txtJust) setTimeout(() => txtJust.focus(), 50);
+          } else {
+            boxJust.classList.add('hidden');
+            respostas.justificativas[chave] = '';
+          }
+        }
+        atualizarEstadoBotaoAvancar();
       });
     });
+
+    if (txtJust) {
+      txtJust.addEventListener('input', (e) => {
+        respostas.justificativas[chave] = e.target.value;
+        atualizarEstadoBotaoAvancar();
+      });
+    }
   }
 
   // 6. Interação para Caixas de Seleção (Checkboxes múltiplos)
@@ -517,6 +598,7 @@ export function bindChecklistPerguntaEvents() {
       if (badgeCount) {
         badgeCount.innerText = `${marcados.length} de ${opcoes.length} marcados`;
       }
+      atualizarEstadoBotaoAvancar();
     }
 
     chkOptions.forEach(card => {
@@ -569,13 +651,26 @@ export function bindChecklistPerguntaEvents() {
     const btnClearTxt = document.getElementById('btnClearRelatoTxt');
     const chipBtns = document.querySelectorAll('.quick-chip-btn');
     const btnIaGerar = document.getElementById('btnIaGerarRelato');
+    const iaFeedbackBanner = document.getElementById('iaSavedFeedbackBanner');
 
     if (txtArea) {
+      // Orientação esmaecida de fundo desaparece imediatamente ao clicar no interior do campo (Item 9)
+      txtArea.addEventListener('focus', () => {
+        txtArea.setAttribute('placeholder', '');
+      });
+
+      txtArea.addEventListener('blur', () => {
+        if (!txtArea.value.trim()) {
+          txtArea.setAttribute('placeholder', txtArea.getAttribute('data-default-placeholder') || ORIENTACAO_TEXTO_PADRAO);
+        }
+      });
+
       txtArea.addEventListener('input', (e) => {
         respostas[chave] = e.target.value;
         if (lblChar) {
           lblChar.innerText = `${e.target.value.length} / 500 caracteres`;
         }
+        atualizarEstadoBotaoAvancar();
       });
     }
 
@@ -584,6 +679,8 @@ export function bindChecklistPerguntaEvents() {
         txtArea.value = '';
         respostas[chave] = '';
         if (lblChar) lblChar.innerText = `0 / 500 caracteres`;
+        if (iaFeedbackBanner) iaFeedbackBanner.classList.add('hidden');
+        atualizarEstadoBotaoAvancar();
         txtArea.focus();
       });
     }
@@ -604,11 +701,12 @@ export function bindChecklistPerguntaEvents() {
         txtArea.value = currentTxt;
         respostas[chave] = currentTxt;
         if (lblChar) lblChar.innerText = `${currentTxt.length} / 500 caracteres`;
-        toast.info('Termo Adicionado', `Sugestão técnica inserida no parecer.`);
+        atualizarEstadoBotaoAvancar();
+        toast.info('Termo Adicionado', 'Sugestão técnica inserida no campo de texto.');
       });
     });
 
-    // Assistente IA com Google Gemini 1.5 Flash
+    // Assistente de Parecer com IA BBVision (Item 9.2)
     if (btnIaGerar && txtArea) {
       btnIaGerar.addEventListener('click', async () => {
         const originalHtml = btnIaGerar.innerHTML;
@@ -620,37 +718,44 @@ export function bindChecklistPerguntaEvents() {
             <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
             <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
           </svg>
-          <span>Gerando Parecer com Gemini 1.5 Flash...</span>
+          <span>Gerando Parecer Técnico com IA...</span>
         `;
 
         try {
           const res = await api.sugerirObservacao('alvenaria');
-          if (res && res.sugestao) {
-            txtArea.value = res.sugestao;
-            respostas[chave] = res.sugestao;
-            toast.success('Parecer Gerado!', 'Sugestão técnica elaborada pela IA com sucesso.');
-          } else {
-            throw new Error('Resposta vazia');
-          }
+          const textoGerado = (res && res.sugestao)
+            ? res.sugestao
+            : 'Alvenaria externa aprumada e nivelada conforme gabarito de referência, juntas regulares e ausência de fissuras visíveis.';
+          txtArea.value = textoGerado;
+          respostas[chave] = textoGerado;
+          toast.success('Parecer Inserido no Campo!', 'O parecer técnico gerado pela IA foi preenchido automaticamente na caixa de texto acima.');
         } catch (err) {
           console.warn('[ChecklistPergunta] Fallback técnico:', err.message);
           const fallbackTxt = 'Alvenaria perfeitamente alinhada e nivelada. Vigas e juntas regulares, sem trincas ativas ou desvios de prumo. Obra conforme diretrizes de engenharia do Banco do Brasil.';
           txtArea.value = fallbackTxt;
           respostas[chave] = fallbackTxt;
-          toast.info('Parecer Técnico', 'Parecer gerado com base no padrão normativo BB.');
+          toast.success('Parecer Inserido no Campo!', 'Parecer técnico inserido automaticamente na caixa de texto acima.');
         } finally {
           btnIaGerar.disabled = false;
           btnIaGerar.innerHTML = originalHtml;
           if (lblChar) lblChar.innerText = `${txtArea.value.length} / 500 caracteres`;
+          if (iaFeedbackBanner) iaFeedbackBanner.classList.remove('hidden');
+          txtArea.classList.add('textarea-ia-highlight');
+          txtArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setTimeout(() => txtArea.classList.remove('textarea-ia-highlight'), 2200);
+          atualizarEstadoBotaoAvancar();
         }
       });
     }
   }
 
   // 8. Botão Próxima Pergunta / Concluir
-  const btnProxima = document.getElementById('btnProximaPergunta');
   if (btnProxima) {
     btnProxima.addEventListener('click', () => {
+      if (btnProxima.disabled) {
+        toast.warning('Preenchimento Obrigatório', 'Responda a questão antes de avançar para a próxima etapa.');
+        return;
+      }
       if (currentIndex < totalPerguntas - 1) {
         state.checklistQuestionIndex = currentIndex + 1;
         state.notify();

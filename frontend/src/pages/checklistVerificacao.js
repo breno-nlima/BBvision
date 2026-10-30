@@ -6,12 +6,25 @@
 
 import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
+import { toast } from '../components/toast.js';
 
 export function renderChecklistVerificacao() {
   const vistoria = state.currentVistoria;
+  const respostas = vistoria.respostas = vistoria.respostas || {};
   const user = state.user || { nome: 'Responsável Técnico', email: 'responsavel@empresa.com.br' };
   const responsavelNome = state.user?.nome || vistoria.responsavel || 'Responsável Técnico';
   const responsavelDoc = state.user?.registro_profissional || vistoria.matricula || 'CREA/CAU Cadastrado';
+
+  const itensVerificacao = [
+    { key: 'check1', num: 1, texto: 'A estrutura está conforme o projeto?' },
+    { key: 'check2', num: 2, texto: 'Não há danos ou irregularidades visíveis?' },
+    { key: 'check3', num: 3, texto: 'A sinalização de segurança está correta?' },
+    { key: 'check4', num: 4, texto: 'A etapa da obra foi atualizada corretamente?' },
+    { key: 'check5', num: 5, texto: 'O local está pronto para registro fotográfico in-loco?' }
+  ];
+
+  const totalMarcados = itensVerificacao.filter(item => Boolean(respostas[item.key])).length;
+  const podeAvancar = totalMarcados >= 1;
 
   return `
     <div class="page-container fade-in" id="checklistVerificacaoPage">
@@ -36,72 +49,42 @@ export function renderChecklistVerificacao() {
 
       <!-- Card do Código Único e Destino do E-mail -->
       <div class="verificacao-codigo-card">
-        <span class="card-mini-label">Codigo Único</span>
+        <span class="card-mini-label">Código Único</span>
         <div class="codigo-pill-highlight">
           ${vistoria.codigoUnico}
         </div>
         <p class="codigo-email-notice">
-          Codigo enviado para: ${user.email || 'responsavel@empresa.com.br'}
+          Código vinculado a: ${user.email || 'responsavel@empresa.com.br'}
         </p>
       </div>
 
-      <!-- Lista de Itens de Verificação Conforme o Gabarito Oficial -->
+      <!-- Lista de Itens de Verificação Conforme o Gabarito Oficial (Inicia em branco) -->
       <div class="verificacao-checklist-card">
+        <div class="checkbox-toolbar" style="margin-bottom: 10px;">
+          <div class="toolbar-buttons-cluster">
+            <button type="button" class="btn-quick-check" id="btnMarcarTodosVerificacao">Marcar Todos</button>
+            <button type="button" class="btn-quick-check" id="btnLimparVerificacao">Limpar</button>
+          </div>
+          <span class="badge-selection-count" id="badgeVerificacaoCount">
+            ${totalMarcados} de ${itensVerificacao.length} marcados
+          </span>
+        </div>
+
         <div class="checklist-items-list">
-          <!-- Item 1 -->
-          <div class="check-item-row" data-check="check1">
-            <div class="item-number-circle">1</div>
-            <p class="item-text">A estrutura está conforme o projeto?</p>
-            <div class="custom-checkbox-btn checked" id="chkItem1">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            </div>
-          </div>
-
-          <!-- Item 2 -->
-          <div class="check-item-row" data-check="check2">
-            <div class="item-number-circle">2</div>
-            <p class="item-text">Não há danos ou irregularidades visíveis?</p>
-            <div class="custom-checkbox-btn checked" id="chkItem2">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            </div>
-          </div>
-
-          <!-- Item 3 -->
-          <div class="check-item-row" data-check="check3">
-            <div class="item-number-circle">3</div>
-            <p class="item-text">A sinalização de segurança está correta?</p>
-            <div class="custom-checkbox-btn checked" id="chkItem3">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            </div>
-          </div>
-
-          <!-- Item 4 -->
-          <div class="check-item-row" data-check="check4">
-            <div class="item-number-circle">4</div>
-            <p class="item-text">A etapa da obra foi atualizada corretamente?</p>
-            <div class="custom-checkbox-btn checked" id="chkItem4">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            </div>
-          </div>
-
-          <!-- Item 5 -->
-          <div class="check-item-row" data-check="check5">
-            <div class="item-number-circle">5</div>
-            <p class="item-text">A foto registra claramente o ponto fiscalizado?</p>
-            <div class="custom-checkbox-btn checked" id="chkItem5">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            </div>
-          </div>
+          ${itensVerificacao.map(item => {
+            const isChecked = Boolean(respostas[item.key]);
+            return `
+              <div class="check-item-row" data-check="${item.key}" style="cursor: pointer;">
+                <div class="item-number-circle">${item.num}</div>
+                <p class="item-text">${item.texto}</p>
+                <div class="custom-checkbox-btn ${isChecked ? 'checked' : ''}" id="chk_${item.key}">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </div>
+              </div>
+            `;
+          }).join('')}
         </div>
       </div>
 
@@ -126,7 +109,7 @@ export function renderChecklistVerificacao() {
 
       <!-- Botão Amarelo de Continuação (Leva à Validação com Câmera & IA) -->
       <div class="verificacao-action-footer">
-        <button class="btn-primary-bb-yellow" id="btnFinalizarChecklist">
+        <button class="btn-primary-bb-yellow" id="btnFinalizarChecklist" ${podeAvancar ? '' : 'disabled'}>
           Avançar para Câmera & IA →
         </button>
       </div>
@@ -135,6 +118,22 @@ export function renderChecklistVerificacao() {
 }
 
 export function bindChecklistVerificacaoEvents() {
+  const respostas = state.currentVistoria.respostas = state.currentVistoria.respostas || {};
+  const btnFinalizar = document.getElementById('btnFinalizarChecklist');
+  const badgeCount = document.getElementById('badgeVerificacaoCount');
+  const checkRows = document.querySelectorAll('.check-item-row');
+  const keys = ['check1', 'check2', 'check3', 'check4', 'check5'];
+
+  function atualizarEstadoVerificacao() {
+    const marcados = keys.filter(k => Boolean(respostas[k])).length;
+    if (badgeCount) {
+      badgeCount.innerText = `${marcados} de ${keys.length} marcados`;
+    }
+    if (btnFinalizar) {
+      btnFinalizar.disabled = marcados < 1;
+    }
+  }
+
   const btnVoltar = document.getElementById('btnVoltarChecklistDinamico');
   if (btnVoltar) {
     btnVoltar.addEventListener('click', () => {
@@ -142,18 +141,48 @@ export function bindChecklistVerificacaoEvents() {
     });
   }
 
-  // Checkboxes interativos
-  const checkButtons = document.querySelectorAll('.custom-checkbox-btn');
-  checkButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      btn.classList.toggle('checked');
+  checkRows.forEach(row => {
+    row.addEventListener('click', () => {
+      const key = row.getAttribute('data-check');
+      const chkBtn = row.querySelector('.custom-checkbox-btn');
+      if (!key || !chkBtn) return;
+      const novoValor = !chkBtn.classList.contains('checked');
+      chkBtn.classList.toggle('checked', novoValor);
+      respostas[key] = novoValor;
+      atualizarEstadoVerificacao();
     });
   });
 
-  const btnFinalizar = document.getElementById('btnFinalizarChecklist');
+  const btnMarcarTodos = document.getElementById('btnMarcarTodosVerificacao');
+  if (btnMarcarTodos) {
+    btnMarcarTodos.addEventListener('click', () => {
+      keys.forEach(k => { respostas[k] = true; });
+      checkRows.forEach(row => {
+        const chkBtn = row.querySelector('.custom-checkbox-btn');
+        if (chkBtn) chkBtn.classList.add('checked');
+      });
+      atualizarEstadoVerificacao();
+    });
+  }
+
+  const btnLimpar = document.getElementById('btnLimparVerificacao');
+  if (btnLimpar) {
+    btnLimpar.addEventListener('click', () => {
+      keys.forEach(k => { respostas[k] = false; });
+      checkRows.forEach(row => {
+        const chkBtn = row.querySelector('.custom-checkbox-btn');
+        if (chkBtn) chkBtn.classList.remove('checked');
+      });
+      atualizarEstadoVerificacao();
+    });
+  }
+
   if (btnFinalizar) {
     btnFinalizar.addEventListener('click', () => {
-      // Avança para a tela de Câmera & Validação com IA conforme o novo fluxo
+      if (btnFinalizar.disabled) {
+        toast.warning('Seleção Obrigatória', 'Marque pelo menos um item do checklist de verificação antes de avançar.');
+        return;
+      }
       state.navigate('camera-ia');
     });
   }

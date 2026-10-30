@@ -10,9 +10,11 @@
 
 import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
+import { toast } from '../components/toast.js';
 
 export function renderAssinaturaResponsavel() {
   const vistoria = state.currentVistoria;
+  const declaracaoAceita = Boolean(vistoria.declaracaoAceita);
 
   return `
     <div class="page-container fade-in" id="assinaturaResponsavelPage">
@@ -68,11 +70,11 @@ export function renderAssinaturaResponsavel() {
             />
           </div>
 
-          <div class="declaracao-check-row" id="rowDeclaracao">
-            <label class="declaracao-label-text">
+          <div class="declaracao-check-row" id="rowDeclaracao" style="cursor: pointer;">
+            <label class="declaracao-label-text" style="cursor: pointer;">
               Declaro que as informações acima são verdadeiras
             </label>
-            <div class="green-check-circle active" id="chkDeclaracao">
+            <div class="green-check-circle ${declaracaoAceita ? 'active' : ''}" id="chkDeclaracao">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3">
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
@@ -83,9 +85,28 @@ export function renderAssinaturaResponsavel() {
 
       <!-- Botão Amarelo de Finalização Criptográfica -->
       <div class="assinatura-action-footer">
-        <button class="btn-primary-bb-yellow" id="btnFinalizarEAssinar">
-          Finalizar e Assinar
+        <button class="btn-primary-bb-yellow" id="btnFinalizarEAssinar" ${declaracaoAceita ? '' : 'disabled'}>
+          Finalizar e Concluir Relatório
         </button>
+      </div>
+
+      <!-- Modal de Confirmação Antes de Encerrar Relatório (Item 13) -->
+      <div class="vistoria-modal-overlay hidden" id="modalConfirmarConclusaoRelatorio">
+        <div class="vistoria-modal-card">
+          <div style="font-size: 32px; margin-bottom: 8px;">🔒</div>
+          <h3 style="color: #002D72; font-size: 17px; margin-bottom: 8px;">Concluir Relatório de Vistoria?</h3>
+          <p style="font-size: 13.5px; color: #334155; line-height: 1.5; font-weight: 500;">
+            Tem certeza que quer concluir este relatório? Após a confirmação este relatório não mais poderá ser alterado.
+          </p>
+          <div style="display: flex; gap: 10px; margin-top: 18px;">
+            <button type="button" class="btn-secondary-white" id="btnCancelarConclusaoModal" style="flex: 1;">
+              Revisar Relatório
+            </button>
+            <button type="button" class="btn-submit-primary" id="btnConfirmarConclusaoModal" style="flex: 1.2;">
+              Sim, Concluir Relatório
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   `;
@@ -162,20 +183,49 @@ export function bindAssinaturaResponsavelEvents() {
   }
 
   // Alternar check de declaração
+  const rowDeclaracao = document.getElementById('rowDeclaracao');
   const chkDeclaracao = document.getElementById('chkDeclaracao');
-  if (chkDeclaracao) {
-    chkDeclaracao.addEventListener('click', () => {
+  const btnFinalizar = document.getElementById('btnFinalizarEAssinar');
+  const modalConfirmar = document.getElementById('modalConfirmarConclusaoRelatorio');
+  const btnCancelarModal = document.getElementById('btnCancelarConclusaoModal');
+  const btnConfirmarModal = document.getElementById('btnConfirmarConclusaoModal');
+
+  if (rowDeclaracao && chkDeclaracao) {
+    rowDeclaracao.addEventListener('click', () => {
       chkDeclaracao.classList.toggle('active');
-      state.currentVistoria.declaracaoAceita = chkDeclaracao.classList.contains('active');
+      const ativo = chkDeclaracao.classList.contains('active');
+      state.currentVistoria.declaracaoAceita = ativo;
+      if (btnFinalizar) btnFinalizar.disabled = !ativo;
     });
   }
 
-  // Finalizar e Assinar com Processamento Criptográfico e Bloqueio
-  const btnFinalizar = document.getElementById('btnFinalizarEAssinar');
+  // Abre modal de confirmação antes de concluir (Item 13)
   if (btnFinalizar) {
-    btnFinalizar.addEventListener('click', async () => {
-      btnFinalizar.disabled = true;
-      btnFinalizar.innerText = 'Processando e Bloqueando Relatório...';
+    btnFinalizar.addEventListener('click', () => {
+      if (!state.currentVistoria.declaracaoAceita) {
+        toast.warning('Declaração Obrigatória', 'Marque a declaração de veracidade das informações antes de concluir.');
+        return;
+      }
+      if (modalConfirmar) {
+        modalConfirmar.classList.remove('hidden');
+      }
+    });
+  }
+
+  if (btnCancelarModal && modalConfirmar) {
+    btnCancelarModal.addEventListener('click', () => {
+      modalConfirmar.classList.add('hidden');
+    });
+  }
+
+  if (btnConfirmarModal) {
+    btnConfirmarModal.addEventListener('click', async () => {
+      btnConfirmarModal.disabled = true;
+      btnConfirmarModal.innerText = 'Concluindo Relatório...';
+      if (btnFinalizar) {
+        btnFinalizar.disabled = true;
+        btnFinalizar.innerText = 'Concluindo e Gerando Relatório...';
+      }
 
       let sigData = null;
       if (canvas && hasDrawn) {
@@ -183,8 +233,9 @@ export function bindAssinaturaResponsavelEvents() {
       }
 
       await state.finalizarVistoriaComAssinatura(sigData);
-      
-      // Avança para a tela de Relatório Bloqueado
+
+      if (modalConfirmar) modalConfirmar.classList.add('hidden');
+      // Avança para a tela de Relatório Concluído
       state.navigate('relatorio-bloqueado');
     });
   }

@@ -4026,3 +4026,233 @@
 
 
 
+
+/* ==========================================================================
+   MELHORIAS DE UX EMPREITEIRA (CHECKLIST, CÂMERA IA E FÉ PÚBLICA)
+   ========================================================================== */
+
+.btn-primary-bb-yellow:disabled {
+  background: #E2E8F0 !important;
+  color: #94A3B8 !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  opacity: 0.78;
+}
+
+.justificativa-qualitativa-box {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: #FFFBEB;
+  border: 1.5px solid #F59E0B;
+  border-radius: 12px;
+  animation: fadeIn 0.2s ease;
+}
+
+.justificativa-qualitativa-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #B45309;
+  margin-bottom: 8px;
+  line-height: 1.35;
+}
+
+.justificativa-textarea {
+  background: #FFFFFF !important;
+  border-color: #FCD34D !important;
+  font-size: 13px !important;
+}
+
+.ia-saved-feedback-banner {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: #ECFDF5;
+  border: 1.5px solid #10B981;
+  border-radius: 10px;
+  color: #065F46;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.textarea-ia-highlight {
+  border-color: #10B981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25) !important;
+  transition: all 0.25s ease;
+}
+
+/* Controles de Câmera Redenhados para Captura Intuitiva (Item 3.1) */
+.cam-step-hint {
+  font-size: 12px;
+  font-weight: 600;
+  color: #F8FAFC;
+}
+
+.btn-capture-main {
+  width: 100%;
+  padding: 15px 18px;
+  border-radius: 14px;
+  border: 2px solid #FFFFFF;
+  background: linear-gradient(135deg, #FED304 0%, #F59E0B 100%);
+  color: #002D72;
+  font-size: 15px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(254, 211, 4, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-capture-main:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(254, 211, 4, 0.45);
+}
+
+.capture-btn-icon {
+  font-size: 20px;
+}
+
+.cam-verified-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(16, 185, 129, 0.18);
+  border: 1.5px solid #10B981;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  color: #FFFFFF;
+}
+
+.verified-icon-check {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #10B981;
+  color: #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.verified-banner-texts {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.verified-banner-texts strong {
+  font-size: 13px;
+  color: #A7F3D0;
+}
+
+.verified-banner-texts span {
+  font-size: 11.5px;
+  color: #E2E8F0;
+}
+
+.btn-confirm-photo-advance {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: none;
+  background: #FED304;
+  color: #002D72;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(254, 211, 4, 0.3);
+}
+
+.btn-retake-clear {
+  padding: 14px 14px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Card Explicativo de Fé Pública (Item 16) */
+.fe-publica-explainer-card {
+  margin: 0 18px 14px 18px;
+  background: #F8FAFC;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.fe-explainer-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #002D72;
+  margin-bottom: 10px;
+}
+
+.fe-steps-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fe-step-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 9px 11px;
+}
+
+.fe-step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #002D72;
+  color: #FED304;
+  font-size: 11.5px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.fe-step-box strong {
+  display: block;
+  font-size: 12px;
+  color: #0F172A;
+  margin-bottom: 2px;
+}
+
+.fe-step-box p {
+  margin: 0;
+  font-size: 11.5px;
+  color: #475569;
+  line-height: 1.38;
+}
+
+.quick-code-pill-btn {
+  background: #EFF6FF;
+  border: 1px solid #93C5FD;
+  color: #002D72;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quick-code-pill-btn:hover {
+  background: #DBEAFE;
+  border-color: #2563EB;
+}

@@ -50,6 +50,7 @@ const relatoriosController = {
         const respostasSanitizadas = respostas.map(r => ({
           pergunta: sanitizeString(r.pergunta || 'Item não especificado'),
           valor: sanitizeString(r.valor || 'Não informado'),
+          justificativa: r.justificativa ? sanitizeString(r.justificativa) : null,
           sugestao_ia: r.sugestao_ia ? sanitizeString(r.sugestao_ia) : null,
           tipo: r.tipo === 'multipla_escolha' ? 'multipla_escolha' : 'texto',
         }));
@@ -270,6 +271,7 @@ const relatoriosController = {
       const respostasSanitizadas = rawRespostas.map(r => ({
         pergunta: sanitizeString(r.pergunta || 'Item não especificado'),
         valor: sanitizeString(r.valor || 'Não informado'),
+        justificativa: r.justificativa ? sanitizeString(r.justificativa) : null,
         sugestao_ia: r.sugestao_ia ? sanitizeString(r.sugestao_ia) : null,
         tipo: r.tipo === 'multipla_escolha' ? 'multipla_escolha' : 'texto',
       }));
@@ -307,12 +309,52 @@ const relatoriosController = {
         });
       }
 
-      let { caminho_arquivo, hash_integridade, avaliacao_gemini, confianca, motivo } = req.body;
+      let {
+        caminho_arquivo,
+        hash_integridade,
+        hash_sha256,
+        avaliacao_gemini,
+        status_ia,
+        confianca,
+        confianca_ia,
+        motivo,
+        motivo_ia,
+        imagemBase64,
+        url,
+      } = req.body;
+
+      hash_integridade = hash_integridade || hash_sha256;
+      avaliacao_gemini = avaliacao_gemini || status_ia;
+      confianca = confianca !== undefined ? confianca : confianca_ia;
+      motivo = motivo || motivo_ia;
 
       if (req.file) {
         caminho_arquivo = path.join('uploads', 'evidencias', path.basename(req.file.path)).replace(/\\/g, '/');
         const buffer = await fs.promises.readFile(req.file.path);
         hash_integridade = generateSha256(buffer);
+      } else if (!caminho_arquivo && (imagemBase64 || url)) {
+        const rawCandidate = imagemBase64 || url;
+        if (typeof rawCandidate === 'string' && (rawCandidate.startsWith('data:image/') || rawCandidate.length > 256)) {
+          let base64Part = rawCandidate;
+          let mimeType = 'image/jpeg';
+          if (rawCandidate.includes(',')) {
+            const parts = rawCandidate.split(',');
+            const mimeMatch = parts[0].match(/:(.*?);/);
+            if (mimeMatch) mimeType = mimeMatch[1];
+            base64Part = parts[1];
+          }
+          const buffer = Buffer.from(base64Part, 'base64');
+          const ext = mimeType === 'image/png' ? '.png' : mimeType === 'image/webp' ? '.webp' : '.jpg';
+          const fileName = `evidencia_rel_${Date.now()}_${Math.round(Math.random() * 1e6)}${ext}`;
+          const filePath = path.join(EVIDENCIAS_DIR, fileName);
+          await fs.promises.writeFile(filePath, buffer);
+          caminho_arquivo = path.join('uploads', 'evidencias', fileName).replace(/\\/g, '/');
+          if (!hash_integridade) {
+            hash_integridade = generateSha256(buffer);
+          }
+        } else if (typeof rawCandidate === 'string' && rawCandidate.trim()) {
+          caminho_arquivo = rawCandidate.trim();
+        }
       }
 
       if (!caminho_arquivo || !hash_integridade) {
@@ -322,12 +364,23 @@ const relatoriosController = {
         });
       }
 
+      const cleanPath = sanitizeString(caminho_arquivo);
+      const cleanHash = sanitizeString(hash_integridade);
+      const cleanStatus = sanitizeString(avaliacao_gemini || 'APROVADO');
+      const cleanConf = typeof confianca === 'number' ? confianca : 0.95;
+      const cleanMotivo = sanitizeString(motivo || 'Evidência fotográfica capturada in-loco.');
+
       const foto = mockData.addFoto(id, {
-        caminho_arquivo: sanitizeString(caminho_arquivo),
-        hash_integridade: sanitizeString(hash_integridade),
-        avaliacao_gemini: sanitizeString(avaliacao_gemini || 'APROVADO'),
-        confianca: typeof confianca === 'number' ? confianca : 0.95,
-        motivo: sanitizeString(motivo || 'Evidência fotográfica capturada in-loco.'),
+        url: cleanPath,
+        caminho_arquivo: cleanPath,
+        hash_sha256: cleanHash,
+        hash_integridade: cleanHash,
+        avaliacao_gemini: cleanStatus,
+        status_ia: cleanStatus,
+        confianca: cleanConf,
+        confianca_ia: cleanConf,
+        motivo: cleanMotivo,
+        motivo_ia: cleanMotivo,
       });
 
       return res.status(201).json({

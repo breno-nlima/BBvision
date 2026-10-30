@@ -150,20 +150,54 @@ function gerarRelatorioPdfBuffer(relatorio) {
         currentY += 18;
       } else {
         respostas.forEach((resp, idx) => {
-          doc.fillColor(CINZA_ESCURO).fontSize(8.5).font('Helvetica-Bold')
-            .text(`${idx + 1}. ${resp.pergunta}`, 45, currentY);
+          const rawPergunta = String(resp.pergunta || 'Item avaliado').replace(/^\d+\.\s*/, '');
+          const perguntaTxt = `${idx + 1}. ${rawPergunta}`;
+          const valorTxt = `Resposta: [ ${resp.valor || 'Não informado'} ]`;
+          const justTxt = resp.justificativa ? `Justificativa Técnica: "${resp.justificativa}"` : '';
+          const mostrarSugestaoIa = resp.sugestao_ia && String(resp.sugestao_ia).trim() !== String(resp.valor || '').trim();
+          const iaTxt = mostrarSugestaoIa ? `Parecer Técnico / IA: "${resp.sugestao_ia}"` : '';
 
-          doc.fillColor(AZUL_BB).font('Helvetica-Bold')
-            .text(`Status: [ ${resp.valor} ]`, 425, currentY);
+          doc.font('Helvetica-Bold').fontSize(8.5);
+          const hPergunta = doc.heightOfString(perguntaTxt, { width: 495 });
+          const hValor = doc.heightOfString(valorTxt, { width: 485 });
 
-          currentY += 13;
+          doc.font('Helvetica-Oblique').fontSize(8);
+          const hJust = justTxt ? doc.heightOfString(justTxt, { width: 480 }) + 3 : 0;
+          const hIa = iaTxt ? doc.heightOfString(iaTxt, { width: 480 }) + 3 : 0;
 
-          if (resp.sugestao_ia) {
-            doc.fillColor(CINZA_TEXTO).fontSize(8).font('Helvetica-Oblique')
-              .text(`Parecer Técnico / IA: "${resp.sugestao_ia}"`, 55, currentY, { width: 480 });
-            currentY += 16;
+          const blocoAltura = hPergunta + hValor + hJust + hIa + 14;
+
+          if (currentY + blocoAltura > 735) {
+            doc.addPage();
+            currentY = 45;
           }
-          currentY += 4;
+
+          // Fundo sutil alternado para facilitar leitura sem sobreposição
+          if (idx % 2 === 0) {
+            doc.rect(45, currentY - 3, 505, blocoAltura - 4).fill('#F8FAFC');
+          }
+
+          doc.fillColor(CINZA_ESCURO).fontSize(8.5).font('Helvetica-Bold')
+            .text(perguntaTxt, 50, currentY, { width: 495 });
+          currentY += hPergunta + 2;
+
+          doc.fillColor(AZUL_BB).fontSize(8.5).font('Helvetica-Bold')
+            .text(valorTxt, 58, currentY, { width: 485 });
+          currentY += hValor + 3;
+
+          if (justTxt) {
+            doc.fillColor('#B45309').fontSize(8).font('Helvetica-Oblique')
+              .text(justTxt, 58, currentY, { width: 480 });
+            currentY += hJust;
+          }
+
+          if (iaTxt) {
+            doc.fillColor(CINZA_TEXTO).fontSize(8).font('Helvetica-Oblique')
+              .text(iaTxt, 58, currentY, { width: 480 });
+            currentY += hIa;
+          }
+
+          currentY += 6;
         });
       }
 
@@ -171,7 +205,7 @@ function gerarRelatorioPdfBuffer(relatorio) {
       // 5. EVIDÊNCIAS FOTOGRÁFICAS IN-LOCO
       // ------------------------------------------------------------------------
       currentY += 8;
-      if (currentY > 620) {
+      if (currentY > 600) {
         doc.addPage();
         currentY = 45;
       }
@@ -190,56 +224,69 @@ function gerarRelatorioPdfBuffer(relatorio) {
         currentY += 20;
       } else {
         fotos.forEach((foto, idx) => {
-          if (currentY > 630) {
+          if (currentY > 610) {
             doc.addPage();
             currentY = 45;
           }
 
           const fotoBoxY = currentY;
-          doc.rect(45, fotoBoxY, 505, 110).fillAndStroke(CINZA_CLARO, BORDA_CINZA);
+          const cardHeight = 122;
+          doc.rect(45, fotoBoxY, 505, cardHeight).fillAndStroke(CINZA_CLARO, BORDA_CINZA);
 
-          // Inclusão segura de imagem
+          // Inclusão segura de imagem (suporta caminho em disco ou data URI Base64)
           let imgInserida = false;
-          if (foto.caminho_arquivo || foto.url) {
-            const rawPath = foto.caminho_arquivo || foto.url;
-            const fullPath = path.isAbsolute(rawPath) ? rawPath : resolveSafePath(rawPath, UPLOAD_ROOT);
+          const rawSource = foto.caminho_arquivo || foto.url || foto.imagemBase64;
+          if (rawSource && typeof rawSource === 'string') {
+            try {
+              if (rawSource.startsWith('data:image/')) {
+                const base64Part = rawSource.split(',')[1];
+                if (base64Part) {
+                  const imgBuf = Buffer.from(base64Part, 'base64');
+                  doc.image(imgBuf, 54, fotoBoxY + 10, { fit: [145, 102], align: 'center', valign: 'center' });
+                  imgInserida = true;
+                }
+              } else {
+                const fullPath = path.isAbsolute(rawSource)
+                  ? rawSource
+                  : resolveSafePath(rawSource, UPLOAD_ROOT);
 
-            if (fullPath && fs.existsSync(fullPath)) {
-              try {
-                doc.image(fullPath, 55, fotoBoxY + 10, { fit: [120, 90], align: 'center', valign: 'center' });
-                imgInserida = true;
-              } catch (e) {
-                // Em caso de falha ao renderizar a imagem no PDFKit, renderiza texto informativo
+                if (fullPath && fs.existsSync(fullPath)) {
+                  doc.image(fullPath, 54, fotoBoxY + 10, { fit: [145, 102], align: 'center', valign: 'center' });
+                  imgInserida = true;
+                }
               }
+            } catch (e) {
+              // Em caso de falha ao renderizar a imagem no PDFKit, segue com os metadados
             }
           }
 
-          const textLeft = imgInserida ? 185 : 55;
+          const textLeft = imgInserida ? 210 : 58;
+          const textWidth = imgInserida ? 330 : 480;
 
           doc.fillColor(AZUL_BB).fontSize(8.5).font('Helvetica-Bold')
-            .text(`Evidência Fotográfica #${idx + 1} (Disparo ao vivo - Câmera)`, textLeft, fotoBoxY + 10);
+            .text(`Evidência Fotográfica #${idx + 1} (Captura ao Vivo In-Loco)`, textLeft, fotoBoxY + 10, { width: textWidth });
 
           doc.fillColor(CINZA_ESCURO).fontSize(8).font('Helvetica')
-            .text(`Avaliação Gemini 1.5 Flash:`, textLeft, fotoBoxY + 26);
+            .text('Avaliação IA BBVision:', textLeft, fotoBoxY + 26);
 
-          const statusGemini = foto.avaliacao_gemini || foto.status_ia || 'APROVADO';
-          const corGemini = statusGemini === 'APROVADO' ? VERDE_SUCESSO : '#D97706';
+          const statusIA = foto.avaliacao_gemini || foto.status_ia || 'APROVADO';
+          const corIA = statusIA === 'APROVADO' ? VERDE_SUCESSO : '#D97706';
           const confVal = foto.confianca || foto.confianca_ia;
           const confPercent = confVal ? Math.round(confVal * 100) : 95;
 
-          doc.fillColor(corGemini).font('Helvetica-Bold')
-            .text(`${statusGemini} (Confiança: ${confPercent}%)`, textLeft + 115, fotoBoxY + 26);
+          doc.fillColor(corIA).font('Helvetica-Bold')
+            .text(`${statusIA} (Confiança: ${confPercent}%)`, textLeft + 95, fotoBoxY + 26);
 
           doc.fillColor(CINZA_ESCURO).font('Helvetica')
-            .text(`Parecer da IA: "${foto.motivo || foto.motivo_ia || 'Nitidez e enquadramento validados'}"`, textLeft, fotoBoxY + 40, { width: 345 });
+            .text(`Parecer da IA: "${foto.motivo || foto.motivo_ia || 'Nitidez e enquadramento validados'}"`, textLeft, fotoBoxY + 42, { width: textWidth });
 
-          doc.fillColor(CINZA_TEXTO).fontSize(7).font('Courier')
-            .text(`Hash Foto: ${foto.hash_integridade || foto.hash_sha256 || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'}`, textLeft, fotoBoxY + 74);
+          doc.fillColor(CINZA_TEXTO).fontSize(6.8).font('Courier')
+            .text(`Hash SHA-256: ${foto.hash_integridade || foto.hash_sha256 || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'}`, textLeft, fotoBoxY + 82, { width: textWidth });
 
           doc.font('Helvetica').fontSize(7.5)
-            .text('Origem: Câmera In-App BBVision | Bloqueio de Galeria Ativo', textLeft, fotoBoxY + 88);
+            .text('Origem: Câmera In-App BBVision | Bloqueio de Galeria Ativo', textLeft, fotoBoxY + 100, { width: textWidth });
 
-          currentY += 118;
+          currentY += cardHeight + 10;
         });
       }
 

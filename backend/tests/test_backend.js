@@ -360,8 +360,46 @@ async function runTests() {
     assert(compRes.status === 200, 'Endpoint com suporte a compressão respondeu HTTP 200');
     assert(compRes.headers['vary'] && compRes.headers['vary'].includes('Accept-Encoding'), 'Header Vary: Accept-Encoding presente');
 
+    // 23. Melhorias Persona Empreiteira (Sugestão IA sem foto prévia, Justificativa Qualitativa e Foto Base64 em Relatórios)
+    console.log('\n23. Testando Melhorias Persona Empreiteira (Sugestão IA, Justificativas e Imagens no PDF)...');
+    const sugChecklistRes = await request('POST', '/api/fotos/sugerir-observacao', {
+      categoria: 'alvenaria',
+    });
+    assert(sugChecklistRes.status === 200, 'Sugestão de parecer IA no checklist respondeu HTTP 200');
+    assert(typeof sugChecklistRes.body.sugestao === 'string' && sugChecklistRes.body.sugestao.length > 10, 'Sugestão técnica gerada com sucesso');
+
+    const relEmpreiteira = await request('POST', '/api/relatorios', { obra_id: obraId }, {
+      Authorization: `Bearer ${tokenRodrigo}`,
+    });
+    const relEmpId = relEmpreiteira.body.id;
+
+    const anexoBase64Res = await request('POST', `/api/relatorios/${relEmpId}/fotos`, {
+      url: `data:image/png;base64,${fakeImageB64}`,
+      confianca_ia: 0.94,
+      motivo_ia: 'Foto capturada ao vivo na vistoria.',
+    }, {
+      Authorization: `Bearer ${tokenRodrigo}`,
+    });
+    assert(anexoBase64Res.status === 201, 'Foto enviada como Data URL Base64 anexada e salva com HTTP 201');
+    assert(anexoBase64Res.body.foto.caminho_arquivo.startsWith('uploads/evidencias/'), 'Caminho da foto persistida em uploads/evidencias/');
+
+    const respJustRes = await request('PUT', `/api/relatorios/${relEmpId}/respostas`, [
+      {
+        pergunta: '4. Condição da calçada externa e acessibilidade da entrada principal',
+        valor: 'Parcialmente acessível (Em adequação)',
+        justificativa: 'Rampa provisória instalada aguardando cura do piso tátil.',
+        tipo: 'multipla_escolha',
+      },
+    ], {
+      Authorization: `Bearer ${tokenRodrigo}`,
+    });
+    assert(respJustRes.status === 200, 'Resposta com justificativa qualitativa salva com HTTP 200');
+
+    const pdfSeedRes = await request('GET', '/api/relatorios/rel-seed-001/pdf');
+    assert(pdfSeedRes.status === 200 && pdfSeedRes.rawBuffer.length > 1500, 'PDF com imagens de vistoria renderizado sem sobreposição');
+
     console.log('\n======================================================');
-    console.log('  TODOS OS 22 GRUPOS DE TESTES PASSARAM COM SUCESSO!');
+    console.log('  TODOS OS 23 GRUPOS DE TESTES PASSARAM COM SUCESSO!');
     console.log('======================================================\n');
   } catch (err) {
     console.error('\n❌ ERRO DURANTE A EXECUÇÃO DOS TESTES:', err);

@@ -32,9 +32,9 @@ export function renderRelatorioBloqueado() {
         <div style="width: 28px;"></div>
       </header>
 
-      <!-- Título da Tela -->
+      <!-- Título da Tela (Item 14: alterado de Relatório Bloqueado para Relatório Concluído) -->
       <div class="bloqueado-header-title">
-        <h2>Relatório Bloqueado</h2>
+        <h2>Relatório Concluído</h2>
       </div>
 
       <!-- Ícone 3D da Caixa Lacrada e Notificação de Imutabilidade -->
@@ -43,8 +43,23 @@ export function renderRelatorioBloqueado() {
           ${Icons.boxLocked3D(90)}
         </div>
         <p class="bloqueado-warning-text">
-          Este relatório foi formalmente finalizado<br/>e possui fé pública inviolável
+          Este relatório foi formalmente concluído<br/>e possui fé pública inviolável
         </p>
+      </div>
+
+      <!-- Evidência Fotográfica Registrada neste Relatório -->
+      <div class="bloqueado-status-rules-card" style="margin-bottom: 12px; padding: 12px;">
+        <div style="font-size: 12px; font-weight: 700; color: #002D72; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+          <span>📸 Evidência Fotográfica Registrada na Vistoria</span>
+          <span style="font-size: 11px; color: #059669;">✓ Anexada ao PDF</span>
+        </div>
+        <div style="border-radius: 10px; overflow: hidden; border: 1px solid #CBD5E1; background: #0F172A;">
+          <img
+            src="${vistoria.fotoCamera || vistoria.caminhoArquivoFoto || 'uploads/evidencias/seed_fachada_bb.png'}"
+            alt="Foto capturada na vistoria"
+            style="width: 100%; max-height: 170px; object-fit: cover; display: block;"
+          />
+        </div>
       </div>
 
       <!-- Card Azul Marinho com Identificação e Timestamp Oficial -->
@@ -161,6 +176,7 @@ export function bindRelatorioBloqueadoEvents() {
   const btnValidar = document.getElementById('btnValidarFePublicaDoc');
   if (btnValidar) {
     btnValidar.addEventListener('click', () => {
+      state.currentVistoria.codigoParaValidar = state.currentVistoria.codigoUnico;
       state.navigate('validador-publico');
     });
   }

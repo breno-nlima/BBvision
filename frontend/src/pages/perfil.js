@@ -55,7 +55,7 @@ export function renderPerfil() {
         ${isEmpreiteira ? `
           <ul class="perm-list">
             <li>✓ Acesso ao fluxo de captura e câmera in-loco (inviolável)</li>
-            <li>✓ Avaliação instantânea por IA com Google Gemini (SLA &le; 15s)</li>
+            <li>✓ Avaliação instantânea por Visão Computacional IA BBVision (SLA &le; 15s)</li>
             <li>✓ Preenchimento guiado de checklists normativos</li>
             <li>✓ Assinatura digital com fé pública e responsabilidade técnica</li>
             <li>✓ Geração de código único e bloqueio de relatório</li>
@@ -86,7 +86,7 @@ export function renderPerfil() {
         </div>
         <div class="info-row">
           <span>Motor de IA:</span>
-          <strong>Google Gemini 1.5 Flash (SLA &le; 15s • Confiança &ge; 75%)</strong>
+          <strong>Visão Computacional IA BBVision (SLA &le; 15s • Confiança &ge; 75%)</strong>
         </div>
         <div class="info-row">
           <span>Padrão Criptográfico:</span>

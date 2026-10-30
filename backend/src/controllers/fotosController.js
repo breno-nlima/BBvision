@@ -150,10 +150,10 @@ const fotosController = {
         }
       }
 
-      if (!imageBuffer) {
+      if (!imageBuffer && !req.body.categoria) {
         return res.status(400).json({
           status: 400,
-          erro: 'Imagem não informada para geração da sugestão de parecer.',
+          erro: 'Imagem ou categoria não informada para geração da sugestão de parecer.',
         });
       }
 

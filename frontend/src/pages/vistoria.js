@@ -78,7 +78,7 @@ export function renderVistoria() {
               ${Icons.logoBVision(44)}
             </div>
             <div class="ai-eval-titles">
-              <h3>Google Gemini 1.5 Flash</h3>
+              <h3>Motor de IA BBVision</h3>
               <p id="aiEvalStatusText">Analisando nitidez, iluminação e enquadramento...</p>
             </div>
           </div>
@@ -265,7 +265,7 @@ export function bindVistoriaEvents() {
 
       if (badge && text) {
         badge.className = 'ai-badge-result loading';
-        text.innerText = 'AVALIANDO COM GEMINI...';
+        text.innerText = 'AVALIANDO COM IA...';
         if (statusText) statusText.innerText = 'Enviando imagem para análise multimodal (SLA <= 15s)...';
       }
 
@@ -292,7 +292,7 @@ export function bindVistoriaEvents() {
           confidenceVal.innerText = `${Math.round((resultado.confianca || 0.95) * 100)}%`;
         }
         if (reasonVal) {
-          reasonVal.innerText = `"${resultado.motivo || 'Parecer emitido pelo Gemini.'}"`;
+          reasonVal.innerText = `"${resultado.motivo || 'Parecer emitido pela IA BBVision.'}"`;
         }
         if (statusText) {
           statusText.innerText = `Análise concluída com sucesso (${resultado.duracaoMs || 1200}ms)!`;

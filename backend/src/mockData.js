@@ -8,6 +8,9 @@
 
 const bcrypt = require('bcryptjs');
 const { supabase, isConfigured } = require('./config/supabase');
+const { ensureSeedImages } = require('./utils/seedImages');
+
+ensureSeedImages();
 
 const salt = bcrypt.genSaltSync(10);
 const defaultPasswordHash = bcrypt.hashSync('123456', salt);
@@ -23,7 +26,7 @@ const defaultChecklistQuestions = [
     titulo: '1. Fachada da agência está legível e conforme padrão BB?',
     subtitulo: 'Verifique a visibilidade da marca Banco do Brasil, totem institucional e desobstrução visual frontal.',
     chaveResposta: 'fachadaLegivel',
-    padrao: 'Sim',
+    padrao: '',
     opcoes: [
       { valor: 'Sim', label: 'Sim (Perfeitamente visível)', detalhe: 'Identificação visual BB e acessos sem nenhuma obstrução', tag: 'Conforme', classeTag: 'tag-conforme' },
       { valor: 'Parcial', label: 'Parcial (Obstrução ou reforma)', detalhe: 'Andaimes, reformas pontuais ou cobertura parcial transitória', tag: 'Atenção', classeTag: 'tag-atencao' },
@@ -39,11 +42,7 @@ const defaultChecklistQuestions = [
     titulo: '2. Quais itens de segurança, proteção coletiva (EPC) e sinalização estão ativos no local?',
     subtitulo: 'Marque todas as caixas aplicáveis verificadas in loco nesta vistoria técnica:',
     chaveResposta: 'segurancaEpc',
-    padrao: [
-      'Isolamento perimetral e tapumes íntegros',
-      'Sinalização visual de perigo e rotas de pedestres',
-      'Uso obrigatório de EPIs completos pela equipe'
-    ],
+    padrao: [],
     opcoes: [
       { valor: 'Isolamento perimetral e tapumes íntegros', label: 'Isolamento perimetral e tapumes íntegros', detalhe: 'Canteiro devidamente fechado sem brechas para circulação pública de pedestres' },
       { valor: 'Sinalização visual de perigo e rotas de pedestres', label: 'Sinalização de perigo e rotas de pedestres', detalhe: 'Placas de advertência oficiais do BB e faixas de circulação externa desobstruídas' },
@@ -61,8 +60,8 @@ const defaultChecklistQuestions = [
     titulo: '3. Relato técnico sobre alvenaria, acabamentos e anomalias estruturais:',
     subtitulo: 'Descreva o alinhamento, prumo, eventuais fissuras ou conformidade de execução da obra:',
     chaveResposta: 'relatoEstrutural',
-    padrao: 'Alvenaria aprumada e nivelada com juntas regulares. Fachada frontal e vigas dentro do padrão visual e normativo do Banco do Brasil.',
-    placeholder: 'Digite ou insira sugestões técnicas sobre a alvenaria, vigas e acabamentos...',
+    padrao: '',
+    placeholder: 'Neste campo, preencher com informações sobre a qualidade do serviço. Ex.: o alinhamento, prumo, eventuais fissuras ou conformidade de execução da obra:',
     chipsRapidos: [
       'Alvenaria aprumada e nivelada',
       'Ausência de trincas estruturais',
@@ -80,7 +79,7 @@ const defaultChecklistQuestions = [
     titulo: '4. Condição da calçada externa e acessibilidade da entrada principal:',
     subtitulo: 'Avaliação de piso tátil, guia rebaixada e rampas de acesso da agência (NBR 9050):',
     chaveResposta: 'acessibilidade',
-    padrao: 'Totalmente acessível (Piso tátil e rampa nivelada sem degraus)',
+    padrao: '',
     opcoes: [
       { valor: 'Totalmente acessível (Piso tátil e rampa nivelada sem degraus)', label: 'Totalmente acessível (NBR 9050)', detalhe: 'Piso tátil direcional/alerta instalado e rampa nivelada sem degraus impeditivos', tag: '100% Conforme', classeTag: 'tag-conforme' },
       { valor: 'Parcialmente acessível (Pequeno desnível ou adequação em andamento)', label: 'Parcialmente acessível (Em adequação)', detalhe: 'Rampa provisória segura ou acabamento de piso tátil em fase final de execução', tag: 'Com Ressalva', classeTag: 'tag-atencao' },
@@ -223,8 +222,8 @@ const mockData = {
     {
       id: 'fot-seed-001',
       relatorio_id: 'rel-seed-001',
-      url: 'prints/WhatsApp Image 2026-10-08 at 11.43.18.jpeg',
-      caminho_arquivo: 'prints/WhatsApp Image 2026-10-08 at 11.43.18.jpeg',
+      url: 'uploads/evidencias/seed_fachada_bb.png',
+      caminho_arquivo: 'uploads/evidencias/seed_fachada_bb.png',
       hash_sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
       hash_integridade: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
       confianca_ia: 0.96,
@@ -239,8 +238,8 @@ const mockData = {
     {
       id: 'fot-seed-002',
       relatorio_id: 'rel-seed-001',
-      url: 'prints/WhatsApp Image 2026-10-08 at 11.43.17.jpeg',
-      caminho_arquivo: 'prints/WhatsApp Image 2026-10-08 at 11.43.17.jpeg',
+      url: 'uploads/evidencias/seed_alvenaria_bb.png',
+      caminho_arquivo: 'uploads/evidencias/seed_alvenaria_bb.png',
       hash_sha256: 'a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0',
       hash_integridade: 'a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0',
       confianca_ia: 0.94,
@@ -255,8 +254,8 @@ const mockData = {
     {
       id: 'fot-seed-003',
       relatorio_id: 'rel-seed-002',
-      url: 'prints/WhatsApp Image 2026-10-08 at 11.43.18.jpeg',
-      caminho_arquivo: 'prints/WhatsApp Image 2026-10-08 at 11.43.18.jpeg',
+      url: 'uploads/evidencias/seed_acessibilidade_bb.png',
+      caminho_arquivo: 'uploads/evidencias/seed_acessibilidade_bb.png',
       hash_sha256: 'd41d8cd98f00b204e9800998ecf8427e98a12c19e70b34dfe3b0c44298fc1c14',
       hash_integridade: 'd41d8cd98f00b204e9800998ecf8427e98a12c19e70b34dfe3b0c44298fc1c14',
       confianca_ia: 0.92,
@@ -665,6 +664,7 @@ const mockData = {
         relatorio_id: relatorioId,
         pergunta: item.pergunta,
         valor: item.valor,
+        justificativa: item.justificativa || null,
         sugestao_ia: item.sugestao_ia || null,
         tipo: item.tipo || 'texto',
         created_at: new Date().toISOString(),
@@ -720,6 +720,8 @@ const mockData = {
       .filter(f => f.relatorio_id === r.id)
       .map(f => ({
         ...f,
+        url: f.url || f.caminho_arquivo,
+        caminho_arquivo: f.caminho_arquivo || f.url,
         hashSha256: f.hash_integridade || f.hash_sha256,
         hash_sha256: f.hash_integridade || f.hash_sha256,
         hash_integridade: f.hash_integridade || f.hash_sha256,

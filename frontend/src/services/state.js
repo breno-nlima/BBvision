@@ -18,7 +18,7 @@ export const PERGUNTAS_PADRAO_BB = [
     titulo: '1. Fachada da agência está legível e conforme padrão BB?',
     subtitulo: 'Verifique a visibilidade da marca Banco do Brasil, totem institucional e desobstrução visual frontal.',
     chaveResposta: 'fachadaLegivel',
-    padrao: 'Sim',
+    padrao: '',
     opcoes: [
       { valor: 'Sim', label: 'Sim (Perfeitamente visível)', detalhe: 'Identificação visual BB e acessos sem nenhuma obstrução', tag: 'Conforme', classeTag: 'tag-conforme' },
       { valor: 'Parcial', label: 'Parcial (Obstrução ou reforma)', detalhe: 'Andaimes, reformas pontuais ou cobertura parcial transitória', tag: 'Atenção', classeTag: 'tag-atencao' },
@@ -34,11 +34,7 @@ export const PERGUNTAS_PADRAO_BB = [
     titulo: '2. Quais itens de segurança, proteção coletiva (EPC) e sinalização estão ativos no local?',
     subtitulo: 'Marque todas as caixas aplicáveis verificadas in loco nesta vistoria técnica:',
     chaveResposta: 'segurancaEpc',
-    padrao: [
-      'Isolamento perimetral e tapumes íntegros',
-      'Sinalização visual de perigo e rotas de pedestres',
-      'Uso obrigatório de EPIs completos pela equipe'
-    ],
+    padrao: [],
     opcoes: [
       { valor: 'Isolamento perimetral e tapumes íntegros', label: 'Isolamento perimetral e tapumes íntegros', detalhe: 'Canteiro devidamente fechado sem brechas para circulação pública de pedestres' },
       { valor: 'Sinalização visual de perigo e rotas de pedestres', label: 'Sinalização de perigo e rotas de pedestres', detalhe: 'Placas de advertência oficiais do BB e faixas de circulação externa desobstruídas' },
@@ -56,8 +52,8 @@ export const PERGUNTAS_PADRAO_BB = [
     titulo: '3. Relato técnico sobre alvenaria, acabamentos e anomalias estruturais:',
     subtitulo: 'Descreva o alinhamento, prumo, eventuais fissuras ou conformidade de execução da obra:',
     chaveResposta: 'relatoEstrutural',
-    padrao: 'Alvenaria aprumada e nivelada com juntas regulares. Fachada frontal e vigas dentro do padrão visual e normativo do Banco do Brasil.',
-    placeholder: 'Digite ou insira sugestões técnicas sobre a alvenaria, vigas e acabamentos...',
+    padrao: '',
+    placeholder: 'Neste campo, preencher com informações sobre a qualidade do serviço. Ex.: o alinhamento, prumo, eventuais fissuras ou conformidade de execução da obra:',
     chipsRapidos: [
       'Alvenaria aprumada e nivelada',
       'Ausência de trincas estruturais',
@@ -75,7 +71,7 @@ export const PERGUNTAS_PADRAO_BB = [
     titulo: '4. Condição da calçada externa e acessibilidade da entrada principal:',
     subtitulo: 'Avaliação de piso tátil, guia rebaixada e rampas de acesso da agência (NBR 9050):',
     chaveResposta: 'acessibilidade',
-    padrao: 'Totalmente acessível (Piso tátil e rampa nivelada sem degraus)',
+    padrao: '',
     opcoes: [
       { valor: 'Totalmente acessível (Piso tátil e rampa nivelada sem degraus)', label: 'Totalmente acessível (NBR 9050)', detalhe: 'Piso tátil direcional/alerta instalado e rampa nivelada sem degraus impeditivos', tag: '100% Conforme', classeTag: 'tag-conforme' },
       { valor: 'Parcialmente acessível (Pequeno desnível ou adequação em andamento)', label: 'Parcialmente acessível (Em adequação)', detalhe: 'Rampa provisória segura ou acabamento de piso tátil em fase final de execução', tag: 'Com Ressalva', classeTag: 'tag-atencao' },
@@ -83,6 +79,18 @@ export const PERGUNTAS_PADRAO_BB = [
     ]
   }
 ];
+
+function higienizarTemplateChecklist(lista) {
+  if (!Array.isArray(lista)) return JSON.parse(JSON.stringify(PERGUNTAS_PADRAO_BB));
+  return lista.map(q => {
+    const copia = { ...q };
+    copia.padrao = copia.tipo === 'caixa' ? [] : '';
+    if (copia.id === 'relatoEstrutural' || copia.tipo === 'texto') {
+      copia.placeholder = 'Neste campo, preencher com informações sobre a qualidade do serviço. Ex.: o alinhamento, prumo, eventuais fissuras ou conformidade de execução da obra:';
+    }
+    return copia;
+  });
+}
 
 class AppState {
   constructor() {
@@ -101,7 +109,7 @@ class AppState {
     const savedTemplate = localStorage.getItem('bbvision_checklist_template');
     if (savedTemplate) {
       try {
-        this.checklistTemplate = JSON.parse(savedTemplate);
+        this.checklistTemplate = higienizarTemplateChecklist(JSON.parse(savedTemplate));
       } catch {
         this.checklistTemplate = JSON.parse(JSON.stringify(PERGUNTAS_PADRAO_BB));
       }
@@ -227,6 +235,7 @@ class AppState {
       fotoUrl: null,
       fotoCamera: null,
       fotoBase64: null,
+      caminhoArquivoFoto: null,
       dataFoto: dataInicial,
       horaFoto: horaInicial,
       localizacaoFoto: 'Obtendo GPS em tempo real...',
@@ -238,32 +247,31 @@ class AppState {
       motivoIA: 'Imagem nítida e bem enquadrada',
       validacaoManual: false,
       respostas: {
-        fachadaLegivel: 'Sim',
-        segurancaEpc: [
-          'Isolamento perimetral e tapumes íntegros',
-          'Sinalização visual de perigo e rotas de pedestres',
-          'Uso obrigatório de EPIs completos pela equipe'
-        ],
-        relatoEstrutural: 'Alvenaria alinhada e nivelada. Ausência de trincas estruturais e juntas regulares conforme projeto executivo do BB.',
-        acessibilidade: 'Totalmente acessível (Piso tátil e rampa nivelada sem degraus)',
-        sinalizacao: 'Sim',
-        limpeza: 5,
-        cameras: 4,
-        observacoes: 'Alvenaria nivelada com juntas regulares. Fachada frontal dentro do padrão visual do Banco do Brasil.',
-        check1: true,
-        check2: true,
-        check3: true,
+        fachadaLegivel: '',
+        segurancaEpc: [],
+        relatoEstrutural: '',
+        acessibilidade: '',
+        justificativas: {},
+        sinalizacao: '',
+        justificativaSinalizacao: '',
+        limpeza: 0,
+        cameras: null,
+        observacoes: '',
+        check1: false,
+        check2: false,
+        check3: false,
         check4: false,
         check5: false
       },
       perguntasChecklist: JSON.parse(JSON.stringify(this.checklistTemplate)),
       assinatura: null,
-      declaracaoAceita: true,
+      declaracaoAceita: false,
       bloqueado: false,
       statusRelatorio: 'EM_ANDAMENTO',
       statusObra: 'REGULAR',
       justificativaFiscal: null,
-      pdfUrl: null
+      pdfUrl: null,
+      codigoParaValidar: ''
     };
 
     // Registros reais de vistorias sincronizados com o backend ou capturados em campo
@@ -380,12 +388,43 @@ class AppState {
   getPerguntasParaObra(obraId) {
     const obra = this.obras.find(o => o.id === obraId);
     if (obra && Array.isArray(obra.perguntasChecklist) && obra.perguntasChecklist.length > 0) {
-      return JSON.parse(JSON.stringify(obra.perguntasChecklist));
+      return higienizarTemplateChecklist(JSON.parse(JSON.stringify(obra.perguntasChecklist)));
     }
     if (obra && Array.isArray(obra.checklist_perguntas) && obra.checklist_perguntas.length > 0) {
-      return JSON.parse(JSON.stringify(obra.checklist_perguntas));
+      return higienizarTemplateChecklist(JSON.parse(JSON.stringify(obra.checklist_perguntas)));
     }
-    return JSON.parse(JSON.stringify(this.checklistTemplate || PERGUNTAS_PADRAO_BB));
+    return higienizarTemplateChecklist(JSON.parse(JSON.stringify(this.checklistTemplate || PERGUNTAS_PADRAO_BB)));
+  }
+
+  resetarVistoriaAtual() {
+    this.currentVistoria.relatorioId = null;
+    this.currentVistoria.fotoUrl = null;
+    this.currentVistoria.fotoCamera = null;
+    this.currentVistoria.fotoBase64 = null;
+    this.currentVistoria.caminhoArquivoFoto = null;
+    this.currentVistoria.validacaoManual = false;
+    this.currentVistoria.assinatura = null;
+    this.currentVistoria.declaracaoAceita = false;
+    this.currentVistoria.bloqueado = false;
+    this.currentVistoria.statusRelatorio = 'EM_ANDAMENTO';
+    this.currentVistoria.pdfUrl = null;
+    this.currentVistoria.respostas = {
+      fachadaLegivel: '',
+      segurancaEpc: [],
+      relatoEstrutural: '',
+      acessibilidade: '',
+      justificativas: {},
+      sinalizacao: '',
+      justificativaSinalizacao: '',
+      limpeza: 0,
+      cameras: null,
+      observacoes: '',
+      check1: false,
+      check2: false,
+      check3: false,
+      check4: false,
+      check5: false
+    };
   }
 
   async salvarChecklistTemplate(perguntas) {
@@ -422,6 +461,7 @@ class AppState {
 
   selectObra(obraId) {
     this.selectedObra = this.obras.find(o => o.id === obraId) || this.obras[0];
+    this.resetarVistoriaAtual();
     this.currentVistoria.obraId = this.selectedObra.id;
     this.currentVistoria.obraNome = this.selectedObra.nome;
     this.currentVistoria.endereco = this.selectedObra.endereco;
@@ -512,6 +552,9 @@ class AppState {
     this.currentVistoria.confiancaIA = resultado.confianca || 0.95;
     this.currentVistoria.motivoIA = resultado.motivo || 'Imagem nítida e bem enquadrada';
     this.currentVistoria.hashSha256 = resultado.hash_integridade || this.currentVistoria.hashSha256;
+    if (resultado.caminho_arquivo) {
+      this.currentVistoria.caminhoArquivoFoto = resultado.caminho_arquivo;
+    }
     this.currentVistoria.validacaoManual = resultado.validacao_manual || resultado.status === 'VALIDACAO_MANUAL';
     this.notify();
   }
@@ -624,60 +667,74 @@ class AppState {
 
       // 2. Anexar foto registrada
       try {
-        await api.anexarFoto(relId, {
-          url: this.currentVistoria.fotoCamera || this.currentVistoria.fotoBase64 || '',
+        const fotoResp = await api.anexarFoto(relId, {
+          caminho_arquivo: this.currentVistoria.caminhoArquivoFoto || '',
+          imagemBase64: this.currentVistoria.fotoCamera || this.currentVistoria.fotoBase64 || '',
+          url: this.currentVistoria.caminhoArquivoFoto || this.currentVistoria.fotoCamera || this.currentVistoria.fotoBase64 || '',
+          hash_integridade: this.currentVistoria.hashSha256,
           hash_sha256: this.currentVistoria.hashSha256,
+          confianca: this.currentVistoria.confiancaIA,
           confianca_ia: this.currentVistoria.confiancaIA,
+          motivo: this.currentVistoria.motivoIA,
           motivo_ia: this.currentVistoria.motivoIA,
+          avaliacao_gemini: this.currentVistoria.confiancaIA >= 0.75 ? 'APROVADO' : 'VALIDACAO_MANUAL',
           status_ia: this.currentVistoria.confiancaIA >= 0.75 ? 'APROVADO' : 'VALIDACAO_MANUAL',
           validacao_manual: this.currentVistoria.validacaoManual
         });
+        if (fotoResp?.foto?.caminho_arquivo) {
+          this.currentVistoria.caminhoArquivoFoto = fotoResp.foto.caminho_arquivo;
+        }
       } catch (errFoto) {
         console.warn('[State] Aviso ao vincular foto na API:', errFoto.message);
       }
 
       // 3. Salvar respostas do checklist (Passo a passo com 4 perguntas + dinâmico)
-      const epcFormatado = Array.isArray(this.currentVistoria.respostas.segurancaEpc)
+      const justMap = this.currentVistoria.respostas.justificativas || {};
+      const epcFormatado = Array.isArray(this.currentVistoria.respostas.segurancaEpc) && this.currentVistoria.respostas.segurancaEpc.length > 0
         ? this.currentVistoria.respostas.segurancaEpc.join('; ')
-        : (this.currentVistoria.respostas.segurancaEpc || 'Isolamento e EPIs ativos');
+        : (this.currentVistoria.respostas.segurancaEpc || 'Isolamento e EPIs verificados');
 
       await api.salvarRespostas(relId, [
         {
           pergunta: '1. Fachada da agência está legível e conforme padrão BB?',
           valor: this.currentVistoria.respostas.fachadaLegivel || 'Sim',
+          justificativa: justMap.fachadaLegivel || null,
           tipo: 'multipla_escolha',
-          sugestao_ia: 'Fachada frontal alinhada ao padrão visual oficial do Banco do Brasil.'
+          sugestao_ia: 'Fachada frontal avaliada segundo padrão visual oficial do Banco do Brasil.'
         },
         {
           pergunta: '2. Itens de segurança, proteção coletiva (EPC) e sinalização',
           valor: epcFormatado,
+          justificativa: justMap.segurancaEpc || null,
           tipo: 'caixa_selecao',
-          sugestao_ia: 'Itens essenciais de proteção coletiva e sinalização identificados in loco.'
+          sugestao_ia: 'Itens de proteção coletiva e sinalização verificados in loco.'
         },
         {
           pergunta: '3. Relato técnico sobre alvenaria, acabamentos e anomalias',
           valor: this.currentVistoria.respostas.relatoEstrutural || this.currentVistoria.respostas.observacoes || 'Alvenaria e vigas em conformidade executiva.',
           tipo: 'texto',
-          sugestao_ia: this.currentVistoria.respostas.relatoEstrutural || this.currentVistoria.respostas.observacoes
+          sugestao_ia: null
         },
         {
           pergunta: '4. Calçada externa e acessibilidade da entrada principal (NBR 9050)',
-          valor: this.currentVistoria.respostas.acessibilidade || 'Totalmente acessível (Piso tátil e rampa)',
+          valor: this.currentVistoria.respostas.acessibilidade || 'Totalmente acessível (NBR 9050)',
+          justificativa: justMap.acessibilidade || null,
           tipo: 'multipla_escolha',
-          sugestao_ia: 'Acessibilidade em conformidade com as diretrizes de mobilidade reduzida do BB.'
+          sugestao_ia: 'Condição de acessibilidade avaliada conforme diretrizes NBR 9050.'
         },
         {
-          pergunta: 'Condição da sinalização complementar',
-          valor: this.currentVistoria.respostas.sinalizacao || 'Sim',
+          pergunta: '5. Condição da sinalização complementar, limpeza e câmeras',
+          valor: `Sinalização: ${this.currentVistoria.respostas.sinalizacao || 'Sim'} | Limpeza: ${this.currentVistoria.respostas.limpeza || 5}/5 | Câmeras: ${this.currentVistoria.respostas.cameras ?? 4}`,
+          justificativa: this.currentVistoria.respostas.justificativaSinalizacao || null,
           tipo: 'multipla_escolha',
-          sugestao_ia: 'Sinalização completa e visível.'
+          sugestao_ia: null
         },
-        {
-          pergunta: 'Observações adicionais consolidadas',
-          valor: this.currentVistoria.respostas.observacoes || '',
+        ...(this.currentVistoria.respostas.observacoes ? [{
+          pergunta: '6. Observações adicionais consolidadas',
+          valor: this.currentVistoria.respostas.observacoes,
           tipo: 'texto',
-          sugestao_ia: this.currentVistoria.respostas.observacoes
-        }
+          sugestao_ia: null
+        }] : [])
       ]);
 
       // 4. Finalizar e gerar PDF oficial com carimbo via PDFKit
@@ -696,17 +753,43 @@ class AppState {
       offlineSync.enfileirarVistoria(this.currentVistoria);
     }
 
-    // Adiciona ao histórico do estado
-    this.relatorios.unshift({
-      id: this.currentVistoria.relatorioId || `rel-${Date.now()}`,
-      obraNome: this.currentVistoria.obraNome,
-      subtitulo: 'Vistoria In-Loco',
-      status: 'Concluído',
-      data: 'Hoje',
-      codigoUnico: this.currentVistoria.codigoUnico,
-      confiancaIA: this.currentVistoria.confiancaIA,
-      hash: this.currentVistoria.hashSha256
-    });
+    // Garante que o relatório recém-criado conste no topo da lista com a foto capturada anexada
+    const novoRelId = this.currentVistoria.relatorioId || `rel-${Date.now()}`;
+    const fotoUrlFinal = this.currentVistoria.fotoCamera || this.currentVistoria.caminhoArquivoFoto || this.currentVistoria.fotoBase64 || 'uploads/evidencias/seed_fachada_bb.png';
+    const fotoObjLocal = {
+      id: `fot-${Date.now()}`,
+      url: fotoUrlFinal,
+      caminho_arquivo: this.currentVistoria.caminhoArquivoFoto || fotoUrlFinal,
+      hash_sha256: this.currentVistoria.hashSha256,
+      hash_integridade: this.currentVistoria.hashSha256,
+      confianca_ia: this.currentVistoria.confiancaIA,
+      confianca: this.currentVistoria.confiancaIA,
+      motivo_ia: this.currentVistoria.motivoIA,
+      motivo: this.currentVistoria.motivoIA,
+      status_ia: 'APROVADO'
+    };
+
+    const existingIdx = this.relatorios.findIndex(r => r.id === novoRelId || r.codigoUnico === this.currentVistoria.codigoUnico);
+    if (existingIdx >= 0) {
+      if (!Array.isArray(this.relatorios[existingIdx].fotos) || this.relatorios[existingIdx].fotos.length === 0) {
+        this.relatorios[existingIdx].fotos = [fotoObjLocal];
+      } else if (this.currentVistoria.fotoCamera) {
+        this.relatorios[existingIdx].fotos[0].previewDataUrl = this.currentVistoria.fotoCamera;
+      }
+    } else {
+      this.relatorios.unshift({
+        id: novoRelId,
+        obraNome: this.currentVistoria.obraNome,
+        subtitulo: 'Vistoria In-Loco',
+        status: 'Concluído',
+        data: 'Hoje',
+        codigoUnico: this.currentVistoria.codigoUnico,
+        confiancaIA: this.currentVistoria.confiancaIA,
+        hash: this.currentVistoria.hashSha256,
+        pdfUrl: this.currentVistoria.pdfUrl || `/api/relatorios/${novoRelId}/pdf`,
+        fotos: [fotoObjLocal]
+      });
+    }
 
     this.notify();
   }

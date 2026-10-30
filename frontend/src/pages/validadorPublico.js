@@ -16,6 +16,8 @@ let carregandoConsulta = false;
 let erroConsulta = null;
 
 export function renderValidadorPublico() {
+  const relatoriosDisponiveis = (state.relatorios || []).filter(r => r.codigoUnico && r.codigoUnico !== 'Pendente');
+
   return `
     <div class="page-container fade-in" id="validadorPublicoPage">
       <header class="app-header">
@@ -41,6 +43,36 @@ export function renderValidadorPublico() {
         </div>
       </section>
 
+      <!-- Card Explicativo: Como Funciona a Validação por Fé Pública (Item 16) -->
+      <section class="fe-publica-explainer-card">
+        <div class="fe-explainer-title">
+          <span>ℹ️ Como funciona a Validação por Fé Pública?</span>
+        </div>
+        <div class="fe-steps-grid">
+          <div class="fe-step-box">
+            <span class="fe-step-num">1</span>
+            <div>
+              <strong>Geração do Código Único</strong>
+              <p>Ao concluir um relatório, o BBVision gera um <strong>Código Único de 16 caracteres</strong> e um lacre matemático (Hash SHA-256) impressos no topo do PDF.</p>
+            </div>
+          </div>
+          <div class="fe-step-box">
+            <span class="fe-step-num">2</span>
+            <div>
+              <strong>Consulta Rápida</strong>
+              <p>Digite o Código Único no campo abaixo ou <strong>toque em um dos relatórios emitidos</strong> para consultar na base do Banco do Brasil.</p>
+            </div>
+          </div>
+          <div class="fe-step-box">
+            <span class="fe-step-num">3</span>
+            <div>
+              <strong>Certidão Anti-Fraude</strong>
+              <p>O sistema confirma que o relatório é autêntico e que a foto, a data/hora, o GPS e as respostas não foram adulterados após a assinatura.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Formulário de Consulta -->
       <section class="validador-form-card">
         <label class="validador-label" for="inputTermoValidacao">
@@ -52,13 +84,28 @@ export function renderValidadorPublico() {
             type="text" 
             id="inputTermoValidacao" 
             class="validador-input" 
-            placeholder="Informe o Código Único (16 dígitos) ou Hash SHA-256..."
+            placeholder="Ex.: 8F4A2C19E70B34DF ou clique em um relatório abaixo..."
             value="${termoConsultadoAtual}"
             autocomplete="off"
             spellcheck="false"
           />
           <button class="btn-limpar-termo" id="btnLimparTermo" title="Limpar">✕</button>
         </div>
+
+        ${relatoriosDisponiveis.length > 0 ? `
+          <div class="quick-test-codes-wrap" style="margin: 10px 0 12px;">
+            <span style="display: block; font-size: 11.5px; font-weight: 600; color: #475569; margin-bottom: 6px;">
+              ⚡ Toque em um relatório emitido para testar a validação agora:
+            </span>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+              ${relatoriosDisponiveis.slice(0, 4).map(r => `
+                <button type="button" class="quick-code-pill-btn" data-codigo="${r.codigoUnico}">
+                  🔑 <strong>${r.codigoUnico}</strong> (${r.obraNome})
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
 
         <button class="btn-action-primary" id="btnConsultarIntegridade">
           ${carregandoConsulta ? '<span class="loading-spinner"></span> Validando no Banco...' : '🔍 Consultar Fé Pública e Integridade'}
@@ -166,7 +213,7 @@ function renderResultadoConteudo() {
 
         <div class="rgi-item">
           <span class="rgi-label">AUDITORIA DA IA:</span>
-          <span class="rgi-value">Gemini 1.5 Flash • Confiança ${Math.round((foto.confianca_ia || 0.96) * 100)}% (Aprovado)</span>
+          <span class="rgi-value">IA BBVision • Confiança ${Math.round((foto.confianca_ia || 0.96) * 100)}% (Aprovado)</span>
         </div>
 
         ${rel.justificativa_fiscal ? `
@@ -193,6 +240,16 @@ function renderResultadoConteudo() {
 }
 
 export function bindValidadorPublicoEvents() {
+  // Se veio de "Relatório Concluído" ou "Relatórios" com um código pré-selecionado, dispara a consulta automaticamente
+  if (state.currentVistoria && state.currentVistoria.codigoParaValidar) {
+    const codigoAuto = state.currentVistoria.codigoParaValidar;
+    state.currentVistoria.codigoParaValidar = '';
+    termoConsultadoAtual = codigoAuto;
+    setTimeout(() => {
+      executarConsulta(codigoAuto);
+    }, 50);
+  }
+
   const btnVoltar = document.getElementById('btnVoltarValidador');
   if (btnVoltar) {
     btnVoltar.addEventListener('click', () => {
@@ -215,6 +272,18 @@ export function bindValidadorPublicoEvents() {
       state.notify();
     });
   }
+
+  // Chips de teste rápido com 1 clique
+  const quickCodeBtns = document.querySelectorAll('.quick-code-pill-btn');
+  quickCodeBtns.forEach(chip => {
+    chip.addEventListener('click', () => {
+      const cod = chip.getAttribute('data-codigo');
+      if (!cod) return;
+      if (inputTermo) inputTermo.value = cod;
+      termoConsultadoAtual = cod;
+      executarConsulta(cod);
+    });
+  });
 
   const btnConsultar = document.getElementById('btnConsultarIntegridade');
   if (btnConsultar && inputTermo) {

@@ -33,7 +33,7 @@ export function renderFiscalAuditoria() {
       <div class="photo-meta-box">
         <strong class="photo-code">${reg.codigo}</strong>
         <span class="photo-subtitle">${idx % 2 === 0 ? reg.local : reg.responsavel}</span>
-        <span class="photo-ia-badge">Gemini ${Math.round((reg.confianca || 0.95) * 100)}%</span>
+        <span class="photo-ia-badge">IA BBVision ${Math.round((reg.confianca || 0.95) * 100)}%</span>
       </div>
     </div>
   `).join('')
@@ -172,7 +172,7 @@ export function renderFiscalAuditoria() {
           <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px; font-size: 11px; margin-bottom: 14px; text-align: left;">
             <div style="margin-bottom: 6px;"><strong>Código Único:</strong> <code id="codigoInspecaoModal" style="color: #002D62; font-weight: 700; background: #FFF9D2; padding: 2px 6px; border-radius: 4px;">8F4A2C19E70B34DF</code></div>
             <div style="margin-bottom: 6px; word-break: break-all;"><strong>Hash SHA-256:</strong> <code style="font-size: 10px; color: #475569;">e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code></div>
-            <div><strong>Validação IA:</strong> <span style="color: #059669; font-weight: 700;">Google Gemini 1.5 Flash • 96% Confiança (Aprovado)</span></div>
+            <div><strong>Validação IA:</strong> <span style="color: #059669; font-weight: 700;">IA BBVision • 96% Confiança (Aprovado)</span></div>
           </div>
 
           <button class="btn-submit-primary" id="btnFecharModalInspecaoBtn" style="width: 100%;">
