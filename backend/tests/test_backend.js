@@ -201,11 +201,47 @@ async function runTests() {
     const fakeImageB64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
     const fotoEval = await request('POST', '/api/fotos/avaliar', {
       imagemBase64: fakeImageB64,
+      telemetriaVisual: {
+        baixaLuz: false,
+        rostoDetectado: false,
+        luminanciaMedia: 175.4,
+        percentualEscuros: 0.08,
+      },
     });
-    assert(fotoEval.status === 200, 'Avaliação de foto retornou HTTP 200');
+    assert(fotoEval.status === 200, 'Avaliação de foto de obra retornou HTTP 200');
     assert(fotoEval.body.hash_integridade, 'Hash SHA-256 gerado para a foto');
     assert(fotoEval.body.hash_integridade.length === 64, 'Hash tem 64 caracteres');
-    assert(['APROVADO', 'REJEITADO', 'VALIDACAO_MANUAL'].includes(fotoEval.body.status), 'Status da foto é válido');
+    assert(fotoEval.body.status === 'APROVADO', 'Foto de obra/fiscalização bem iluminada foi APROVADA pela IA');
+    assert(fotoEval.body.categoria === 'OBRA_LOCAL', 'Categoria da foto aprovada é OBRA_LOCAL');
+
+    // 8.1 Rejeição obrigatória de foto com Baixa Luz
+    const fotoBaixaLuz = await request('POST', '/api/fotos/avaliar', {
+      imagemBase64: fakeImageB64,
+      telemetriaVisual: {
+        baixaLuz: true,
+        rostoDetectado: false,
+        luminanciaMedia: 28.5,
+        percentualEscuros: 0.84,
+      },
+    });
+    assert(fotoBaixaLuz.status === 200, 'Avaliação de foto com baixa luz retornou HTTP 200');
+    assert(fotoBaixaLuz.body.status === 'REJEITADO', 'Foto com baixa luz NÃO aprovou (status REJEITADO)');
+    assert(fotoBaixaLuz.body.categoria === 'BAIXA_LUZ', 'Categoria identificada como BAIXA_LUZ');
+
+    // 8.2 Rejeição obrigatória de foto de Rosto / Selfie
+    const fotoRostoSelfie = await request('POST', '/api/fotos/avaliar', {
+      imagemBase64: fakeImageB64,
+      telemetriaVisual: {
+        baixaLuz: false,
+        rostoDetectado: true,
+        facesDetectadas: 1,
+        luminanciaMedia: 142.0,
+        taxaPeleCentro: 0.34,
+      },
+    });
+    assert(fotoRostoSelfie.status === 200, 'Avaliação de foto de rosto/selfie retornou HTTP 200');
+    assert(fotoRostoSelfie.body.status === 'REJEITADO', 'Foto de rosto/selfie NÃO aprovou (status REJEITADO)');
+    assert(fotoRostoSelfie.body.categoria === 'ROSTO_SELFIE', 'Categoria identificada como ROSTO_SELFIE');
 
     // 9. Proteção contra Path Traversal
     console.log('\n9. Testando Proteção contra Path Traversal em Fotos (/api/fotos/sugerir-observacao)...');
@@ -398,8 +434,50 @@ async function runTests() {
     const pdfSeedRes = await request('GET', '/api/relatorios/rel-seed-001/pdf');
     assert(pdfSeedRes.status === 200 && pdfSeedRes.rawBuffer.length > 1500, 'PDF com imagens de vistoria renderizado sem sobreposição');
 
+    // 24. Registro de Fotos da Empreiteira nos Relatórios e nos PDFs de Comprovação
+    console.log('\n24. Testando Registro de Fotos da Empreiteira no Relatório e no PDF de Comprovação...');
+    const relComFotoRes = await request('POST', '/api/relatorios', {
+      obra_id: obraId,
+      respostas: [
+        { pergunta: '1. Fachada da agência', valor: 'Sim', justificativa: 'Perfeitamente visível' },
+      ],
+      fotos: [
+        {
+          imagemBase64: fakeImageB64,
+          motivo: 'Foto registrada in-loco da fachada pela empreiteira.',
+          avaliacao_gemini: 'APROVADO',
+          confianca: 0.95,
+        },
+      ],
+    }, {
+      Authorization: `Bearer ${tokenRodrigo}`,
+    });
+    assert(relComFotoRes.status === 201, 'Relatório com foto inicial criado com HTTP 201');
+    const relComFotoId = relComFotoRes.body.id;
+
+    // Consulta relatório para validar que a foto da empreiteira foi registrada
+    const relConsulta = await request('GET', `/api/relatorios/${relComFotoId}`, null, {
+      Authorization: `Bearer ${tokenRodrigo}`,
+    });
+    assert(relConsulta.status === 200, 'Consulta de relatório retornou HTTP 200');
+    assert(Array.isArray(relConsulta.body.fotos) && relConsulta.body.fotos.length >= 1, 'Foto da empreiteira registrada no relatório');
+    assert(relConsulta.body.fotos[0].caminho_arquivo, 'Foto possui caminho de arquivo salvo');
+    assert(relConsulta.body.fotos[0].hash_integridade, 'Foto possui hash SHA-256 gravado');
+
+    // Finaliza o relatório
+    const finalizarComFoto = await request('POST', `/api/relatorios/${relComFotoId}/finalizar`, {}, {
+      Authorization: `Bearer ${tokenRodrigo}`,
+    });
+    assert(finalizarComFoto.status === 200, 'Finalização de relatório com foto retornou HTTP 200');
+
+    // Baixa o PDF de comprovação e atesta que foi gerado com sucesso
+    const pdfComprovacao = await request('GET', `/api/relatorios/${relComFotoId}/pdf`);
+    assert(pdfComprovacao.status === 200, 'Download do PDF de comprovação retornou HTTP 200');
+    assert(pdfComprovacao.headers['content-type'] === 'application/pdf', 'PDF possui Content-Type application/pdf');
+    assert(pdfComprovacao.rawBuffer.length > 2000, 'PDF de comprovação gerado com evidências fotográficas embutidas');
+
     console.log('\n======================================================');
-    console.log('  TODOS OS 23 GRUPOS DE TESTES PASSARAM COM SUCESSO!');
+    console.log('  TODOS OS 24 GRUPOS DE TESTES PASSARAM COM SUCESSO!');
     console.log('======================================================\n');
   } catch (err) {
     console.error('\n❌ ERRO DURANTE A EXECUÇÃO DOS TESTES:', err);

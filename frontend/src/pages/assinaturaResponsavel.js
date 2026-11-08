@@ -46,7 +46,7 @@ export function renderAssinaturaResponsavel() {
         <div class="canvas-wrapper">
           <canvas id="signatureCanvas" class="signature-canvas" width="340" height="180"></canvas>
           <div class="canvas-pen-indicator" id="penIndicator">
-            <span class="pen-icon">✍️</span>
+            <span class="pen-icon" style="display:inline-flex; align-items:center;">${Icons.penAssinatura(22)}</span>
             <span class="pen-sample-sig">${state.user?.nome || vistoria.responsavel || 'Assinatura Digital'}</span>
           </div>
         </div>
@@ -93,7 +93,7 @@ export function renderAssinaturaResponsavel() {
       <!-- Modal de Confirmação Antes de Encerrar Relatório (Item 13) -->
       <div class="vistoria-modal-overlay hidden" id="modalConfirmarConclusaoRelatorio">
         <div class="vistoria-modal-card">
-          <div style="font-size: 32px; margin-bottom: 8px;">🔒</div>
+          <div style="margin-bottom: 10px; display:flex; justify-content:center;">${Icons.lockShieldGold(48)}</div>
           <h3 style="color: #002D72; font-size: 17px; margin-bottom: 8px;">Concluir Relatório de Vistoria?</h3>
           <p style="font-size: 13.5px; color: #334155; line-height: 1.5; font-weight: 500;">
             Tem certeza que quer concluir este relatório? Após a confirmação este relatório não mais poderá ser alterado.

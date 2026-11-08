@@ -93,11 +93,22 @@ const fotosController = {
       // 2. Geração do Hash SHA-256 Imediato (Inviolabilidade da Evidência)
       const hashIntegridade = generateSha256(imageBuffer);
 
+      // 2.1 Extrai telemetria visual de visão computacional (iluminação, detecção de rosto/selfie e contexto)
+      let telemetriaVisual = req.body.telemetriaVisual || null;
+      if (typeof telemetriaVisual === 'string') {
+        try {
+          telemetriaVisual = JSON.parse(telemetriaVisual);
+        } catch (e) {
+          telemetriaVisual = null;
+        }
+      }
+
       // 3. Avaliação Multimodal com Google Gemini (com SLA estrito de 15s)
-      const resultadoIA = await geminiService.avaliarQualidadeFoto(imageBuffer, mimeType);
+      const resultadoIA = await geminiService.avaliarQualidadeFoto(imageBuffer, mimeType, telemetriaVisual);
 
       return res.status(200).json({
         status: resultadoIA.status,
+        categoria: resultadoIA.categoria || (resultadoIA.status === 'APROVADO' ? 'OBRA_LOCAL' : 'REJEITADO'),
         confianca: resultadoIA.confianca,
         motivo: resultadoIA.motivo,
         hash_integridade: hashIntegridade,

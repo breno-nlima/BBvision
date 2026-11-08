@@ -27,7 +27,7 @@ class BBVisionModal {
       <div class="bb-modal-dialog bb-pdf-dialog">
         <header class="bb-modal-header">
           <div class="bb-modal-header-brand">
-            <span class="bb-stamp-icon">🛡️</span>
+            <span class="bb-stamp-icon" style="display:inline-flex; align-items:center;">${Icons.shieldFePublica(26)}</span>
             <div>
               <h3 class="bb-modal-title">${title}</h3>
               <span class="bb-modal-subtitle">Documento Criptografado • Fé Pública Banco do Brasil</span>
@@ -46,11 +46,11 @@ class BBVisionModal {
             <span class="hash-val" title="${hash}">${hash ? hash.substring(0, 24) + '...' : 'Pendente'}</span>
           </div>
           <div class="bb-meta-actions">
-            <a href="${pdfUrl}" target="_blank" download="BBVision_${codigo || 'Relatorio'}.pdf" class="btn-modal-action btn-download" title="Baixar PDF Oficial">
-              📥 Baixar PDF
+            <a href="${pdfUrl}" target="_blank" download="BBVision_${codigo || 'Relatorio'}.pdf" class="btn-modal-action btn-download" title="Baixar PDF Oficial" style="display:inline-flex; align-items:center; gap:5px;">
+              ${Icons.downloadFile(15)} Baixar PDF
             </a>
-            <a href="${pdfUrl}" target="_blank" class="btn-modal-action btn-open-external" title="Abrir em Nova Aba">
-              ↗ Abrir Aba
+            <a href="${pdfUrl}" target="_blank" class="btn-modal-action btn-open-external" title="Abrir em Nova Aba" style="display:inline-flex; align-items:center; gap:5px;">
+              ${Icons.externalOpen(15)} Abrir Aba
             </a>
           </div>
         </div>
@@ -60,7 +60,7 @@ class BBVisionModal {
         </div>
 
         <footer class="bb-modal-footer">
-          <span class="bb-security-seal">🔒 Documento inviolável com carimbo temporal ICP-Brasil / Banco do Brasil S.A.</span>
+          <span class="bb-security-seal" style="display:inline-flex; align-items:center; gap:6px;">${Icons.lockInviolavel(16)} Documento inviolável com carimbo temporal ICP-Brasil / Banco do Brasil S.A.</span>
           <button class="btn-modal-close" id="btnDismissPdfModal">Fechar Visualizador</button>
         </footer>
       </div>
@@ -91,7 +91,7 @@ class BBVisionModal {
       <div class="bb-modal-dialog bb-parecer-dialog">
         <header class="bb-modal-header warning">
           <div class="bb-modal-header-brand">
-            <span class="bb-stamp-icon">⚖️</span>
+            <span class="bb-stamp-icon" style="display:inline-flex; align-items:center;">${Icons.gavelAuditoria(26)}</span>
             <div>
               <h3 class="bb-modal-title">Emitir Parecer Técnico de Auditoria</h3>
               <span class="bb-modal-subtitle">${obraNome} — Fiscalização BB</span>
@@ -110,7 +110,7 @@ class BBVisionModal {
             <label class="parecer-option selected" id="optAprovar">
               <input type="radio" name="decisaoFiscal" value="APROVADO" checked />
               <div class="opt-body">
-                <strong>✓ Aprovar Vistoria (Obra REGULAR)</strong>
+                <strong style="display:inline-flex; align-items:center; gap:6px;">${Icons.checkVerified(16)} Aprovar Vistoria (Obra REGULAR)</strong>
                 <span>Todos os itens do checklist e fotos atendem aos requisitos do Banco do Brasil.</span>
               </div>
             </label>
@@ -118,7 +118,7 @@ class BBVisionModal {
             <label class="parecer-option" id="optReprovar">
               <input type="radio" name="decisaoFiscal" value="REPROVADO" />
               <div class="opt-body">
-                <strong>⚠️ Solicitar Ajuste Técnico (PENDENTE_AJUSTE)</strong>
+                <strong style="display:inline-flex; align-items:center; gap:6px;">${Icons.warningAlert(16)} Solicitar Ajuste Técnico (PENDENTE_AJUSTE)</strong>
                 <span>Identificadas inconformidades nos registros fotográficos ou checklist de campo.</span>
               </div>
             </label>

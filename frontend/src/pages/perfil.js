@@ -12,9 +12,10 @@ import { toast } from '../components/toast.js';
 export function renderPerfil() {
   const user = state.user;
   const isEmpreiteira = user?.cargo === 'empreiteira';
-  const roleLabel = isEmpreiteira ? '👷‍♂️ Empreiteira (Campo & Vistorias)' : '👩‍💼 Fiscal de Obra (Banco do Brasil)';
+  const roleLabel = isEmpreiteira
+    ? `${Icons.perfilObras(18)} Empreiteira (Campo & Vistorias)`
+    : `${Icons.perfilBb(18)} Fiscal de Obra (Banco do Brasil)`;
   const dataCadastro = user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : '10/10/2026';
-  const defaultAvatar = isEmpreiteira ? 'src/assets/icons/perfil_obras.png' : 'src/assets/icons/perfil_bb.png';
 
   return `
     <div class="page-container fade-in" id="perfilPage">
@@ -22,21 +23,18 @@ export function renderPerfil() {
 
       <!-- Card do Usuário Autenticado -->
       <div class="profile-card-top">
-        <div class="profile-avatar-large">
-          <img 
-            src="${user?.avatar || defaultAvatar}" 
-            alt="${user?.nome || 'Usuário'}"
-          >
+        <div class="profile-avatar-large" style="display:flex; align-items:center; justify-content:center; background:transparent; border:none; box-shadow:none;">
+          ${isEmpreiteira ? Icons.perfilObras(76) : Icons.perfilBb(76)}
         </div>
         <h2 class="profile-name">${user?.nome || 'Usuário BBVision'}</h2>
-        <span class="profile-role-badge ${isEmpreiteira ? 'empreiteira' : 'fiscal'}">
+        <span class="profile-role-badge ${isEmpreiteira ? 'empreiteira' : 'fiscal'}" style="display:inline-flex; align-items:center; gap:6px;">
           ${roleLabel}
         </span>
         <span class="profile-email">${user?.email || 'usuario@empresa.com.br'}</span>
 
         <div class="profile-meta-tags-row" style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
-          <span style="background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #94A3B8;">
-            🏢 ${user?.empresa || (isEmpreiteira ? 'Empreiteira Contratada' : 'Banco do Brasil - DIPAT')}
+          <span style="background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #94A3B8; display:inline-flex; align-items:center; gap:6px;">
+            ${Icons.iconeBanco(14)} ${user?.empresa || (isEmpreiteira ? 'Empreiteira Contratada' : 'Banco do Brasil - DIPAT')}
           </span>
           ${user?.registro_profissional ? `
             <span style="background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #94A3B8; display: inline-flex; align-items: center; gap: 6px;">

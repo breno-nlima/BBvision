@@ -236,8 +236,8 @@ export function renderChecklistPergunta() {
 
       <!-- Campo de Justificativa Qualitativa quando selecionado "Com Ressalva" / "Atenção" ou "Crítico" / "Não Conforme" -->
       <div class="justificativa-qualitativa-box ${precisaJustificar ? '' : 'hidden'}" id="boxJustificativaQualitativa">
-        <label class="justificativa-qualitativa-label" for="txtJustificativaPergunta">
-          ⚠️ Justificativa técnica obrigatória (Descreva o motivo da ressalva ou condição crítica):
+        <label class="justificativa-qualitativa-label" for="txtJustificativaPergunta" style="display:inline-flex; align-items:center; gap:6px;">
+          ${Icons.warningAlert(16)} Justificativa técnica obrigatória (Descreva o motivo da ressalva ou condição crítica):
         </label>
         <textarea
           id="txtJustificativaPergunta"
@@ -326,7 +326,7 @@ export function renderChecklistPergunta() {
         <!-- Chips de Preenchimento Rápido de Engenharia -->
         <div class="quick-chips-section">
           <div class="quick-chips-title">
-            <span>⚡ Sugestões rápidas de engenharia (toque para adicionar):</span>
+            <span style="display:inline-flex; align-items:center; gap:5px;">${Icons.boltFlash(15)} Sugestões rápidas de engenharia (toque para adicionar):</span>
           </div>
           <div class="quick-chips-cloud">
             ${chipsRapidos.map(chip => `
@@ -340,10 +340,8 @@ export function renderChecklistPergunta() {
         <!-- Assistente de Parecer com IA BBVision -->
         <div class="ia-generate-block">
           <button type="button" class="btn-ia-gemini-checklist" id="btnIaGerarRelato">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FED304" stroke-width="2.5">
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
-            </svg>
-            <span>✨ Assistente de Parecer com IA (Preenche o campo acima)</span>
+            ${Icons.aiSparkle(18)}
+            <span>Assistente de Parecer com IA (Preenche o campo acima)</span>
           </button>
           <span class="ia-disclaimer-pill">
             O parecer gerado é inserido diretamente na caixa de texto acima para sua revisão
@@ -401,9 +399,14 @@ export function renderChecklistPergunta() {
             ${listaPerguntas.map((q, idx) => {
               const isActive = idx === currentIndex;
               const isDone = idx < currentIndex;
+              const typeSvg = q.tipo === 'caixa'
+                ? Icons.questionCheckbox(14)
+                : q.tipo === 'texto'
+                ? Icons.questionText(14)
+                : Icons.questionRadio(14);
               return `
                 <button type="button" class="step-tab-pill ${isActive ? 'active' : ''} ${isDone ? 'completed' : ''}" data-step="${idx}">
-                  <span class="step-tab-icon">${isDone ? '✓' : (q.tipoIcon || '🔘')}</span>
+                  <span class="step-tab-icon" style="display:inline-flex; align-items:center;">${isDone ? Icons.checkVerified(14) : typeSvg}</span>
                   <span>Q${q.numero || (idx + 1)}</span>
                 </button>
               `;
@@ -422,8 +425,14 @@ export function renderChecklistPergunta() {
               <span>${vistoria.codigoUnico}</span>
             </div>
 
-            <div class="pergunta-type-pill">
-              <span>${currentQ.tipoIcon || '🔘'}</span>
+            <div class="pergunta-type-pill" style="display:inline-flex; align-items:center; gap:5px;">
+              <span style="display:inline-flex; align-items:center;">${
+                currentQ.tipo === 'caixa'
+                  ? Icons.questionCheckbox(15)
+                  : currentQ.tipo === 'texto'
+                  ? Icons.questionText(15)
+                  : Icons.questionRadio(15)
+              }</span>
               <span>${currentQ.tipoLabel || 'Pergunta Técnica'}</span>
             </div>
           </div>

@@ -1043,4 +1043,74 @@
   }
 }
 
+/* --------------------------------------------------------------------------
+   15. BBVision Custom Vector Icon System v3.0 — Micro-Interações & Personalidade
+   -------------------------------------------------------------------------- */
+.bbv-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+  transition: transform 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.22s ease;
+}
+
+.nav-svg-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 4px;
+}
+
+.bb-nav-link:hover .bbv-icon,
+.quick-action-card:hover .bbv-icon,
+.nav-item-btn:hover .bbv-icon,
+.local-option-card:hover .bbv-icon {
+  transform: scale(1.1) translateY(-1px);
+  filter: drop-shadow(0 3px 6px rgba(0, 45, 98, 0.16));
+}
+
+.quick-action-icon-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, rgba(0, 45, 98, 0.05) 0%, rgba(254, 211, 4, 0.12) 100%);
+  border: 1px solid rgba(0, 45, 98, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.22s ease;
+}
+
+.quick-action-card:hover .quick-action-icon-badge {
+  background: linear-gradient(135deg, rgba(254, 211, 4, 0.26) 0%, rgba(0, 45, 98, 0.08) 100%);
+  border-color: rgba(254, 211, 4, 0.65);
+  box-shadow: 0 4px 12px rgba(254, 211, 4, 0.22);
+}
+
+.bbv-icon-logo {
+  filter: drop-shadow(0 6px 14px rgba(0, 27, 61, 0.22));
+  animation: bbvFloatSubtle 4.5s ease-in-out infinite;
+}
+
+@keyframes bbvFloatSubtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.bbv-cad-illustration {
+  width: 100%;
+  height: 100%;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.obra-card:hover .bbv-cad-illustration {
+  transform: scale(1.03);
+}
+
+
 

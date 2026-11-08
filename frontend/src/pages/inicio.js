@@ -50,7 +50,7 @@ export function renderInicio() {
 
         ${state.isOffline ? `
           <div class="offline-banner-notice">
-            <span>📡 Modo Offline ativo. Operando com dados locais em cache resiliente.</span>
+            <span style="display:inline-flex; align-items:center; gap:6px;">${Icons.signalOffline(18)} Modo Offline ativo. Operando com dados locais em cache resiliente.</span>
           </div>
         ` : ''}
 
@@ -70,12 +70,12 @@ export function renderInicio() {
                 ${Icons.iconeCadastro(16)} Nova Obra
               </button>
               <button class="btn-pill-navy" id="btnHeroGerenciarPerguntas" title="Gerenciar Perguntas do Checklist Oficial BB" style="background: rgba(255, 255, 255, 0.15); color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.3); padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background 0.15s ease;">
-                📋 Perguntas Checklist
+                ${Icons.checklistBb(16)} Perguntas Checklist
               </button>
             </div>
           </div>
           <div class="hero-fiscal-badge-wrap">
-            ${Icons.logoBBOficial(48)}
+            ${Icons.logoBBOficial(48, '#FED304')}
           </div>
         </section>
 
@@ -136,15 +136,15 @@ export function renderInicio() {
           </div>
 
           <div class="quick-action-card" id="btnAtalhoChecklistFiscal" title="Visualizar e Editar Perguntas do Checklist Oficial BB">
-            <div class="quick-action-icon-badge" style="background: rgba(0, 45, 98, 0.08); color: #002D62; font-size: 20px;">
-              📋
+            <div class="quick-action-icon-badge">
+              ${Icons.checklistBb(28)}
             </div>
             <span class="quick-action-label" style="font-weight: 700; color: #002D62;">Checklist BB</span>
           </div>
 
           <div class="quick-action-card" id="btnAtalhoValidadorGrid">
             <div class="quick-action-icon-badge">
-              🛡️
+              ${Icons.shieldFePublica(28)}
             </div>
             <span class="quick-action-label">Validar Fé Pública</span>
           </div>
@@ -194,7 +194,7 @@ export function renderInicio() {
 
       ${state.isOffline ? `
         <div class="offline-banner-notice">
-          <span>📡 Modo Offline ativo. Os dados serão sincronizados automaticamente (HU05).</span>
+          <span style="display:inline-flex; align-items:center; gap:6px;">${Icons.signalOffline(18)} Modo Offline ativo. Os dados serão sincronizados automaticamente (HU05).</span>
         </div>
       ` : ''}
 
@@ -235,7 +235,7 @@ export function renderInicio() {
 
         <div class="quick-action-card" id="btnAtalhoValidadorEmpreiteira">
           <div class="quick-action-icon-badge">
-            🛡️
+            ${Icons.shieldFePublica(28)}
           </div>
           <span class="quick-action-label">Validar Hash</span>
         </div>

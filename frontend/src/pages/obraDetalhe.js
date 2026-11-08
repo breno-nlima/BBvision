@@ -71,12 +71,12 @@ export function renderObraDetalhe() {
           <div class="detalhe-divider"></div>
           <div class="detalhe-item-row" id="btnFiscalEditarChecklistObra" style="cursor: pointer; background: #F8FAFC; border: 1.5px solid #002D62; padding: 12px 14px; border-radius: 8px; margin-top: 6px; display: flex; align-items: center; justify-content: space-between;" title="Clique para gerenciar as perguntas do checklist desta obra">
             <div class="detalhe-text-group">
-              <span class="detalhe-label" style="color: #002D62; font-weight: 700;">📋 Checklist Técnico Desta Obra</span>
+              <span class="detalhe-label" style="color: #002D62; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">${Icons.checklistBb(18)} Checklist Técnico Desta Obra</span>
               <strong class="detalhe-val" style="color: #002D62; font-size: 13px;">${perguntasObra.length} perguntas configuradas</strong>
               <span class="detalhe-sub" style="font-size: 11.5px; color: #475569;">Clique para visualizar ou alterar perguntas exclusivas desta unidade</span>
             </div>
-            <div class="detalhe-action-icon" style="color: #002D62; font-size: 18px;">
-              ✏️
+            <div class="detalhe-action-icon" style="color: #002D62; display: flex; align-items: center;">
+              ${Icons.penAssinatura(20)}
             </div>
           </div>
         ` : ''}

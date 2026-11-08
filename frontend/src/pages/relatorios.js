@@ -42,8 +42,8 @@ export function renderRelatorios() {
             onerror="this.onerror=null; this.src='/uploads/evidencias/seed_fachada_bb.png';"
           />
           <div style="flex: 1; min-width: 0;">
-            <div style="font-size: 11.5px; font-weight: 700; color: #002D72; margin-bottom: 2px;">
-              📸 Foto Registrada na Vistoria
+            <div style="font-size: 11.5px; font-weight: 700; color: #002D72; margin-bottom: 2px; display:inline-flex; align-items:center; gap:5px;">
+              ${Icons.cameraAiLens(15)} Foto Registrada na Vistoria
             </div>
             <div style="font-size: 11px; color: #475569; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
               ${motivoFoto}
@@ -76,8 +76,8 @@ export function renderRelatorios() {
             ${Icons.iconeRelatorio(18)} Visualizar Relatório PDF
           </button>
           ${rel.codigoUnico && rel.codigoUnico !== 'Pendente' ? `
-            <button type="button" class="btn-secondary-white btn-validar-fe-rel" data-codigo="${rel.codigoUnico}" style="flex: 1; font-size: 12px; padding: 10px 12px;">
-              🛡️ Validar Fé Pública
+            <button type="button" class="btn-secondary-white btn-validar-fe-rel" data-codigo="${rel.codigoUnico}" style="flex: 1; font-size: 12px; padding: 10px 12px; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+              ${Icons.shieldFePublica(16)} Validar Fé Pública
             </button>
           ` : ''}
         </div>

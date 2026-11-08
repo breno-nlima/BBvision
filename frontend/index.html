@@ -45,16 +45,16 @@
     <!-- Navegação Central da Aplicação -->
     <nav class="bb-navbar-nav" id="mainNavigationLinks">
       <button class="bb-nav-link" id="navLinkInicio">
-        <img src="src/assets/icons/icone_inicio.png" style="width: 16px; height: 16px; object-fit: contain; vertical-align: middle;" alt="Início" /> Início
+        <span class="nav-svg-slot" id="navSlotInicio"></span> Início
       </button>
       <button class="bb-nav-link" id="navLinkObras">
-        <img src="src/assets/icons/icone_obras.png" style="width: 16px; height: 16px; object-fit: contain; vertical-align: middle;" alt="Obras" /> Obras
+        <span class="nav-svg-slot" id="navSlotObras"></span> Obras
       </button>
       <button class="bb-nav-link" id="navLinkRelatorios">
-        <img src="src/assets/icons/icone_relatorio.png" style="width: 16px; height: 16px; object-fit: contain; vertical-align: middle;" alt="Relatórios" /> Relatórios
+        <span class="nav-svg-slot" id="navSlotRelatorios"></span> Relatórios
       </button>
       <button class="bb-nav-link highlight-gov" id="navLinkValidador">
-        <span>🛡️</span> Validar Fé Pública
+        <span class="nav-svg-slot" id="navSlotValidador"></span> Validar Fé Pública
       </button>
     </nav>
 
@@ -97,22 +97,30 @@
       if (page === 'relatorios' || page === 'relatorio-bloqueado') document.getElementById('navLinkRelatorios')?.classList.add('active');
       if (page === 'validador-publico') document.getElementById('navLinkValidador')?.classList.add('active');
 
+      // Injeta os ícones vetoriais proprietários BBVision na barra superior
+      const slotIni = document.getElementById('navSlotInicio');
+      const slotObr = document.getElementById('navSlotObras');
+      const slotRel = document.getElementById('navSlotRelatorios');
+      const slotVal = document.getElementById('navSlotValidador');
+      if (slotIni && !slotIni.innerHTML) slotIni.innerHTML = Icons.iconeInicio(18);
+      if (slotObr && !slotObr.innerHTML) slotObr.innerHTML = Icons.iconeObras(18);
+      if (slotRel && !slotRel.innerHTML) slotRel.innerHTML = Icons.iconeRelatorio(18);
+      if (slotVal && !slotVal.innerHTML) slotVal.innerHTML = Icons.shieldFePublica(18);
+
       if (user) {
         if (navLinks) navLinks.style.display = 'flex';
         const isFiscal = user.cargo === 'fiscal';
         const roleLabel = isFiscal ? 'Fiscal BB' : 'Empreiteira';
-        const avatarUrl = user.avatar || (isFiscal
-          ? 'src/assets/icons/perfil_bb.png'
-          : 'src/assets/icons/perfil_obras.png');
+        const avatarSvg = isFiscal ? Icons.perfilBb(34) : Icons.perfilObras(34);
 
         userArea.innerHTML = `
           ${isFiscal ? `
             <button class="bb-nav-link" id="btnNavNovaObra" style="background: rgba(254, 211, 4, 0.18); color: #FED304; border: 1px solid rgba(254, 211, 4, 0.45); border-radius: var(--radius-full); padding: 5px 12px; font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;" title="Cadastrar Nova Obra (Exclusivo Fiscal BB)">
-              <img src="src/assets/icons/icone_cadastro.png" style="width: 16px; height: 16px; object-fit: contain; vertical-align: middle;" alt="Nova Obra" /> Nova Obra
+              ${Icons.iconeCadastro(18)} Nova Obra
             </button>
           ` : ''}
           <div class="bb-user-profile-badge" id="btnNavUserProfile" title="Ver Perfil de ${user.nome}">
-            <img src="${avatarUrl}" alt="${user.nome}" class="bb-user-avatar">
+            <div class="bb-user-avatar-svg" style="display:flex; align-items:center;">${avatarSvg}</div>
             <div class="bb-user-info">
               <span class="bb-user-name">${user.nome.split(' ')[0]}</span>
               <span class="bb-user-role ${isFiscal ? 'fiscal' : 'empreiteira'}">${roleLabel}</span>
@@ -152,8 +160,8 @@
         // Deslogado
         if (navLinks) navLinks.style.display = page === 'validador-publico' ? 'flex' : 'none';
         userArea.innerHTML = page === 'validador-publico' ? `
-          <button class="bb-nav-link" id="btnNavAcessarLogin" style="background: rgba(254, 211, 4, 0.15); color: #FED304; border: 1px solid rgba(254, 211, 4, 0.4); border-radius: 9999px; padding: 6px 14px;">
-            <span>🔑</span> Acessar Sistema
+          <button class="bb-nav-link" id="btnNavAcessarLogin" style="background: rgba(254, 211, 4, 0.15); color: #FED304; border: 1px solid rgba(254, 211, 4, 0.4); border-radius: 9999px; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px;">
+            ${Icons.keyProtocolo(16)} Acessar Sistema
           </button>
         ` : '';
         userArea.style.display = page === 'validador-publico' ? 'flex' : 'none';

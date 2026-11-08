@@ -188,8 +188,11 @@ class BBVisionApiClient {
   // ----------------------------------------------------------------------------
   // FOTOS E IA GEMINI
   // ----------------------------------------------------------------------------
-  async avaliarFoto(formDataOrBase64) {
+  async avaliarFoto(formDataOrBase64, telemetriaVisual = null) {
     if (formDataOrBase64 instanceof FormData) {
+      if (telemetriaVisual) {
+        formDataOrBase64.append('telemetriaVisual', JSON.stringify(telemetriaVisual));
+      }
       const headers = {};
       if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
       return this.request('/api/fotos/avaliar', {
@@ -202,7 +205,10 @@ class BBVisionApiClient {
     return this.request('/api/fotos/avaliar', {
       method: 'POST',
       headers: this.getHeaders(),
-      body: JSON.stringify({ imagemBase64: formDataOrBase64 }),
+      body: JSON.stringify({
+        imagemBase64: formDataOrBase64,
+        telemetriaVisual,
+      }),
     });
   }
 
@@ -257,11 +263,11 @@ class BBVisionApiClient {
     });
   }
 
-  async finalizarRelatorio(relatorioId) {
+  async finalizarRelatorio(relatorioId, dadosExtras = {}) {
     return this.request(`/api/relatorios/${relatorioId}/finalizar`, {
       method: 'POST',
       headers: this.getHeaders(),
-      body: JSON.stringify({}),
+      body: JSON.stringify(dadosExtras || {}),
     });
   }
 

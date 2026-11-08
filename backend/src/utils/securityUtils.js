@@ -23,8 +23,14 @@ function resolveSafePath(userPath, allowedBaseDir) {
   // Normaliza o diretório base para caminho absoluto
   const resolvedBase = path.resolve(allowedBaseDir);
 
-  // Normaliza o caminho relativo fornecido
-  const resolvedTarget = path.resolve(resolvedBase, userPath);
+  // Normaliza o caminho relativo fornecido e remove prefixo do diretório base se duplicado (ex: 'uploads/evidencias/...')
+  let cleanUserPath = userPath.replace(/\\/g, '/').replace(/^\/+/, '');
+  const baseName = path.basename(resolvedBase).toLowerCase();
+  if (cleanUserPath.toLowerCase().startsWith(baseName + '/')) {
+    cleanUserPath = cleanUserPath.substring(baseName.length + 1);
+  }
+
+  const resolvedTarget = path.resolve(resolvedBase, cleanUserPath);
 
   // Garante que o caminho de destino inicia estritamente com o diretório base
   if (!resolvedTarget.startsWith(resolvedBase)) {

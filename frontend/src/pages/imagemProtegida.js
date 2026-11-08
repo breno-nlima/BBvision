@@ -61,7 +61,7 @@ export function renderImagemProtegida() {
       <div class="protegida-checklist-box">
         <div class="protegida-item-row" id="itemCodigoUnico">
           <div class="protegida-item-left">
-            <span class="proto-symbol">◇</span>
+            <span class="proto-symbol" style="display:inline-flex; align-items:center;">${Icons.hashCrypto(18)}</span>
             <span class="proto-text">Código único gravado</span>
           </div>
           <div class="proto-arrow">
@@ -73,7 +73,7 @@ export function renderImagemProtegida() {
 
         <div class="protegida-item-row">
           <div class="protegida-item-left">
-            <span class="proto-symbol">🛡️</span>
+            <span class="proto-symbol" style="display:inline-flex; align-items:center;">${Icons.clockTimestamp(18)}</span>
             <span class="proto-text">Data e hora carimbadas</span>
           </div>
           <div class="proto-code-tag">${vistoria.dataFoto} ${vistoria.horaFoto}</div>
@@ -81,7 +81,7 @@ export function renderImagemProtegida() {
 
         <div class="protegida-item-row">
           <div class="protegida-item-left">
-            <span class="proto-symbol">📍</span>
+            <span class="proto-symbol" style="display:inline-flex; align-items:center;">${Icons.gpsPin(18)}</span>
             <span class="proto-text">GPS registrado</span>
           </div>
           <div class="proto-code-tag">${vistoria.localizacaoFoto}</div>
@@ -89,7 +89,7 @@ export function renderImagemProtegida() {
 
         <div class="protegida-item-row">
           <div class="protegida-item-left">
-            <span class="proto-symbol">🔒</span>
+            <span class="proto-symbol" style="display:inline-flex; align-items:center;">${Icons.lockInviolavel(18)}</span>
             <span class="proto-text">Hash de verificação aplicado</span>
           </div>
           <div class="proto-code-tag">SHA-256</div>

@@ -549,14 +549,18 @@ class AppState {
   }
 
   setResultadoAvaliacaoIa(resultado) {
-    this.currentVistoria.confiancaIA = resultado.confianca || 0.95;
+    this.currentVistoria.statusIA = resultado.status || 'APROVADO';
+    this.currentVistoria.categoriaIA = resultado.categoria || (resultado.status === 'APROVADO' ? 'OBRA_LOCAL' : 'REJEITADO');
+    this.currentVistoria.confiancaIA = resultado.confianca ?? 0.95;
     this.currentVistoria.motivoIA = resultado.motivo || 'Imagem nítida e bem enquadrada';
     this.currentVistoria.hashSha256 = resultado.hash_integridade || this.currentVistoria.hashSha256;
     if (resultado.caminho_arquivo) {
       this.currentVistoria.caminhoArquivoFoto = resultado.caminho_arquivo;
     }
     this.currentVistoria.validacaoManual = resultado.validacao_manual || resultado.status === 'VALIDACAO_MANUAL';
-    this.notify();
+    if (this.currentPage !== 'camera-ia') {
+      this.notify();
+    }
   }
 
   setLocalizacaoFoto(local, coords = null, shouldNotify = true) {
@@ -660,7 +664,8 @@ class AppState {
       // 1. Criar relatório se não tiver id
       let relId = this.currentVistoria.relatorioId;
       if (!relId) {
-        const novoRel = await api.criarRelatorio(this.currentVistoria.obraId || '11111111-2222-3333-4444-555555555555');
+        const obraIdValida = this.currentVistoria.obraId || 'obr-001';
+        const novoRel = await api.criarRelatorio(obraIdValida);
         relId = novoRel.id;
         this.currentVistoria.relatorioId = relId;
       }
@@ -738,7 +743,16 @@ class AppState {
       ]);
 
       // 4. Finalizar e gerar PDF oficial com carimbo via PDFKit
-      const finalRes = await api.finalizarRelatorio(relId);
+      const finalRes = await api.finalizarRelatorio(relId, {
+        fotos: [{
+          caminho_arquivo: this.currentVistoria.caminhoArquivoFoto || '',
+          imagemBase64: this.currentVistoria.fotoCamera || this.currentVistoria.fotoBase64 || '',
+          hash_integridade: this.currentVistoria.hashSha256,
+          confianca: this.currentVistoria.confiancaIA,
+          motivo: this.currentVistoria.motivoIA,
+          avaliacao_gemini: 'APROVADO'
+        }]
+      });
       if (finalRes && finalRes.codigo) {
         this.currentVistoria.codigoUnico = finalRes.codigo;
         this.currentVistoria.codigoHexDoc = finalRes.codigo;
@@ -760,6 +774,8 @@ class AppState {
       id: `fot-${Date.now()}`,
       url: fotoUrlFinal,
       caminho_arquivo: this.currentVistoria.caminhoArquivoFoto || fotoUrlFinal,
+      previewDataUrl: this.currentVistoria.fotoCamera || this.currentVistoria.fotoBase64 || null,
+      imagemBase64: this.currentVistoria.fotoCamera || this.currentVistoria.fotoBase64 || null,
       hash_sha256: this.currentVistoria.hashSha256,
       hash_integridade: this.currentVistoria.hashSha256,
       confianca_ia: this.currentVistoria.confiancaIA,
@@ -771,11 +787,10 @@ class AppState {
 
     const existingIdx = this.relatorios.findIndex(r => r.id === novoRelId || r.codigoUnico === this.currentVistoria.codigoUnico);
     if (existingIdx >= 0) {
-      if (!Array.isArray(this.relatorios[existingIdx].fotos) || this.relatorios[existingIdx].fotos.length === 0) {
-        this.relatorios[existingIdx].fotos = [fotoObjLocal];
-      } else if (this.currentVistoria.fotoCamera) {
-        this.relatorios[existingIdx].fotos[0].previewDataUrl = this.currentVistoria.fotoCamera;
-      }
+      this.relatorios[existingIdx].fotos = [fotoObjLocal];
+      this.relatorios[existingIdx].pdfUrl = this.currentVistoria.pdfUrl || `/api/relatorios/${novoRelId}/pdf`;
+      this.relatorios[existingIdx].hash = this.currentVistoria.hashSha256;
+      this.relatorios[existingIdx].codigoUnico = this.currentVistoria.codigoUnico;
     } else {
       this.relatorios.unshift({
         id: novoRelId,
@@ -790,6 +805,19 @@ class AppState {
         fotos: [fotoObjLocal]
       });
     }
+
+    // Registra a foto no mosaico forense da fiscal Mariana
+    this.fiscalRegistros.unshift({
+      id: fotoObjLocal.id,
+      codigo: this.currentVistoria.codigoUnico || '8F4A2C19E70B34DF',
+      titulo: fotoObjLocal.motivo_ia ? fotoObjLocal.motivo_ia.substring(0, 30) : 'Foto da Vistoria',
+      local: this.currentVistoria.obraNome,
+      responsavel: this.currentVistoria.responsavel,
+      status: 'Validado',
+      img: fotoUrlFinal,
+      confianca: this.currentVistoria.confiancaIA,
+      relatorioId: novoRelId
+    });
 
     this.notify();
   }

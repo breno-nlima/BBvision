@@ -73,8 +73,8 @@ export function renderChecklistDinamico() {
 
           <!-- Justificativa qualitativa quando selecionado Não ou Parcial -->
           <div class="justificativa-qualitativa-box ${precisaJustSinalizacao ? '' : 'hidden'}" id="boxJustificativaSinalizacao" style="margin-top: 10px;">
-            <label class="justificativa-qualitativa-label" for="txtJustificativaSinalizacao">
-              ⚠️ Justificativa obrigatória (Sinalização Parcial ou Não Conforme):
+            <label class="justificativa-qualitativa-label" for="txtJustificativaSinalizacao" style="display:inline-flex; align-items:center; gap:6px;">
+              ${Icons.warningAlert(16)} Justificativa obrigatória (Sinalização Parcial ou Não Conforme):
             </label>
             <textarea
               id="txtJustificativaSinalizacao"
@@ -136,13 +136,13 @@ export function renderChecklistDinamico() {
         <div class="field-card-box">
           <div class="field-card-header" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
             <label class="field-title">Observações adicionais</label>
-            <button type="button" class="btn-ia-suggest-action" id="btnGerarSugestaoIa" title="Preenche automaticamente o campo abaixo com um resumo técnico das respostas">
-              ✨ Gerar Resumo das Respostas com IA
+            <button type="button" class="btn-ia-suggest-action" id="btnGerarSugestaoIa" title="Preenche automaticamente o campo abaixo com um resumo técnico das respostas" style="display:inline-flex; align-items:center; gap:6px;">
+              ${Icons.aiSparkle(16)} Gerar Resumo das Respostas com IA
             </button>
           </div>
           <div class="ai-assistant-banner" style="flex-direction: column; align-items: flex-start; gap: 2px;">
             <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-              <span class="ai-robot-icon">✨ Assistente de Parecer IA BBVision</span>
+              <span class="ai-robot-icon" style="display:inline-flex; align-items:center; gap:6px;">${Icons.aiSparkle(15)} Assistente de Parecer IA BBVision</span>
               <span class="ai-warning-human">Revise antes de enviar</span>
             </div>
             <span style="font-size: 11px; color: #475569;">
@@ -150,7 +150,7 @@ export function renderChecklistDinamico() {
             </span>
           </div>
           <div class="ia-saved-feedback-banner hidden" id="iaDinamicoFeedbackBanner" style="margin-bottom: 8px;">
-            <span>✅ <strong>Resumo gerado pela IA e inserido no campo abaixo!</strong></span>
+            <span style="display:inline-flex; align-items:center; gap:6px;">${Icons.checkVerified(15)} <strong>Resumo gerado pela IA e inserido no campo abaixo!</strong></span>
           </div>
           <textarea
             class="field-textarea"

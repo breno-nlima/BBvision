@@ -46,7 +46,7 @@ export function renderValidadorPublico() {
       <!-- Card Explicativo: Como Funciona a Validação por Fé Pública (Item 16) -->
       <section class="fe-publica-explainer-card">
         <div class="fe-explainer-title">
-          <span>ℹ️ Como funciona a Validação por Fé Pública?</span>
+          <span style="display:inline-flex; align-items:center; gap:6px;">${Icons.infoBadge(18)} Como funciona a Validação por Fé Pública?</span>
         </div>
         <div class="fe-steps-grid">
           <div class="fe-step-box">
@@ -94,21 +94,21 @@ export function renderValidadorPublico() {
 
         ${relatoriosDisponiveis.length > 0 ? `
           <div class="quick-test-codes-wrap" style="margin: 10px 0 12px;">
-            <span style="display: block; font-size: 11.5px; font-weight: 600; color: #475569; margin-bottom: 6px;">
-              ⚡ Toque em um relatório emitido para testar a validação agora:
+            <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #475569; margin-bottom: 6px;">
+              ${Icons.boltFlash(15)} Toque em um relatório emitido para testar a validação agora:
             </span>
             <div style="display: flex; flex-wrap: wrap; gap: 6px;">
               ${relatoriosDisponiveis.slice(0, 4).map(r => `
-                <button type="button" class="quick-code-pill-btn" data-codigo="${r.codigoUnico}">
-                  🔑 <strong>${r.codigoUnico}</strong> (${r.obraNome})
+                <button type="button" class="quick-code-pill-btn" data-codigo="${r.codigoUnico}" style="display:inline-flex; align-items:center; gap:5px;">
+                  ${Icons.keyProtocolo(14)} <strong>${r.codigoUnico}</strong> (${r.obraNome})
                 </button>
               `).join('')}
             </div>
           </div>
         ` : ''}
 
-        <button class="btn-action-primary" id="btnConsultarIntegridade">
-          ${carregandoConsulta ? '<span class="loading-spinner"></span> Validando no Banco...' : '🔍 Consultar Fé Pública e Integridade'}
+        <button class="btn-action-primary" id="btnConsultarIntegridade" style="display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+          ${carregandoConsulta ? '<span class="loading-spinner"></span> Validando no Banco...' : `${Icons.search(18)} Consultar Fé Pública e Integridade`}
         </button>
       </section>
 
@@ -145,7 +145,7 @@ function renderResultadoConteudo() {
     return `
       <div class="resultado-box invalido fade-in">
         <div class="resultado-header-status">
-          <span class="status-icon-bad">❌</span>
+          <span class="status-icon-bad" style="display:inline-flex; align-items:center;">${Icons.errorCross(28)}</span>
           <div>
             <h3>DOCUMENTO NÃO LOCALIZADO OU INVÁLIDO</h3>
             <p>O identificador consultado não corresponde a nenhum relatório autêntico no Banco do Brasil.</p>
@@ -162,7 +162,7 @@ function renderResultadoConteudo() {
   if (!resultadoConsulta) {
     return `
       <div class="resultado-empty-hint">
-        <span>🛡️</span>
+        <span style="display:flex; justify-content:center; margin-bottom:6px;">${Icons.shieldFePublica(36)}</span>
         <p>Insira o código de 16 caracteres ou o hash de 64 caracteres do relatório para certificar a autenticidade.</p>
       </div>
     `;
@@ -225,14 +225,14 @@ function renderResultadoConteudo() {
       </div>
 
       <div class="resultado-acoes-footer">
-        <button class="btn-download-pdf-valid" id="btnAbrirPdfValidador">
-          📄 Visualizar PDF Oficial com Carimbo Criptográfico
+        <button class="btn-download-pdf-valid" id="btnAbrirPdfValidador" style="display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+          ${Icons.pdfDocument(18)} Visualizar PDF Oficial com Carimbo Criptográfico
         </button>
-        <button class="btn-download-pdf-valid" id="btnCopiarLinkValidador" style="background: rgba(254, 211, 4, 0.15); color: #003882; border: 1px solid rgba(0, 56, 130, 0.3);">
-          🔗 Copiar Link de Validação Pública
+        <button class="btn-download-pdf-valid" id="btnCopiarLinkValidador" style="background: rgba(254, 211, 4, 0.15); color: #003882; border: 1px solid rgba(0, 56, 130, 0.3); display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+          ${Icons.hashCrypto(16)} Copiar Link de Validação Pública
         </button>
-        <button class="btn-download-pdf-valid" id="btnImprimirCertidao" style="background: #F8FAFC; color: #475569; border: 1px solid #CBD5E1;">
-          🖨️ Imprimir Certidão de Fé Pública
+        <button class="btn-download-pdf-valid" id="btnImprimirCertidao" style="background: #F8FAFC; color: #475569; border: 1px solid #CBD5E1; display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+          ${Icons.shieldFePublica(16)} Imprimir Certidão de Fé Pública
         </button>
       </div>
     </div>

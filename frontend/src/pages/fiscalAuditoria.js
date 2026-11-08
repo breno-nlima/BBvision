@@ -39,7 +39,7 @@ export function renderFiscalAuditoria() {
   `).join('')
     : `
     <div style="grid-column: 1 / -1; padding: 36px 16px; text-align: center; background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 12px;">
-      <span style="font-size: 32px; display: block; margin-bottom: 8px;">📷</span>
+      <span style="display: flex; justify-content: center; margin-bottom: 8px;">${Icons.cameraAiLens(36)}</span>
       <h4 style="font-size: 15px; font-weight: 700; color: #002D62; margin-bottom: 6px;">Nenhuma evidência registrada</h4>
       <p style="font-size: 12px; color: #64748B; max-width: 380px; margin: 0 auto;">As vistorias e fotos capturadas em campo pelas empreiteiras credenciadas aparecerão aqui em tempo real.</p>
     </div>
@@ -74,7 +74,7 @@ export function renderFiscalAuditoria() {
         <div class="metric-summary-card">
           <div class="metric-card-top">
             <span class="metric-label">Fotos Inspecionadas:</span>
-            <span class="metric-chevron">📷</span>
+            <span class="metric-chevron" style="display:inline-flex; align-items:center;">${Icons.cameraAiLens(18)}</span>
           </div>
           <div class="metric-large-number">${registros.length}</div>
           <span class="metric-bottom-hint">Todas com Carimbo SHA-256</span>
@@ -83,7 +83,7 @@ export function renderFiscalAuditoria() {
         <div class="metric-summary-card">
           <div class="metric-card-top">
             <span class="metric-label">Último Envio de Campo:</span>
-            <span class="metric-chevron">⏱️</span>
+            <span class="metric-chevron" style="display:inline-flex; align-items:center;">${Icons.clockTimestamp(18)}</span>
           </div>
           <div class="metric-large-number timestamp">${vistoria.dataFoto} às ${vistoria.horaFoto}</div>
           <span class="metric-bottom-hint">Responsável: ${vistoria.responsavel}</span>
@@ -92,7 +92,7 @@ export function renderFiscalAuditoria() {
         <div class="metric-summary-card success">
           <div class="metric-card-top">
             <span class="metric-label">Integridade Cripto:</span>
-            <span class="metric-chevron">🛡️</span>
+            <span class="metric-chevron" style="display:inline-flex; align-items:center;">${Icons.shieldFePublica(18)}</span>
           </div>
           <div class="metric-large-number">100%</div>
           <span class="metric-bottom-hint">Hash e Código Verificados</span>
@@ -117,7 +117,7 @@ export function renderFiscalAuditoria() {
       <div class="fiscal-analysis-decision-card">
         <div class="analysis-question-title">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 18px;">⚖️</span>
+            <span style="display:inline-flex; align-items:center;">${Icons.gavelAuditoria(22)}</span>
             <h3>Julgamento da Fiscalização BB</h3>
           </div>
           <span style="font-size: 11px; color: var(--text-secondary);">Requisito 8.7 • Homologação de Fé Pública</span>
@@ -127,11 +127,11 @@ export function renderFiscalAuditoria() {
           <span class="decision-prompt-text">Emitir Parecer Técnico Oficial:</span>
           
           <div class="decision-buttons-row">
-            <button class="btn-decision-reprovar" id="btnReprovarObra" title="Solicitar correções técnicas na obra">
-              ⚠️ Solicitar Ajuste
+            <button class="btn-decision-reprovar" id="btnReprovarObra" title="Solicitar correções técnicas na obra" style="display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+              ${Icons.warningAlert(16)} Solicitar Ajuste
             </button>
-            <button class="btn-decision-aprovar" id="btnAprovarObra" title="Aprovar e homologar avanço físico">
-              ✓ Aprovar Vistoria
+            <button class="btn-decision-aprovar" id="btnAprovarObra" title="Aprovar e homologar avanço físico" style="display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+              ${Icons.checkVerified(16)} Aprovar Vistoria
             </button>
           </div>
         </div>
@@ -151,8 +151,8 @@ export function renderFiscalAuditoria() {
 
       <!-- Botão Amarelo de Detalhes Completos & PDF Oficial (HU07) -->
       <div class="fiscal-action-footer">
-        <button class="btn-primary-bb-yellow" id="btnVerDetalhesCompletos">
-          📄 Visualizar Relatório Oficial (PDFKit com Carimbo BB)
+        <button class="btn-primary-bb-yellow" id="btnVerDetalhesCompletos" style="display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+          ${Icons.pdfDocument(20)} Visualizar Relatório Oficial (PDFKit com Carimbo BB)
         </button>
       </div>
 

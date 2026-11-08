@@ -145,8 +145,8 @@ export function renderLogin() {
 
         <!-- Rodapé do Card de Autenticação -->
         <div class="auth-card-footer">
-          <button type="button" class="btn-link-public-doc" id="btnIrValidadorSemLogin">
-            🛡️ Validar Autenticidade de Laudo / Relatório (Público)
+          <button type="button" class="btn-link-public-doc" id="btnIrValidadorSemLogin" style="display:inline-flex; align-items:center; justify-content:center; gap:7px;">
+            ${Icons.shieldFePublica(18)} Validar Autenticidade de Laudo / Relatório (Público)
           </button>
         </div>
 
