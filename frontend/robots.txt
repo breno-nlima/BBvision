@@ -1,0 +1,8 @@
+# BBVision - Robots & Content Signals Policy
+User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+Allow: /
+Disallow: /api/auth/
+Disallow: /uploads/
+
+Sitemap: https://antiquewhite-dolphin-779579.hostingersite.com/sitemap.xml

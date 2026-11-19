@@ -39,7 +39,8 @@ export function renderLogin() {
 
         <!-- Formulário 1: Login -->
         <div class="auth-form-body ${abaAtiva === 'login' ? '' : 'hidden'}" id="loginFormSection">
-          <form id="formLogin">
+          <h2 class="sr-only">Acesso ao Portal de Fiscalização Remota de Obras</h2>
+          <form id="formLogin" toolname="bbvision_login" tooldescription="Autentica um usuário Empreiteira ou Fiscal de Obras do Banco do Brasil no portal BBVision usando e-mail corporativo e senha.">
             <div class="auth-field-group">
               <label for="loginEmail" class="auth-field-label">E-mail corporativo ou institucional</label>
               <input 

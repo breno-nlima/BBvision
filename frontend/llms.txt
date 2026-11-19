@@ -1,0 +1,28 @@
+# BBVision
+
+> Sistema Inteligente de Fiscalização e Monitoramento Remoto de Obras do Banco do Brasil com IA Google Gemini, Fé Pública e Inviolabilidade Criptográfica SHA-256.
+
+O BBVision é a plataforma de monitoramento, auditoria e fiscalização remota de obras para o Banco do Brasil, desenvolvida pela Equipe TakeOff no programa Residência Tecnológica em Software & IA (Porto Digital). Empreiteiras executam vistorias de campo com captura fotográfica exclusivamente in-loco (bloqueio de galeria), validação visual instantânea por Google Gemini 1.5 Flash (SLA <= 15s, confiança >= 75%), checklists dinâmicos, modo offline e assinatura digital com bloqueio imediato do laudo. Fiscais de engenharia do Banco do Brasil auditam os relatórios PDF carimbados com Código Único (16 caracteres hex) e Hash criptográfico SHA-256, homologando obras como REGULAR ou PENDENTE_AJUSTE.
+
+## Páginas Principais
+
+- [Início e Portal BBVision](https://antiquewhite-dolphin-779579.hostingersite.com/): Acesso ao portal corporativo de fiscalização remota de obras para Empreiteiras e Fiscais do Banco do Brasil.
+- [Validador Público de Fé Pública](https://antiquewhite-dolphin-779579.hostingersite.com/validador): Consulta aberta para verificar a autenticidade e integridade criptográfica SHA-256 de laudos emitidos pelo BBVision.
+- [Sobre o BBVision](https://antiquewhite-dolphin-779579.hostingersite.com/about): Visão geral da arquitetura, personas (Rodrigo — Empreiteira e Mariana — Fiscal BB), governança de IA e equipe TakeOff / Porto Digital.
+- [Contato e Suporte Institucional](https://antiquewhite-dolphin-779579.hostingersite.com/contact): E-mail oficial, telefone institucional, endereço no Porto Digital (Recife/PE) e canais de suporte técnico.
+- [Termos de Uso e Governança](https://antiquewhite-dolphin-779579.hostingersite.com/terms): Regras de utilização, inviolabilidade documental, proibição de upload via galeria e responsabilidades legais.
+- [Política de Privacidade e LGPD](https://antiquewhite-dolphin-779579.hostingersite.com/privacy): Tratamento de dados pessoais, evidências fotográficas, trilhas de auditoria e direitos dos titulares conforme a LGPD.
+
+## API e Descoberta para Agentes
+
+- [Metadados da API REST](https://antiquewhite-dolphin-779579.hostingersite.com/api-info): Inventário JSON dos endpoints públicos e autenticados do backend Express.
+- [Health Check Operacional](https://antiquewhite-dolphin-779579.hostingersite.com/api/health): Telemetria de disponibilidade, versão do sistema, memória e camada de persistência.
+- [Validador Público JSON](https://antiquewhite-dolphin-779579.hostingersite.com/api/validador/{codigoOuHash}): Endpoint GET público que valida Código Único (16 hex) ou Hash SHA-256 (64 hex) e retorna o laudo autenticado.
+- [MCP Server Card (SEP-1649)](https://antiquewhite-dolphin-779579.hostingersite.com/.well-known/mcp/server-card.json): Cartão de descoberta do servidor MCP BBVision com endpoint, capacidades e ferramentas suportadas.
+- [Endpoint MCP Streamable HTTP](https://antiquewhite-dolphin-779579.hostingersite.com/api/mcp): Endpoint JSON-RPC 2.0 do Model Context Protocol para ferramentas públicas de leitura e validação.
+- [Sitemap XML](https://antiquewhite-dolphin-779579.hostingersite.com/sitemap.xml): Lista estruturada de todas as páginas públicas indexáveis.
+
+## Optional
+
+- [Página Inicial em Markdown](https://antiquewhite-dolphin-779579.hostingersite.com/index.md): Representação enxuta em Markdown da página inicial (também servida via cabeçalho HTTP Accept: text/markdown).
+- [Repositório Oficial no GitHub](https://github.com/breno-nlima/BBvision): Código-fonte completo, documentação TakeOff e suíte de testes automatizados.

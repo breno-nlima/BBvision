@@ -10,6 +10,7 @@ const authRoutes = require('./authRoutes');
 const obrasRoutes = require('./obrasRoutes');
 const relatoriosRoutes = require('./relatoriosRoutes');
 const fotosRoutes = require('./fotosRoutes');
+const mcpRoutes = require('./mcpRoutes');
 const mockData = require('../mockData');
 const { isConfigured } = require('../config/supabase');
 const { validatorLimiter } = require('../middlewares/rateLimiter');
@@ -20,6 +21,7 @@ router.use('/obras', obrasRoutes);
 router.use('/relatorios', relatoriosRoutes);
 router.use('/fotos', fotosRoutes);
 router.use('/ia', fotosRoutes); // Alias para facilidade de integração
+router.use('/mcp', mcpRoutes); // Endpoint MCP Streamable HTTP (JSON-RPC 2.0)
 
 // Validador público de autenticidade (Código Único de 16 caracteres ou Hash SHA-256 de 64 caracteres)
 // Protegido por rate limiter dedicado e validação estrita de formato contra ataques de força bruta

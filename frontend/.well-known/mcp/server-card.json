@@ -1,0 +1,101 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json",
+  "name": "com.hostingersite.antiquewhite-dolphin-779579/bbvision",
+  "title": "BBVision — Fiscalização Remota de Obras (Banco do Brasil)",
+  "version": "1.2.0",
+  "protocolVersion": "2025-11-25",
+  "description": "Servidor MCP público do BBVision para validação criptográfica SHA-256 de laudos de obras (Fé Pública), telemetria de disponibilidade e consulta de metadados institucionais da plataforma.",
+  "websiteUrl": "https://antiquewhite-dolphin-779579.hostingersite.com/",
+  "documentationUrl": "https://antiquewhite-dolphin-779579.hostingersite.com/llms.txt",
+  "endpoint": "https://antiquewhite-dolphin-779579.hostingersite.com/api/mcp",
+  "serverInfo": {
+    "name": "bbvision-mcp",
+    "title": "BBVision MCP Server",
+    "version": "1.2.0"
+  },
+  "transport": {
+    "type": "streamable-http",
+    "endpoint": "https://antiquewhite-dolphin-779579.hostingersite.com/api/mcp"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://antiquewhite-dolphin-779579.hostingersite.com/api/mcp",
+      "supportedProtocolVersions": ["2025-11-25", "2025-03-26"]
+    }
+  ],
+  "authentication": {
+    "required": false,
+    "schemes": ["none", "bearer"]
+  },
+  "capabilities": {
+    "tools": {
+      "listChanged": false
+    },
+    "resources": {
+      "subscribe": false,
+      "listChanged": false
+    },
+    "prompts": {
+      "listChanged": false
+    }
+  },
+  "tools": [
+    {
+      "name": "validate_report_authenticity",
+      "description": "Valida a autenticidade e integridade criptográfica (Fé Pública) de um laudo de vistoria BBVision usando Código Único de 16 caracteres hexadecimais ou Hash SHA-256 de 64 caracteres.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "codigoOuHash": {
+            "type": "string",
+            "description": "Código Único de 16 caracteres hexadecimais ou Hash SHA-256 de 64 caracteres do laudo."
+          }
+        },
+        "required": ["codigoOuHash"]
+      }
+    },
+    {
+      "name": "get_system_health",
+      "description": "Retorna status operacional, versão, tempo de atividade e estado da camada de dados do BBVision.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_platform_info",
+      "description": "Retorna informações institucionais, páginas públicas, canais de contato e endpoints do BBVision.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    }
+  ],
+  "resources": [
+    {
+      "uri": "https://antiquewhite-dolphin-779579.hostingersite.com/llms.txt",
+      "name": "BBVision LLMs Guide",
+      "description": "Guia estruturado do BBVision para agentes e LLMs.",
+      "mimeType": "text/plain"
+    },
+    {
+      "uri": "https://antiquewhite-dolphin-779579.hostingersite.com/index.md",
+      "name": "BBVision Homepage (Markdown)",
+      "description": "Versão Markdown da página inicial do BBVision.",
+      "mimeType": "text/markdown"
+    }
+  ],
+  "icons": [
+    {
+      "src": "https://antiquewhite-dolphin-779579.hostingersite.com/src/assets/logo.png",
+      "type": "image/png"
+    }
+  ],
+  "repository": {
+    "source": "github",
+    "url": "https://github.com/breno-nlima/BBvision"
+  }
+}

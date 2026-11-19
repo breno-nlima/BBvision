@@ -38,16 +38,16 @@ export function renderValidadorPublico() {
           ${Icons.shieldYellow(38)}
         </div>
         <div class="validador-hero-text">
-          <h2>Validador de Integridade e Fé Pública</h2>
+          <h1>Validador de Integridade e Fé Pública</h1>
           <p>Verificação criptográfica SHA-256 e atestado oficial das vistorias do Banco do Brasil</p>
         </div>
       </section>
 
       <!-- Card Explicativo: Como Funciona a Validação por Fé Pública (Item 16) -->
       <section class="fe-publica-explainer-card">
-        <div class="fe-explainer-title">
+        <h2 class="fe-explainer-title">
           <span style="display:inline-flex; align-items:center; gap:6px;">${Icons.infoBadge(18)} Como funciona a Validação por Fé Pública?</span>
-        </div>
+        </h2>
         <div class="fe-steps-grid">
           <div class="fe-step-box">
             <span class="fe-step-num">1</span>
@@ -75,41 +75,44 @@ export function renderValidadorPublico() {
 
       <!-- Formulário de Consulta -->
       <section class="validador-form-card">
-        <label class="validador-label" for="inputTermoValidacao">
-          Digite o Código Único Oficial (16 caracteres hex) ou o Hash SHA-256:
-        </label>
-        
-        <div class="validador-input-wrapper">
-          <input 
-            type="text" 
-            id="inputTermoValidacao" 
-            class="validador-input" 
-            placeholder="Ex.: 8F4A2C19E70B34DF ou clique em um relatório abaixo..."
-            value="${termoConsultadoAtual}"
-            autocomplete="off"
-            spellcheck="false"
-          />
-          <button class="btn-limpar-termo" id="btnLimparTermo" title="Limpar">✕</button>
-        </div>
-
-        ${relatoriosDisponiveis.length > 0 ? `
-          <div class="quick-test-codes-wrap" style="margin: 10px 0 12px;">
-            <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #475569; margin-bottom: 6px;">
-              ${Icons.boltFlash(15)} Toque em um relatório emitido para testar a validação agora:
-            </span>
-            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-              ${relatoriosDisponiveis.slice(0, 4).map(r => `
-                <button type="button" class="quick-code-pill-btn" data-codigo="${r.codigoUnico}" style="display:inline-flex; align-items:center; gap:5px;">
-                  ${Icons.keyProtocolo(14)} <strong>${r.codigoUnico}</strong> (${r.obraNome})
-                </button>
-              `).join('')}
-            </div>
+        <form id="formValidadorPublico" toolname="validate_report_authenticity" tooldescription="Valida a autenticidade e integridade criptográfica SHA-256 (Fé Pública) de um relatório de vistoria BBVision usando Código Único de 16 caracteres ou Hash SHA-256.">
+          <label class="validador-label" for="inputTermoValidacao">
+            Digite o Código Único Oficial (16 caracteres hex) ou o Hash SHA-256:
+          </label>
+          
+          <div class="validador-input-wrapper">
+            <input 
+              type="text" 
+              id="inputTermoValidacao" 
+              name="codigoOuHash"
+              class="validador-input" 
+              placeholder="Ex.: 8F4A2C19E70B34DF ou clique em um relatório abaixo..."
+              value="${termoConsultadoAtual}"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button type="button" class="btn-limpar-termo" id="btnLimparTermo" title="Limpar">✕</button>
           </div>
-        ` : ''}
 
-        <button class="btn-action-primary" id="btnConsultarIntegridade" style="display:inline-flex; align-items:center; justify-content:center; gap:8px;">
-          ${carregandoConsulta ? '<span class="loading-spinner"></span> Validando no Banco...' : `${Icons.search(18)} Consultar Fé Pública e Integridade`}
-        </button>
+          ${relatoriosDisponiveis.length > 0 ? `
+            <div class="quick-test-codes-wrap" style="margin: 10px 0 12px;">
+              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #475569; margin-bottom: 6px;">
+                ${Icons.boltFlash(15)} Toque em um relatório emitido para testar a validação agora:
+              </span>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                ${relatoriosDisponiveis.slice(0, 4).map(r => `
+                  <button type="button" class="quick-code-pill-btn" data-codigo="${r.codigoUnico}" style="display:inline-flex; align-items:center; gap:5px;">
+                    ${Icons.keyProtocolo(14)} <strong>${r.codigoUnico}</strong> (${r.obraNome})
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <button type="submit" class="btn-action-primary" id="btnConsultarIntegridade" style="display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+            ${carregandoConsulta ? '<span class="loading-spinner"></span> Validando no Banco...' : `${Icons.search(18)} Consultar Fé Pública e Integridade`}
+          </button>
+        </form>
       </section>
 
       <!-- Área de Resultado da Consulta -->
@@ -121,7 +124,7 @@ export function renderValidadorPublico() {
       <section class="api-governance-footer-card">
         <div class="api-gov-header">
           <span class="api-gov-tag">INFRAESTRUTURA & CRIPTOGRAFIA</span>
-          <h4>Garantias Técnicas de Integridade do Banco do Brasil</h4>
+          <h2>Garantias Técnicas de Integridade do Banco do Brasil</h2>
         </div>
         <p style="font-size: 11.5px; color: var(--text-secondary); margin-top: 6px;">
           Cada documento emitido pelo BBVision possui carimbo temporal irreversível e assinatura digital vinculada à credencial do responsável técnico e fiscalização de engenharia.
@@ -285,9 +288,11 @@ export function bindValidadorPublicoEvents() {
     });
   });
 
+  const formValidador = document.getElementById('formValidadorPublico');
   const btnConsultar = document.getElementById('btnConsultarIntegridade');
-  if (btnConsultar && inputTermo) {
-    btnConsultar.addEventListener('click', () => {
+  if (formValidador && inputTermo) {
+    formValidador.addEventListener('submit', (e) => {
+      e.preventDefault();
       const termo = inputTermo.value.trim();
       if (!termo) {
         toast.warning('Campo Obrigatório', 'Informe o Código Único ou o Hash SHA-256 do documento.');
@@ -296,11 +301,15 @@ export function bindValidadorPublicoEvents() {
       termoConsultadoAtual = termo;
       executarConsulta(termo);
     });
-
-    inputTermo.addEventListener('keyup', (e) => {
-      if (e.key === 'Enter') {
-        btnConsultar.click();
+  } else if (btnConsultar && inputTermo) {
+    btnConsultar.addEventListener('click', () => {
+      const termo = inputTermo.value.trim();
+      if (!termo) {
+        toast.warning('Campo Obrigatório', 'Informe o Código Único ou o Hash SHA-256 do documento.');
+        return;
       }
+      termoConsultadoAtual = termo;
+      executarConsulta(termo);
     });
   }
 

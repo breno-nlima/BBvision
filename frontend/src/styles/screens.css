@@ -3716,6 +3716,7 @@
   flex-shrink: 0;
 }
 
+.validador-hero-text h1,
 .validador-hero-text h2 {
   font-size: 16px;
   font-weight: 800;
@@ -3991,6 +3992,7 @@
   margin-bottom: 4px;
 }
 
+.api-gov-header h2,
 .api-gov-header h4 {
   font-size: 12px;
   font-weight: 700;

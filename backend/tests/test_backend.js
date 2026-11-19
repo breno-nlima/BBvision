@@ -476,8 +476,101 @@ async function runTests() {
     assert(pdfComprovacao.headers['content-type'] === 'application/pdf', 'PDF possui Content-Type application/pdf');
     assert(pdfComprovacao.rawBuffer.length > 2000, 'PDF de comprovação gerado com evidências fotográficas embutidas');
 
+    // 25. Agent-Readiness, SEO Semântico, Markdown Negotiation, WebMCP e MCP Server Card (SEP-1649)
+    console.log('\n25. Testando Agent-Readiness (18 Requisitos: robots, sitemap, 404 real, JSON-LD, llms.txt, Markdown, Link, WebMCP, MCP Card)...');
+
+    // 25.1 & 25.3 robots.txt (Content-Signal + Sitemap)
+    const robotsRes = await request('GET', '/robots.txt');
+    assert(robotsRes.status === 200, 'robots.txt respondeu HTTP 200');
+    assert((robotsRes.headers['content-type'] || '').includes('text/plain'), 'robots.txt servido como text/plain');
+    assert(robotsRes.body.includes('Content-Signal:') && robotsRes.body.includes('search=yes') && robotsRes.body.includes('ai-train=no'), 'robots.txt declara Content-Signal');
+    assert(robotsRes.body.includes('Sitemap: https://antiquewhite-dolphin-779579.hostingersite.com/sitemap.xml'), 'robots.txt declara diretiva Sitemap');
+
+    // 25.2 sitemap.xml
+    const sitemapRes = await request('GET', '/sitemap.xml');
+    assert(sitemapRes.status === 200, 'sitemap.xml respondeu HTTP 200');
+    assert((sitemapRes.headers['content-type'] || '').includes('application/xml'), 'sitemap.xml servido como application/xml');
+    assert(sitemapRes.body.includes('<urlset') && sitemapRes.body.includes('/about</loc>') && sitemapRes.body.includes('/contact</loc>') && sitemapRes.body.includes('/terms</loc>') && sitemapRes.body.includes('/validador</loc>'), 'sitemap.xml lista todas as páginas públicas');
+
+    // 25.4 404 real para páginas inexistentes (sem soft-404 HTTP 200)
+    const missingHtml = await request('GET', '/pagina-inexistente-teste-404', null, { Accept: 'text/html' });
+    assert(missingHtml.status === 404, 'Página inexistente retornou HTTP 404 real (HTML)');
+    const missingMd = await request('GET', '/pagina-inexistente-teste-404', null, { Accept: 'text/markdown' });
+    assert(missingMd.status === 404 && (missingMd.headers['content-type'] || '').includes('text/markdown'), 'Página inexistente retornou HTTP 404 real (Markdown)');
+
+    // 25.5 - 25.12 & 25.16 Homepage HTML: canonical, H1 único, JSON-LD completo, links institucionais, mailto/tel, Link header
+    const homeHtmlRes = await request('GET', '/', null, { Accept: 'text/html,application/xhtml+xml' });
+    assert(homeHtmlRes.status === 200, 'Homepage HTML retornou HTTP 200');
+    assert((homeHtmlRes.headers['content-type'] || '').includes('text/html'), 'Homepage retornou text/html para navegador');
+    assert(homeHtmlRes.body.includes('<title>') && homeHtmlRes.body.includes('name="description"') && homeHtmlRes.body.includes('<link rel="canonical" href="https://antiquewhite-dolphin-779579.hostingersite.com/">'), 'Homepage possui title, meta description e link canonical');
+
+    const h1Matches = homeHtmlRes.body.match(/<h1[\s>]/gi) || [];
+    assert(h1Matches.length === 1, 'Homepage possui exatamente um <h1>');
+    assert(homeHtmlRes.body.includes('<h2>'), 'Homepage possui hierarquia clara de headings (h1 -> h2)');
+
+    const jsonLdMatch = homeHtmlRes.body.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/i);
+    assert(!!jsonLdMatch, 'Homepage contém bloco JSON-LD');
+    const jsonLdData = JSON.parse(jsonLdMatch[1]);
+    const graphNodes = Array.isArray(jsonLdData['@graph']) ? jsonLdData['@graph'] : [jsonLdData];
+    const schemaTypes = graphNodes.map(n => n['@type']);
+    const orgNode = graphNodes.find(n => n['@type'] === 'Organization');
+    assert(!!orgNode && orgNode.name && orgNode.email && orgNode.telephone && orgNode.address && orgNode.contactPoint, 'JSON-LD possui nó Organization completo');
+    assert(Array.isArray(orgNode.sameAs) && orgNode.sameAs.length >= 3, 'Organization possui links externos via sameAs');
+    assert(schemaTypes.length >= 4 && schemaTypes.includes('WebSite') && schemaTypes.includes('WebApplication') && schemaTypes.includes('Service'), 'JSON-LD cobre múltiplos tipos de schema');
+
+    assert(homeHtmlRes.body.includes('href="/about"') && homeHtmlRes.body.includes('href="/contact"') && homeHtmlRes.body.includes('href="/terms"') && homeHtmlRes.body.includes('href="/privacy"'), 'Homepage vincula páginas about, contact, terms e privacy');
+    assert(homeHtmlRes.body.includes('href="mailto:') && homeHtmlRes.body.includes('href="tel:'), 'Homepage expõe contato machine-readable (mailto: e tel:)');
+
+    const linkHeader = homeHtmlRes.headers['link'] || '';
+    assert(linkHeader.includes('/llms.txt') && linkHeader.includes('text/markdown') && linkHeader.includes('/.well-known/mcp/server-card.json'), 'Homepage emite cabeçalho RFC 8288 Link apontando para llms.txt, Markdown e MCP Server Card');
+
+    // Valida páginas institucionais e redirecionamentos 301 em português
+    for (const pagePath of ['/about', '/contact', '/terms', '/privacy', '/validador']) {
+      const pRes = await request('GET', pagePath, null, { Accept: 'text/html' });
+      const pH1s = (pRes.body.match(/<h1[\s>]/gi) || []).length;
+      assert(pRes.status === 200 && pH1s === 1 && pRes.body.includes(`rel="canonical" href="https://antiquewhite-dolphin-779579.hostingersite.com${pagePath}"`), `Página ${pagePath} retornou HTTP 200 com H1 único e canonical`);
+    }
+    const sobreRedirect = await request('GET', '/sobre', null, { Accept: 'text/html' });
+    assert(sobreRedirect.status === 301 && sobreRedirect.headers['location'] === '/about', 'Alias /sobre redireciona 301 para /about');
+
+    // 25.13 & 25.14 llms.txt
+    const llmsRes = await request('GET', '/llms.txt');
+    assert(llmsRes.status === 200, '/llms.txt respondeu HTTP 200');
+    assert((llmsRes.headers['content-type'] || '').includes('text/plain'), '/llms.txt servido como text/plain (não HTML)');
+    assert(llmsRes.body.startsWith('# BBVision') && llmsRes.body.includes('\n> ') && llmsRes.body.includes('](https://antiquewhite-dolphin-779579.hostingersite.com/'), '/llms.txt segue formato padrão (# título, > resumo e links Markdown)');
+
+    // 25.15 Negociação Accept: text/markdown
+    const homeMdRes = await request('GET', '/', null, { Accept: 'text/markdown' });
+    assert(homeMdRes.status === 200, 'Homepage com Accept: text/markdown respondeu HTTP 200');
+    assert((homeMdRes.headers['content-type'] || '').includes('text/markdown'), 'Homepage retornou text/markdown quando solicitado');
+    assert((homeMdRes.headers['vary'] || '').toLowerCase().includes('accept'), 'Homepage emite Vary: Accept');
+    assert(homeMdRes.body.startsWith('# BBVision') && !homeMdRes.body.includes('<!DOCTYPE html>'), 'Corpo Markdown da homepage é limpo e bem-formado');
+
+    // 25.17 WebMCP (imperativo + declarativo)
+    assert(homeHtmlRes.body.includes('src="src/utils/webmcp.js"') && homeHtmlRes.body.includes('toolname=') && homeHtmlRes.body.includes('tooldescription='), 'Homepage carrega script WebMCP e declara formulário toolname/tooldescription');
+    const webMcpScript = await request('GET', '/src/utils/webmcp.js');
+    assert(webMcpScript.status === 200 && webMcpScript.body.includes('navigator.modelContext') && webMcpScript.body.includes('registerTool') && webMcpScript.body.includes('inputSchema') && webMcpScript.body.includes('execute'), 'Script WebMCP registra ferramentas via navigator.modelContext.registerTool()');
+
+    // 25.18 MCP Server Card (SEP-1649) + Endpoint MCP Streamable HTTP
+    const mcpCardRes = await request('GET', '/.well-known/mcp/server-card.json');
+    assert(mcpCardRes.status === 200, '/.well-known/mcp/server-card.json respondeu HTTP 200');
+    assert((mcpCardRes.headers['content-type'] || '').includes('application/json'), 'MCP Server Card servido como application/json (não HTML)');
+    assert(mcpCardRes.body.name && mcpCardRes.body.version && mcpCardRes.body.endpoint && mcpCardRes.body.capabilities && mcpCardRes.body.capabilities.tools, 'MCP Server Card contém name, version, endpoint e capabilities');
+
+    const mcpInit = await request('POST', '/api/mcp', { jsonrpc: '2.0', id: 1, method: 'initialize', params: {} });
+    assert(mcpInit.status === 200 && mcpInit.body.result && mcpInit.body.result.serverInfo && mcpInit.body.result.capabilities, 'Endpoint POST /api/mcp responde handshake JSON-RPC initialize');
+    const mcpTools = await request('POST', '/api/mcp', { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} });
+    assert(mcpTools.status === 200 && Array.isArray(mcpTools.body.result.tools) && mcpTools.body.result.tools.length >= 3, 'Endpoint POST /api/mcp lista ferramentas MCP');
+    const mcpValidate = await request('POST', '/api/mcp', {
+      jsonrpc: '2.0',
+      id: 3,
+      method: 'tools/call',
+      params: { name: 'validate_report_authenticity', arguments: { codigoOuHash: finalizarRes.body.codigo } },
+    });
+    assert(mcpValidate.status === 200 && mcpValidate.body.result && mcpValidate.body.result.content[0].text.includes('"autentico": true'), 'Ferramenta MCP validate_report_authenticity valida código real');
+
     console.log('\n======================================================');
-    console.log('  TODOS OS 24 GRUPOS DE TESTES PASSARAM COM SUCESSO!');
+    console.log('  TODOS OS 25 GRUPOS DE TESTES PASSARAM COM SUCESSO!');
     console.log('======================================================\n');
   } catch (err) {
     console.error('\n❌ ERRO DURANTE A EXECUÇÃO DOS TESTES:', err);
