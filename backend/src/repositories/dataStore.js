@@ -297,7 +297,7 @@ class DataStore {
           .select('*')
           .eq('email', cleanEmail)
           .maybeSingle();
-        if (!error) return data || null;
+        if (!error && data) return data;
       } catch (e) {
         console.warn('[DataStore/Supabase] findUserByEmailAsync:', e.message);
       }
@@ -314,7 +314,7 @@ class DataStore {
           .select('*')
           .eq('id', id)
           .maybeSingle();
-        if (!error) return data || null;
+        if (!error && data) return data;
       } catch (e) {
         console.warn('[DataStore/Supabase] findUserByIdAsync:', e.message);
       }
