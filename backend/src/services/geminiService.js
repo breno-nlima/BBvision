@@ -72,7 +72,11 @@ function limitWords(text, maxWords = 20) {
 }
 
 /**
- * Avalia telemetria de visão computacional (luminosidade, rosto/selfie e contexto de obra/local)
+ * Avalia telemetria de visão computacional:
+ * 1. Baixa luz -> reprova (BAIXA_LUZ)
+ * 2. Pessoa/rosto ocupando a parte central da foto -> reprova (PESSOA_NO_CENTRO)
+ *    Obs.: Selfies e pessoas na foto SÃO PERMITIDAS desde que fora da parte central.
+ * 3. Contexto estrito de obra, prédio, edifício, casa ou construção -> fora disso reprova (FORA_DE_CONTEXTO)
  * @param {object|null} telemetriaVisual
  * @returns {{ rejeitado: boolean, categoria: string, confianca: number, motivo: string } | null}
  */
@@ -96,31 +100,37 @@ function avaliarCondicoesTelemetria(telemetriaVisual) {
       rejeitado: true,
       categoria: 'BAIXA_LUZ',
       confianca: 0.22,
-      motivo: `Reprovado pela IA Gemini: Imagem com baixa luz${lumInfo}. Ilumine o local da obra antes de capturar.`,
+      motivo: `Reprovado pela IA: Imagem com baixa luz${lumInfo}. Ilumine o local da obra antes de capturar.`,
     };
   }
 
-  // 2. Verificação estrita de Rosto Humano / Selfie / Foto de Si Mesmo
-  const isRostoSelfie =
-    telemetriaVisual.rostoDetectado === true ||
-    (typeof telemetriaVisual.facesDetectadas === 'number' && telemetriaVisual.facesDetectadas > 0);
+  // 2. Selfies e pessoas são permitidas, mas NÃO podem ocupar a parte central da foto
+  const isPessoaNoCentro =
+    telemetriaVisual.pessoaNoCentro === true ||
+    telemetriaVisual.rostoNoCentro === true ||
+    (typeof telemetriaVisual.facesNoCentro === 'number' && telemetriaVisual.facesNoCentro > 0) ||
+    (telemetriaVisual.rostoDetectado === true && telemetriaVisual.pessoaNoCentro !== false && telemetriaVisual.selfieLateral !== true);
 
-  if (isRostoSelfie) {
+  if (isPessoaNoCentro) {
     return {
       rejeitado: true,
-      categoria: 'ROSTO_SELFIE',
-      confianca: 0.14,
-      motivo: 'Reprovado pela IA Gemini: Foto de rosto ou selfie não é permitida. Fotografe apenas a obra ou local.',
+      categoria: 'PESSOA_NO_CENTRO',
+      confianca: 0.18,
+      motivo: 'Reprovado pela IA: Pessoas e selfies são permitidas, mas não devem ocupar a parte central da foto. Deixe a obra ou construção livre no centro.',
     };
   }
 
-  // 3. Verificação de Contexto de Obra / Fiscalização de Lugares
-  if (telemetriaVisual.foraDeContexto === true) {
+  // 3. Verificação Estrita de Contexto: somente obra, prédio, edifício, casa ou construção
+  const isForaDeContexto =
+    telemetriaVisual.foraDeContexto === true ||
+    telemetriaVisual.contextoConstrucao === false;
+
+  if (isForaDeContexto) {
     return {
       rejeitado: true,
       categoria: 'FORA_DE_CONTEXTO',
-      confianca: 0.30,
-      motivo: 'Reprovado pela IA Gemini: A imagem deve retratar obra, instalação ou fiscalização de lugar.',
+      confianca: 0.25,
+      motivo: 'Reprovado pela IA: A foto deve retratar exclusivamente uma obra, prédio, edifício, casa ou construção.',
     };
   }
 
@@ -128,12 +138,16 @@ function avaliarCondicoesTelemetria(telemetriaVisual) {
     rejeitado: false,
     categoria: 'OBRA_LOCAL',
     confianca: 0.94,
-    motivo: 'Foto de obra/fiscalização de local validada pela IA Gemini com boa iluminação.',
+    motivo: 'Foto de obra, prédio ou construção validada pela IA com boa iluminação e centro livre.',
   };
 }
 
 /**
- * P1 — Avaliar Qualidade e Condições da Foto (Iluminação, Ausência de Rosto/Selfie, Contexto de Obra/Lugar)
+ * P1 — Avaliar Qualidade e Contexto da Foto
+ * Regras obrigatórias:
+ * - Iluminação adequada (reprova baixa luz)
+ * - Contexto estrito: somente obra, prédio, edifício, casa ou construção (nada fora disso)
+ * - Selfie e pessoas são permitidas, desde que NÃO ocupem a parte central da foto
  * SLA: <= 15 segundos | Limiar de Confiança: >= 75%
  * 
  * @param {Buffer} imageBuffer Buffer binário da foto
@@ -145,7 +159,7 @@ async function avaliarQualidadeFoto(imageBuffer, mimeType = 'image/jpeg', teleme
   const startTime = Date.now();
   const avaliacaoTelemetria = avaliarCondicoesTelemetria(telemetriaVisual);
 
-  // Fallback 1: Chave de API não configurada -> Motor de Visão Computacional Gemini BBVision
+  // Fallback 1: Chave de API não configurada -> Motor de Visão Computacional local BBVision
   if (!genAI || !apiKey || apiKey === 'sua-chave-gemini-aqui') {
     const duracaoMs = Math.max(12, Date.now() - startTime);
 
@@ -168,7 +182,7 @@ async function avaliarQualidadeFoto(imageBuffer, mimeType = 'image/jpeg', teleme
         status: 'APROVADO',
         categoria: 'OBRA_LOCAL',
         confianca: 0.94,
-        motivo: 'Foto de obra/fiscalização de local validada pela IA Gemini com boa iluminação.',
+        motivo: 'Foto de obra, prédio ou construção validada pela IA com boa iluminação e centro livre.',
         duracaoMs,
         modelo: modelName || 'gemini-1.5-flash',
         isFallback: false,
@@ -197,15 +211,16 @@ async function avaliarQualidadeFoto(imageBuffer, mimeType = 'image/jpeg', teleme
     });
 
     const imagePart = bufferToGenerativePart(imageBuffer, mimeType);
-    const prompt = 
-      'Você é o auditor de visão computacional Gemini do sistema BBVision (Banco do Brasil).\n' +
-      'Verifique rigorosamente esta foto capturada na validação de câmera segundo estas regras obrigatórias:\n' +
-      '1. BAIXA LUZ: Imagens com baixa iluminação, escuras, subexpostas ou com lente coberta NÃO devem aprovar (STATUS: REJEITADO, CATEGORIA: BAIXA_LUZ).\n' +
-      '2. ROSTO / SELFIE: Imagens de rosto humano, selfie, foto de si mesmo ou pessoa em primeiro plano NÃO devem aprovar (STATUS: REJEITADO, CATEGORIA: ROSTO_SELFIE).\n' +
-      '3. OBRA E FISCALIZAÇÃO DE LUGARES: Deve aprovar SOMENTE fotos bem iluminadas de obra, reforma, edificação, ambiente interno/externo, instalação predial ou fiscalização de lugares (STATUS: APROVADO, CATEGORIA: OBRA_LOCAL). Objetos avulsos sem relação com fiscalização de local devem reprovar (STATUS: REJEITADO, CATEGORIA: FORA_DE_CONTEXTO).\n\n' +
+    const prompt =
+      'Você é o auditor de visão computacional do sistema BBVision (fiscalização de obras).\n' +
+      'Faça uma leitura visual rigorosa desta imagem capturada na câmera seguindo estritamente estas 4 regras obrigatórias:\n' +
+      '1. BAIXA LUZ: Imagens escuras, com baixa iluminação, subexpostas, muito desfocadas ou com lente obstruída NÃO devem aprovar (STATUS: REJEITADO, CATEGORIA: BAIXA_LUZ).\n' +
+      '2. CONTEXTO ESTRITO DE CONSTRUÇÃO (OBRIGATÓRIO): A foto DEVE retratar claramente uma obra, canteiro de obras, reforma, prédio, edifício, casa ou construção civil (fachada, estrutura, alvenaria, telhado, fundação ou edificação). QUALQUER outra coisa fora disso — como objetos avulsos, animais, comida, plantas isoladas, telas/monitores, documentos, veículos sem obra, móveis isolados ou cenários sem construção/prédio/casa visível — DEVE REPROVAR (STATUS: REJEITADO, CATEGORIA: FORA_DE_CONTEXTO).\n' +
+      '3. SELFIE E PESSOAS (PERMITIDAS SOMENTE FORA DO CENTRO): Selfies e presença de pessoas/operários na foto SÃO PERMITIDAS, DESDE QUE uma obra, prédio, edifício, casa ou construção esteja claramente visível na foto e NENHUMA pessoa ou rosto ocupe a parte central da imagem. Se uma pessoa ou rosto estiver ocupando a parte central da foto (obstruindo ou dominando o centro no lugar da construção), DEVE REPROVAR (STATUS: REJEITADO, CATEGORIA: PESSOA_NO_CENTRO).\n' +
+      '4. APROVAÇÃO: Aprove SOMENTE se a imagem estiver bem iluminada, tratar-se claramente de obra, prédio, edifício, casa ou construção e nenhuma pessoa ocupar a parte central da foto (STATUS: APROVADO, CATEGORIA: OBRA_LOCAL).\n\n' +
       'Responda ESTRITAMENTE no formato abaixo sem introduções ou observações extras:\n' +
       'STATUS: APROVADO (ou REJEITADO)\n' +
-      'CATEGORIA: OBRA_LOCAL (ou BAIXA_LUZ ou ROSTO_SELFIE ou FORA_DE_CONTEXTO)\n' +
+      'CATEGORIA: OBRA_LOCAL (ou BAIXA_LUZ ou PESSOA_NO_CENTRO ou FORA_DE_CONTEXTO)\n' +
       'CONFIANCA: [número decimal de 0.0 a 1.0]\n' +
       'MOTIVO: [justificativa técnica concisa com no máximo 20 palavras]';
 
@@ -222,7 +237,7 @@ async function avaliarQualidadeFoto(imageBuffer, mimeType = 'image/jpeg', teleme
     let status = 'APROVADO';
     let categoria = 'OBRA_LOCAL';
     let confianca = 0.95;
-    let motivo = 'Foto de obra/local nítida com boa iluminação e enquadramento adequado.';
+    let motivo = 'Foto de obra, prédio ou construção nítida, bem iluminada e com centro livre.';
 
     // Extrai STATUS
     const statusMatch = sanitized.match(/STATUS[:\s]+(APROVADO|REJEITADO)/i);
@@ -233,14 +248,17 @@ async function avaliarQualidadeFoto(imageBuffer, mimeType = 'image/jpeg', teleme
     }
 
     // Extrai CATEGORIA
-    const catMatch = sanitized.match(/CATEGORIA[:\s]+(OBRA_LOCAL|BAIXA_LUZ|ROSTO_SELFIE|FORA_DE_CONTEXTO)/i);
+    const catMatch = sanitized.match(/CATEGORIA[:\s]+(OBRA_LOCAL|BAIXA_LUZ|PESSOA_NO_CENTRO|FORA_DE_CONTEXTO|ROSTO_SELFIE)/i);
     if (catMatch) {
-      categoria = catMatch[1].toUpperCase();
-    } else if (/rosto|selfie|pessoa|face/i.test(sanitized)) {
-      categoria = 'ROSTO_SELFIE';
-      status = 'REJEITADO';
-    } else if (/escur|baixa luz|ilumina/i.test(sanitized) && status === 'REJEITADO') {
-      categoria = 'BAIXA_LUZ';
+      categoria = catMatch[1].toUpperCase() === 'ROSTO_SELFIE' ? 'PESSOA_NO_CENTRO' : catMatch[1].toUpperCase();
+    } else if (status === 'REJEITADO') {
+      if (/centro|central|pessoa|rosto|selfie/i.test(sanitized)) {
+        categoria = 'PESSOA_NO_CENTRO';
+      } else if (/escur|baixa luz|ilumina/i.test(sanitized)) {
+        categoria = 'BAIXA_LUZ';
+      } else {
+        categoria = 'FORA_DE_CONTEXTO';
+      }
     }
 
     // Extrai CONFIANÇA
@@ -257,11 +275,13 @@ async function avaliarQualidadeFoto(imageBuffer, mimeType = 'image/jpeg', teleme
     if (motivoMatch) {
       motivo = motivoMatch[1].trim();
     } else {
-      motivo = sanitized.replace(/STATUS:.*|CATEGORIA:.*|CONFIANCA:.*/gi, '').trim() || 
-        (status === 'APROVADO' ? 'Local de obra e iluminação conformes.' : 'Foto reprovada nos critérios de iluminação ou contexto de obra.');
+      motivo = sanitized.replace(/STATUS:.*|CATEGORIA:.*|CONFIANCA:.*/gi, '').trim() ||
+        (status === 'APROVADO'
+          ? 'Obra/construção bem iluminada e com área central livre.'
+          : 'Foto reprovada nos critérios de iluminação, contexto de construção ou pessoa no centro.');
     }
 
-    // Se a telemetria física da câmera detectou baixa luz severa ou rosto/selfie, garante a reprovação
+    // Se a telemetria física da câmera detectou baixa luz severa, pessoa no centro ou cena sem estrutura, garante reprovação
     if (avaliacaoTelemetria && avaliacaoTelemetria.rejeitado) {
       status = 'REJEITADO';
       categoria = avaliacaoTelemetria.categoria;
@@ -273,7 +293,8 @@ async function avaliarQualidadeFoto(imageBuffer, mimeType = 'image/jpeg', teleme
     // Se a confiança for menor que 0.75, obrigatoriamente REJEITA
     if (confianca < confidenceThreshold && status === 'APROVADO') {
       status = 'REJEITADO';
-      motivo = `Confiança (${Math.round(confianca * 100)}%) abaixo do limiar de 75%. Fotografe o local da obra com boa luz.`;
+      categoria = 'FORA_DE_CONTEXTO';
+      motivo = `Confiança (${Math.round(confianca * 100)}%) abaixo do limiar de 75%. Enquadre a obra, prédio, casa ou construção com boa luz.`;
     }
 
     if (status === 'REJEITADO' && confianca >= confidenceThreshold) {

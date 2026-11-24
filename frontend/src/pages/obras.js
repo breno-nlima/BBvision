@@ -8,17 +8,25 @@ import { state } from '../services/state.js';
 import { renderHeader, bindHeaderEvents } from '../components/header.js';
 import { modal } from '../components/modal.js';
 import { toast } from '../components/toast.js';
+import { escapeHtml } from '../utils/formatters.js';
 
-export function renderObras() {
-  const query = state.searchQuery || '';
-  const filteredObras = state.obras.filter(o => 
-    o.nome.toLowerCase().includes(query) || 
-    o.responsavel.toLowerCase().includes(query) ||
-    o.endereco.toLowerCase().includes(query)
+function renderObrasCardsHtml(query, isFiscal) {
+  const q = (query || '').toLowerCase();
+  const filteredObras = state.obras.filter(o =>
+    (o.nome || '').toLowerCase().includes(q) ||
+    (o.responsavel || '').toLowerCase().includes(q) ||
+    (o.endereco || '').toLowerCase().includes(q)
   );
 
-  const cardsHtml = filteredObras.map(obra => {
-    // Escolhe a mídia correta de acordo com a imagem do mockup
+  if (filteredObras.length === 0) {
+    return `
+      <div class="resultado-empty-hint" style="grid-column: 1 / -1; text-align: center; padding: 28px 16px;">
+        <p>Nenhuma obra encontrada para "${escapeHtml(query)}".</p>
+      </div>
+    `;
+  }
+
+  return filteredObras.map(obra => {
     let mediaHtml = '';
     if (obra.imagemTipo === 'logo') {
       mediaHtml = `
@@ -40,28 +48,33 @@ export function renderObras() {
       `;
     }
 
+    const actionLabel = isFiscal ? 'Gerenciar / Auditar' : 'Registrar vistoria';
+
     return `
-      <div class="obra-card ${obra.destaque ? 'destaque' : ''}" data-id="${obra.id}">
+      <div class="obra-card ${obra.destaque ? 'destaque' : ''}" data-id="${escapeHtml(obra.id)}">
         ${mediaHtml}
         
         <div class="obra-card-body">
           <div class="obra-card-header-row">
-            <h3 class="obra-card-title">${obra.nome}</h3>
-            <button class="obra-card-eye-btn" data-view-id="${obra.id}" title="Ver Detalhes">
+            <h3 class="obra-card-title">${escapeHtml(obra.nome)}</h3>
+            <button class="obra-card-eye-btn" data-view-id="${escapeHtml(obra.id)}" title="Ver Detalhes">
               ${Icons.eye(16)}
             </button>
           </div>
-          <span class="obra-card-subtitle">${obra.tipo}</span>
+          <span class="obra-card-subtitle">${escapeHtml(obra.tipo)}</span>
           
-          <button class="btn-registrar-vistoria" data-action-id="${obra.id}">
-            Registrar vistoria
+          <button class="btn-registrar-vistoria" data-action-id="${escapeHtml(obra.id)}">
+            ${actionLabel}
           </button>
         </div>
       </div>
     `;
   }).join('');
+}
 
+export function renderObras() {
   const isFiscal = state.user?.cargo === 'fiscal';
+  const cardsHtml = renderObrasCardsHtml(state.searchQuery || '', isFiscal);
 
   return `
     <div class="page-container fade-in" id="obrasPage">
@@ -77,13 +90,13 @@ export function renderObras() {
             type="text" 
             id="inputBuscarObra" 
             class="search-input" 
-            placeholder="Buscar obra por nome ou responsável" 
-            value="${state.searchQuery}"
+            placeholder="Buscar obra por nome, endereço ou responsável" 
+            value="${escapeHtml(state.searchQuery || '')}"
           />
         </div>
         ${isFiscal ? `
-          <button class="btn-pill-yellow" id="btnNovaObraBar" title="Cadastrar Nova Obra (Exclusivo Fiscal BB)" style="display: inline-flex; align-items: center; gap: 6px;">
-            ${Icons.iconeCadastro(16)} Nova Obra
+          <button class="btn-pill-yellow" id="btnNovaObraBar" title="Cadastrar Nova Obra (Exclusivo Fiscal BB)">
+            + Nova Obra
           </button>
         ` : ''}
       </section>
@@ -96,14 +109,38 @@ export function renderObras() {
   `;
 }
 
+function bindObrasCardClicks() {
+  document.querySelectorAll('.btn-registrar-vistoria').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const obraId = btn.getAttribute('data-action-id');
+      state.selectObra(obraId);
+      state.navigate('obra-detalhe');
+    });
+  });
+
+  document.querySelectorAll('.obra-card-eye-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const obraId = btn.getAttribute('data-view-id');
+      state.selectObra(obraId);
+      state.navigate('obra-detalhe');
+    });
+  });
+}
+
 export function bindObrasEvents() {
   bindHeaderEvents();
+  const isFiscal = state.user?.cargo === 'fiscal';
 
-  // Campo de busca com debounce
+  // Filtro instantâneo no grid SEM recriar o input (evita perda de foco ao digitar)
   const inputBusca = document.getElementById('inputBuscarObra');
-  if (inputBusca) {
+  const obrasGrid = document.getElementById('obrasGrid');
+  if (inputBusca && obrasGrid) {
     inputBusca.addEventListener('input', (e) => {
-      state.setSearchQuery(e.target.value);
+      state.searchQuery = e.target.value;
+      obrasGrid.innerHTML = renderObrasCardsHtml(state.searchQuery, isFiscal);
+      bindObrasCardClicks();
     });
   }
 
@@ -125,26 +162,6 @@ export function bindObrasEvents() {
     });
   }
 
-  // Botões 'Registrar vistoria' nos cards
-  const btnRegistrarList = document.querySelectorAll('.btn-registrar-vistoria');
-  btnRegistrarList.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const obraId = btn.getAttribute('data-action-id');
-      state.selectObra(obraId);
-      state.navigate('obra-detalhe');
-    });
-  });
-
-  // Botões de olho (Ver detalhes)
-  const eyeButtons = document.querySelectorAll('.obra-card-eye-btn');
-  eyeButtons.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const obraId = btn.getAttribute('data-view-id');
-      state.selectObra(obraId);
-      state.navigate('obra-detalhe');
-    });
-  });
+  bindObrasCardClicks();
 }
 

@@ -55,8 +55,8 @@ export function renderRelatorioBloqueado() {
       <!-- Evidência Fotográfica Registrada neste Relatório -->
       <div class="bloqueado-status-rules-card" style="margin-bottom: 12px; padding: 12px;">
         <div style="font-size: 12px; font-weight: 700; color: #002D72; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-          <span style="display:inline-flex; align-items:center; gap:6px;">${Icons.cameraAiLens(18)} Evidência Fotográfica Registrada na Vistoria</span>
-          <span style="font-size: 11px; color: #059669; font-weight: 700; display:inline-flex; align-items:center; gap:4px;">${Icons.checkVerified(13)} Registrada no Relatório & PDF</span>
+          <span>Evidência Fotográfica Registrada na Vistoria</span>
+          <span style="font-size: 11px; color: #059669; font-weight: 700;">Registrada no Relatório & PDF</span>
         </div>
         <div style="border-radius: 10px; overflow: hidden; border: 1px solid #CBD5E1; background: #0F172A;">
           <img
@@ -67,7 +67,7 @@ export function renderRelatorioBloqueado() {
           />
         </div>
         <div style="font-size: 11px; color: #475569; margin-top: 6px; line-height: 1.35;">
-          ${vistoria.motivoIA || 'Evidência fotográfica capturada in-loco pela empreiteira e auditada pela IA Gemini.'}
+          ${vistoria.motivoIA || 'Evidência fotográfica capturada in-loco pela empreiteira e auditada pela IA.'}
         </div>
       </div>
 
@@ -75,8 +75,8 @@ export function renderRelatorioBloqueado() {
       <div class="bloqueado-protocolo-card">
         <div class="proto-card-top-row">
           <span class="proto-card-label">Código Oficial:</span>
-          <button class="proto-dots-btn" id="btnCopiarCodigoBloqueado" title="Copiar Código" style="display:inline-flex; align-items:center; gap:5px;">
-            ${Icons.checklistBb(14)} Copiar
+          <button class="proto-dots-btn" id="btnCopiarCodigoBloqueado" title="Copiar Código">
+            Copiar
           </button>
         </div>
 
@@ -97,11 +97,11 @@ export function renderRelatorioBloqueado() {
       <div class="bloqueado-status-rules-card">
         <div class="rule-status-row clickable" id="btnAbrirVisualizacao">
           <div class="rule-status-left">
-            <span class="rule-icon-box" style="display:inline-flex; align-items:center; justify-content:center;">${Icons.pdfDocument(20)}</span>
+            <span class="rule-icon-box" style="display:inline-flex; align-items:center; justify-content:center; color:#002D62;">${Icons.pdfDocument(17)}</span>
             <span class="rule-title-text">Visualizar PDF Oficial (Carimbo BB)</span>
           </div>
           <div class="rule-arrow">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
           </div>
@@ -109,7 +109,7 @@ export function renderRelatorioBloqueado() {
 
         <div class="rule-status-row locked-state" id="ruleEdicaoBloqueada">
           <div class="rule-status-left">
-            <span class="rule-icon-box" style="display:inline-flex; align-items:center; justify-content:center;">${Icons.lockInviolavel(19)}</span>
+            <span class="rule-icon-box" style="display:inline-flex; align-items:center; justify-content:center; color:#64748B;">${Icons.lockInviolavel(17)}</span>
             <span class="rule-title-text">Edição bloqueada (Inviolabilidade)</span>
           </div>
           <div class="rule-arrow">
@@ -119,7 +119,7 @@ export function renderRelatorioBloqueado() {
 
         <div class="rule-status-row locked-state" id="ruleReenvioBloqueado">
           <div class="rule-status-left">
-            <span class="rule-icon-box" style="display:inline-flex; align-items:center; justify-content:center;">${Icons.shieldFePublica(19)}</span>
+            <span class="rule-icon-box" style="display:inline-flex; align-items:center; justify-content:center; color:#64748B;">${Icons.shieldFePublica(17)}</span>
             <span class="rule-title-text">Reenvio vedado (Prevenção de duplicidade)</span>
           </div>
           <div class="rule-arrow">
@@ -130,8 +130,8 @@ export function renderRelatorioBloqueado() {
 
       <!-- Botões de Ação Final -->
       <div class="bloqueado-action-footer">
-        <button class="btn-secondary-white" id="btnValidarFePublicaDoc" style="margin-bottom: 8px; display:inline-flex; align-items:center; justify-content:center; gap:7px;">
-          ${Icons.shieldFePublica(18)} Validar Autenticidade (Fé Pública)
+        <button class="btn-secondary-white" id="btnValidarFePublicaDoc" style="margin-bottom: 8px;">
+          Validar Autenticidade (Fé Pública)
         </button>
         <button class="btn-primary-bb-yellow" id="btnVoltarDashboard">
           Voltar para Minhas Obras

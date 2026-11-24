@@ -11,9 +11,9 @@ const siteConfig = {
   name: 'BBVision',
   title: 'BBVision - Fiscalização Remota de Obras | Banco do Brasil',
   shortDescription:
-    'Sistema Inteligente de Fiscalização e Monitoramento Remoto de Obras do Banco do Brasil com IA Google Gemini, Fé Pública e Inviolabilidade Criptográfica SHA-256.',
+    'Sistema Inteligente de Fiscalização e Monitoramento Remoto de Obras do Banco do Brasil com IA, Fé Pública e Inviolabilidade Criptográfica SHA-256.',
   longDescription:
-    'Plataforma corporativa desenvolvida no programa Residência Tecnológica em Software & IA (Porto Digital / TakeOff) para substituir vistorias presenciais dispendiosas por fiscalizações remotas auditáveis, com captura fotográfica exclusiva in-loco, validação visual via Google Gemini 1.5 Flash, checklists dinâmicos, assinatura digital e selo criptográfico SHA-256 com validação pública de Fé Pública.',
+    'Plataforma corporativa desenvolvida no programa Residência Tecnológica em Software & IA (Porto Digital / TakeOff) para substituir vistorias presenciais dispendiosas por fiscalizações remotas auditáveis, com captura fotográfica exclusiva in-loco, validação visual via IA, checklists dinâmicos, assinatura digital e selo criptográfico SHA-256 com validação pública de Fé Pública.',
   version: '1.2.0',
   language: 'pt-BR',
   logoUrl: `${SITE_URL}/src/assets/logo.png`,

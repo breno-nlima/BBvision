@@ -7,6 +7,7 @@
  */
 
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const { supabase, isConfigured } = require('./config/supabase');
 const { ensureSeedImages } = require('./utils/seedImages');
 
@@ -495,8 +496,10 @@ const mockData = {
   },
 
   async createObraAsync(dados) {
+    const randSuffix = crypto.randomBytes(3).toString('hex');
     const novaObra = {
-      id: `obr-${Date.now()}`,
+      ...dados,
+      id: `obr-${Date.now()}-${randSuffix}`,
       created_at: new Date().toISOString(),
       status: dados.status || 'REGULAR',
       tipo: dados.tipo || 'Reforma e Modernização de Agência',
@@ -504,7 +507,6 @@ const mockData = {
       cadastrado_por_fiscal_id: dados.cadastrado_por_fiscal_id || '22222222-2222-4222-8222-222222222222',
       fiscal_responsavel_id: dados.fiscal_responsavel_id || dados.cadastrado_por_fiscal_id || '22222222-2222-4222-8222-222222222222',
       checklist_perguntas: dados.checklist_perguntas || dados.perguntasChecklist || this.getChecklistTemplate(),
-      ...dados,
     };
 
     if (isConfigured && supabase) {
@@ -521,8 +523,10 @@ const mockData = {
   },
 
   createObra(dados) {
+    const randSuffix = crypto.randomBytes(3).toString('hex');
     const novaObra = {
-      id: `obr-${Date.now()}`,
+      ...dados,
+      id: `obr-${Date.now()}-${randSuffix}`,
       created_at: new Date().toISOString(),
       status: dados.status || 'REGULAR',
       tipo: dados.tipo || 'Reforma e Modernização de Agência',
@@ -530,7 +534,6 @@ const mockData = {
       cadastrado_por_fiscal_id: dados.cadastrado_por_fiscal_id || '22222222-2222-4222-8222-222222222222',
       fiscal_responsavel_id: dados.fiscal_responsavel_id || dados.cadastrado_por_fiscal_id || '22222222-2222-4222-8222-222222222222',
       checklist_perguntas: dados.checklist_perguntas || dados.perguntasChecklist || this.getChecklistTemplate(),
-      ...dados,
     };
     this.obras.push(novaObra);
     return { ...novaObra };
@@ -641,8 +644,10 @@ const mockData = {
 
   createRelatorio(dados) {
     const nowIso = new Date().toISOString();
+    const randSuffix = crypto.randomBytes(3).toString('hex');
     const novo = {
-      id: `rel-${Date.now()}`,
+      ...dados,
+      id: `rel-${Date.now()}-${randSuffix}`,
       status: 'EM_ANDAMENTO',
       codigo_unico: null,
       hash_integridade: null,
@@ -650,7 +655,6 @@ const mockData = {
       created_at: nowIso,
       data: nowIso,
       data_finalizacao: null,
-      ...dados,
     };
     this.relatorios.push(novo);
     return { ...novo };
@@ -704,6 +708,8 @@ const mockData = {
     rel.status = status;
     rel.justificativa_fiscal = justificativa;
     rel.data_julgamento = nowIso;
+    // Invalida PDF antigo em cache para garantir recompilação com o parecer oficial do fiscal
+    rel.arquivo_pdf_url = null;
 
     // Atualiza status da obra correspondente
     const obra = this.obras.find(o => o.id === rel.obra_id);
@@ -713,25 +719,34 @@ const mockData = {
     return { relatorio: { ...rel }, obra: obra ? { ...obra } : null };
   },
 
+  atualizarPdfRelatorio(id, pdfRelativePath) {
+    const rel = this.relatorios.find(r => r.id === id);
+    if (!rel) return null;
+    rel.arquivo_pdf_url = pdfRelativePath;
+    return { ...rel };
+  },
+
   formatRelatorio(r) {
-    const obra = this.findObraById(r.obra_id);
-    const usuario = this.findUserById(r.usuario_id);
-    const fotos = this.fotos
-      .filter(f => f.relatorio_id === r.id)
-      .map(f => ({
-        ...f,
-        url: f.url || f.caminho_arquivo,
-        caminho_arquivo: f.caminho_arquivo || f.url,
-        hashSha256: f.hash_integridade || f.hash_sha256,
-        hash_sha256: f.hash_integridade || f.hash_sha256,
-        hash_integridade: f.hash_integridade || f.hash_sha256,
-        confianca: f.confianca !== undefined ? f.confianca : f.confianca_ia,
-        motivo: f.motivo || f.motivo_ia,
-        status: f.avaliacao_gemini || f.status_ia || 'APROVADO',
-      }));
-    const respostas = this.respostas
-      .filter(resp => resp.relatorio_id === r.id)
-      .map(resp => ({ ...resp }));
+    const obra = r.obra || this.findObraById(r.obra_id);
+    const usuario = r.usuario || this.findUserById(r.usuario_id);
+    const rawFotos = Array.isArray(r.fotos) && r.fotos.length > 0
+      ? r.fotos
+      : this.fotos.filter(f => f.relatorio_id === r.id);
+    const fotos = rawFotos.map(f => ({
+      ...f,
+      url: f.url || f.caminho_arquivo,
+      caminho_arquivo: f.caminho_arquivo || f.url,
+      hashSha256: f.hash_integridade || f.hash_sha256,
+      hash_sha256: f.hash_integridade || f.hash_sha256,
+      hash_integridade: f.hash_integridade || f.hash_sha256,
+      confianca: f.confianca !== undefined ? f.confianca : f.confianca_ia,
+      motivo: f.motivo || f.motivo_ia,
+      status: f.avaliacao_gemini || f.status_ia || 'APROVADO',
+    }));
+    const rawRespostas = Array.isArray(r.respostas) && r.respostas.length > 0
+      ? r.respostas
+      : this.respostas.filter(resp => resp.relatorio_id === r.id);
+    const respostas = rawRespostas.map(resp => ({ ...resp }));
 
     return {
       ...r,
@@ -741,7 +756,7 @@ const mockData = {
       hash_integridade: r.hash_integridade,
       dataFinalizacao: r.data_finalizacao || r.data,
       data_finalizacao: r.data_finalizacao || r.data,
-      pdfUrl: r.arquivo_pdf_url ? `/${r.arquivo_pdf_url.replace(/^\/+/, '')}` : `/api/relatorios/${r.id}/pdf`,
+      pdfUrl: `/api/relatorios/${r.id}/pdf`,
       obra: obra ? { ...obra } : null,
       usuario: usuario ? { id: usuario.id, nome: usuario.nome, email: usuario.email, cargo: usuario.cargo } : null,
       fotos,

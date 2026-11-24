@@ -96,10 +96,18 @@ class BVisionApp {
     }
 
     // Regra de Controle de Acesso por Persona (RBAC):
-    // Rodrigo (empreiteira) não pode acessar o painel de auditoria e julgamento exclusivo do Banco do Brasil
+    // 1. Empreiteira não pode acessar o painel de auditoria e julgamento exclusivo do Fiscal BB
     if (page === 'fiscal-auditoria' && userRole === 'empreiteira') {
       toast.warning('Acesso Restrito', 'O Painel de Auditoria e Julgamento é restrito aos fiscais de obra e auditores de engenharia do Banco do Brasil.');
       state.navigate('inicio', 'inicio');
+      return;
+    }
+
+    // 2. Fiscal BB não executa captura in-loco de campo (função exclusiva da Empreiteira)
+    const paginasExclusivasEmpreiteira = ['tipo-local', 'camera-ia', 'imagem-protegida', 'assinatura-responsavel', 'vistoria'];
+    if (paginasExclusivasEmpreiteira.includes(page) && userRole === 'fiscal') {
+      toast.warning('Fluxo Exclusivo de Campo', 'A captura fotográfica e assinatura in-loco são exclusivas da Empreiteira. Utilize o Painel de Auditoria ou o Editor de Checklist.');
+      state.navigate('fiscal-auditoria', 'fiscal-auditoria');
       return;
     }
 

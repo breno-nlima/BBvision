@@ -32,8 +32,8 @@ export function renderLogin() {
           <button type="button" class="auth-tab-btn ${abaAtiva === 'login' ? 'active' : ''}" id="tabBtnLogin">
             Entrar
           </button>
-          <button type="button" class="auth-tab-btn ${abaAtiva === 'cadastro' ? 'active' : ''}" id="tabBtnCadastro" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
-            ${Icons.iconeCadastro(16)} Criar Nova Conta
+          <button type="button" class="auth-tab-btn ${abaAtiva === 'cadastro' ? 'active' : ''}" id="tabBtnCadastro">
+            Criar Nova Conta
           </button>
         </div>
 
@@ -120,8 +120,8 @@ export function renderLogin() {
                 <input type="text" id="cadEmpresa" class="auth-input-field" placeholder="Nome da empresa ou agência" />
               </div>
               <div class="auth-field-group">
-                <label for="cadDoc" class="auth-field-label" style="display: flex; align-items: center; gap: 6px;">
-                  ${Icons.iconeCrea(16)} CREA / CAU / Matrícula
+                <label for="cadDoc" class="auth-field-label">
+                  CREA / CAU / Matrícula
                 </label>
                 <input type="text" id="cadDoc" class="auth-input-field" placeholder="Ex: CREA-SP 123456/D" />
               </div>
@@ -138,16 +138,16 @@ export function renderLogin() {
               </div>
             </div>
 
-            <button type="submit" class="btn-auth-submit" id="btnSubmitCadastro" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-              ${Icons.iconeCadastro(18)} Criar Conta e Acessar
+            <button type="submit" class="btn-auth-submit" id="btnSubmitCadastro">
+              Criar Conta e Acessar
             </button>
           </form>
         </div>
 
         <!-- Rodapé do Card de Autenticação -->
         <div class="auth-card-footer">
-          <button type="button" class="btn-link-public-doc" id="btnIrValidadorSemLogin" style="display:inline-flex; align-items:center; justify-content:center; gap:7px;">
-            ${Icons.shieldFePublica(18)} Validar Autenticidade de Laudo / Relatório (Público)
+          <button type="button" class="btn-link-public-doc" id="btnIrValidadorSemLogin">
+            Validar Autenticidade de Laudo / Relatório (Público)
           </button>
         </div>
 

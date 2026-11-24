@@ -3,50 +3,59 @@
  * Visualização e Auditoria dos Relatórios Gerados com Fé Pública
  */
 
-import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { renderHeader, bindHeaderEvents } from '../components/header.js';
 import { modal } from '../components/modal.js';
 import { toast } from '../components/toast.js';
+import { escapeHtml, normalizeImageSrc } from '../utils/formatters.js';
 
 export function renderRelatorios() {
   const itemsHtml = state.relatorios.map(rel => {
     const isAprovado = rel.statusRaw === 'APROVADO';
+    const isPendenteAjuste = rel.statusRaw === 'PENDENTE_AJUSTE';
     const primeiraFotoObj = Array.isArray(rel.fotos) && rel.fotos.length > 0 ? rel.fotos[0] : null;
     const rawImg = primeiraFotoObj
       ? (primeiraFotoObj.previewDataUrl || primeiraFotoObj.url || primeiraFotoObj.caminho_arquivo)
-      : (rel.id === 'rel-002' || rel.id === 'rel-seed-002' ? 'uploads/evidencias/seed_acessibilidade_bb.png' : 'uploads/evidencias/seed_fachada_bb.png');
-    const fotoSrc = rawImg && (rawImg.startsWith('data:') || rawImg.startsWith('http') || rawImg.startsWith('/'))
-      ? rawImg
-      : `/${String(rawImg || 'uploads/evidencias/seed_fachada_bb.png').replace(/^\/+/, '')}`;
+      : (rel.id === 'rel-seed-002' ? 'uploads/evidencias/seed_acessibilidade_bb.png' : 'uploads/evidencias/seed_fachada_bb.png');
+    const fotoSrc = normalizeImageSrc(rawImg);
     const motivoFoto = primeiraFotoObj?.motivo || primeiraFotoObj?.motivo_ia || 'Evidência fotográfica capturada in-loco com carimbo temporal BBVision.';
+    const statusChipClass = isAprovado
+      ? 'concluido'
+      : isPendenteAjuste
+      ? 'pendente'
+      : (rel.status === 'Concluído' ? 'concluido' : 'andamento');
+    const statusChipLabel = isAprovado
+      ? 'Homologado'
+      : isPendenteAjuste
+      ? 'Pendente de Ajuste'
+      : rel.status;
 
     return `
       <div class="relatorio-card-item">
         <div class="rel-top-row">
           <div>
-            <h4 class="rel-title">${rel.obraNome}</h4>
-            <span class="rel-sub">${rel.subtitulo} • Emitido em ${rel.data}</span>
+            <h4 class="rel-title">${escapeHtml(rel.obraNome)}</h4>
+            <span class="rel-sub">${escapeHtml(rel.subtitulo)} • Emitido em ${escapeHtml(rel.data)}</span>
           </div>
-          <span class="status-badge-chip ${isAprovado ? 'concluido' : (rel.status === 'Concluído' ? 'concluido' : 'andamento')}">
-            ${isAprovado ? '✓ Homologado' : rel.status}
+          <span class="status-badge-chip ${statusChipClass}">
+            ${escapeHtml(statusChipLabel)}
           </span>
         </div>
 
         <!-- Evidência Fotográfica Vinculada ao Relatório (Item 15.2) -->
         <div class="rel-photo-preview-box" style="margin: 10px 0; border-radius: 10px; overflow: hidden; border: 1px solid #E2E8F0; background: #F8FAFC; display: flex; align-items: center; gap: 12px; padding: 8px;">
           <img
-            src="${fotoSrc}"
-            alt="Foto da vistoria - ${rel.obraNome}"
+            src="${escapeHtml(fotoSrc)}"
+            alt="Foto da vistoria - ${escapeHtml(rel.obraNome)}"
             style="width: 96px; height: 68px; object-fit: cover; border-radius: 8px; border: 1px solid #CBD5E1; flex-shrink: 0; background: #0F172A;"
             onerror="this.onerror=null; this.src='/uploads/evidencias/seed_fachada_bb.png';"
           />
           <div style="flex: 1; min-width: 0;">
-            <div style="font-size: 11.5px; font-weight: 700; color: #002D72; margin-bottom: 2px; display:inline-flex; align-items:center; gap:5px;">
-              ${Icons.cameraAiLens(15)} Foto Registrada na Vistoria
+            <div style="font-size: 11.5px; font-weight: 700; color: #002D72; margin-bottom: 2px;">
+              Foto Registrada na Vistoria
             </div>
             <div style="font-size: 11px; color: #475569; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-              ${motivoFoto}
+              ${escapeHtml(motivoFoto)}
             </div>
           </div>
         </div>
@@ -54,7 +63,7 @@ export function renderRelatorios() {
         <div class="rel-audit-grid">
           <div class="audit-field">
             <span class="af-label">Código Único Oficial:</span>
-            <span class="af-code">${rel.codigoUnico}</span>
+            <span class="af-code">${escapeHtml(rel.codigoUnico)}</span>
           </div>
           ${rel.confiancaIA ? `
             <div class="audit-field">
@@ -67,17 +76,17 @@ export function renderRelatorios() {
         ${rel.hash ? `
           <div class="rel-hash-row">
             <span class="af-label">Hash SHA-256 Inviolável:</span>
-            <code class="af-hash">${rel.hash.substring(0, 32)}...</code>
+            <code class="af-hash">${escapeHtml(rel.hash.substring(0, 32))}...</code>
           </div>
         ` : ''}
 
         <div class="rel-action-row" style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button class="btn-ver-pdf" data-rel-id="${rel.id}" data-obra-nome="${rel.obraNome}" data-codigo="${rel.codigoUnico}" data-hash="${rel.hash || ''}" style="flex: 1.5; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
-            ${Icons.iconeRelatorio(18)} Visualizar Relatório PDF
+          <button class="btn-ver-pdf" data-rel-id="${escapeHtml(rel.id)}" data-obra-nome="${escapeHtml(rel.obraNome)}" data-codigo="${escapeHtml(rel.codigoUnico)}" data-hash="${escapeHtml(rel.hash || '')}" style="flex: 1.5;">
+            Visualizar Relatório PDF
           </button>
           ${rel.codigoUnico && rel.codigoUnico !== 'Pendente' ? `
-            <button type="button" class="btn-secondary-white btn-validar-fe-rel" data-codigo="${rel.codigoUnico}" style="flex: 1; font-size: 12px; padding: 10px 12px; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
-              ${Icons.shieldFePublica(16)} Validar Fé Pública
+            <button type="button" class="btn-secondary-white btn-validar-fe-rel" data-codigo="${escapeHtml(rel.codigoUnico)}" style="flex: 1; font-size: 12px; padding: 10px 12px;">
+              Validar Fé Pública
             </button>
           ` : ''}
         </div>
@@ -90,9 +99,7 @@ export function renderRelatorios() {
       ${renderHeader('relatorios')}
 
       <div class="relatorios-intro-header">
-        <h2 class="section-title" style="display: flex; align-items: center; gap: 8px;">
-          ${Icons.iconeRelatorio(26)} Relatórios & Auditoria
-        </h2>
+        <h2 class="section-title">Relatórios & Auditoria</h2>
         <p class="section-subtitle">Documentos oficiais com inviolabilidade matemática, carimbo temporal e fé pública do Banco do Brasil.</p>
       </div>
 

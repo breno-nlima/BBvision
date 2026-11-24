@@ -6,6 +6,7 @@
 
 import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
+import { toast } from '../components/toast.js';
 
 export function renderTipoLocal() {
   const currentTipo = state.currentVistoria.tipoLocal || 'Agência Bancária';
@@ -40,17 +41,16 @@ export function renderTipoLocal() {
   const cardsHtml = locais.map(loc => {
     const isSelected = loc.titulo === currentTipo;
     const cardClass = isSelected ? 'tipo-card-amarelo' : 'tipo-card-azul';
-    const iconColor = isSelected ? '#002D62' : '#FFFFFF';
 
     let iconSvg = '';
     if (loc.id === 'agencia') {
-      iconSvg = Icons.iconeBanco(36);
+      iconSvg = Icons.iconAgencia(30, 'currentColor');
     } else if (loc.id === 'caixa') {
-      iconSvg = Icons.iconAtm(32, iconColor);
+      iconSvg = Icons.iconAtm(30, 'currentColor');
     } else if (loc.id === 'externa') {
-      iconSvg = Icons.iconAreaExterna(32, iconColor);
+      iconSvg = Icons.iconAreaExterna(30, 'currentColor');
     } else {
-      iconSvg = Icons.iconPredioAdmin(32, iconColor);
+      iconSvg = Icons.iconPredioAdmin(30, 'currentColor');
     }
 
     return `
@@ -114,6 +114,13 @@ export function bindTipoLocalEvents() {
   if (btnVoltar) {
     btnVoltar.addEventListener('click', () => {
       state.navigate('obra-detalhe');
+    });
+  }
+
+  const btnOpcoesTipo = document.getElementById('btnOpcoesTipo');
+  if (btnOpcoesTipo) {
+    btnOpcoesTipo.addEventListener('click', () => {
+      toast.info('Seleção de Local', 'Escolha o ambiente principal da vistoria para direcionar o checklist técnico da obra.');
     });
   }
 

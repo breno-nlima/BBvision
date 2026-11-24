@@ -5,6 +5,8 @@
  * local segura do dispositivo e sincronizadas automaticamente ao restabelecer a conexão."
  */
 
+import { API_BASE_URL } from './api.js';
+
 const QUEUE_STORAGE_KEY = 'bbvision_offline_queue';
 
 class OfflineSyncService {
@@ -92,15 +94,33 @@ class OfflineSyncService {
     for (const item of fila) {
       try {
         const dados = item.dados || {};
+        const respObj = dados.respostas || {};
+        const justMap = respObj.justificativas || {};
+        const perguntas = Array.isArray(dados.perguntasChecklist) ? dados.perguntasChecklist : [];
+        const respostasLista = perguntas.length > 0
+          ? perguntas.map((q, idx) => {
+              const chave = q.chaveResposta || q.id || `pergunta_${idx}`;
+              const rawVal = respObj[chave];
+              const valorStr = Array.isArray(rawVal) ? rawVal.join('; ') : String(rawVal || 'Não informado');
+              return {
+                pergunta: q.titulo || `Item ${idx + 1}`,
+                valor: valorStr,
+                justificativa: justMap[chave] || null,
+                tipo: q.tipo === 'multipla_escolha' ? 'multipla_escolha' : 'texto',
+              };
+            })
+          : [
+              { pergunta: '1. Fachada da agência', valor: respObj.fachadaLegivel || 'Conforme', justificativa: justMap.fachadaLegivel || null },
+              { pergunta: '2. Segurança e EPC', valor: Array.isArray(respObj.segurancaEpc) ? respObj.segurancaEpc.join('; ') : (respObj.segurancaEpc || 'Verificado') },
+              { pergunta: '3. Relato estrutural', valor: respObj.relatoEstrutural || respObj.observacoes || 'Registro sincronizado da fila offline.' },
+              { pergunta: '4. Acessibilidade', valor: respObj.acessibilidade || 'Conforme', justificativa: justMap.acessibilidade || null },
+            ];
+
         const payload = {
           obra_id: dados.obraId || dados.obra_id || 'obr-001',
           codigo_unico: dados.codigoUnico || null,
           timestamp: item.timestamp,
-          respostas: dados.respostas ? [
-            { pergunta: 'Status da alvenaria e acabamentos', valor: dados.respostas.alvenaria || dados.respostas.fachada || 'Conforme' },
-            { pergunta: 'Condições da calçada e acessibilidade', valor: dados.respostas.calcada || 'Conforme' },
-            { pergunta: 'Observações de engenharia e campo', valor: dados.respostas.observacoes || 'Registro sincronizado da fila offline.' }
-          ] : [],
+          respostas: respostasLista,
           fotos: (dados.fotoCamera || dados.fotoUrl) ? [{
             imagemBase64: dados.fotoCamera || null,
             caminho_arquivo: dados.fotoUrl && !dados.fotoCamera ? dados.fotoUrl : null,
@@ -117,7 +137,7 @@ class OfflineSyncService {
           headers['Authorization'] = `Bearer ${token}`;
         }
 
-        const response = await fetch('/api/relatorios/sincronizar-offline', {
+        const response = await fetch(`${API_BASE_URL}/api/relatorios/sincronizar-offline`, {
           method: 'POST',
           headers,
           body: JSON.stringify(payload),

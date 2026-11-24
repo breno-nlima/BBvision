@@ -11,6 +11,7 @@ import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { api } from '../services/api.js';
 import { toast } from '../components/toast.js';
+import { getPerguntasChecklistAtual } from './checklistPergunta.js';
 
 const PLACEHOLDER_OBS_DINAMICO = 'Neste campo, preencher com observações complementares da vistoria ou clicar em "Gerar Resumo das Respostas com IA" acima...';
 
@@ -44,7 +45,7 @@ export function renderChecklistDinamico() {
           </button>
           <div class="bvision-white-title">
             <span class="bb-eye-badge">${Icons.logoBVision(24)}</span>
-            <span class="brand-name-white">BVision</span>
+            <span class="brand-name-white">BBVision</span>
             <span class="page-title-white">Checklist Complementar</span>
           </div>
         </div>
@@ -73,8 +74,8 @@ export function renderChecklistDinamico() {
 
           <!-- Justificativa qualitativa quando selecionado Não ou Parcial -->
           <div class="justificativa-qualitativa-box ${precisaJustSinalizacao ? '' : 'hidden'}" id="boxJustificativaSinalizacao" style="margin-top: 10px;">
-            <label class="justificativa-qualitativa-label" for="txtJustificativaSinalizacao" style="display:inline-flex; align-items:center; gap:6px;">
-              ${Icons.warningAlert(16)} Justificativa obrigatória (Sinalização Parcial ou Não Conforme):
+            <label class="justificativa-qualitativa-label" for="txtJustificativaSinalizacao">
+              Justificativa obrigatória (Sinalização Parcial ou Não Conforme):
             </label>
             <textarea
               id="txtJustificativaSinalizacao"
@@ -137,12 +138,12 @@ export function renderChecklistDinamico() {
           <div class="field-card-header" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
             <label class="field-title">Observações adicionais</label>
             <button type="button" class="btn-ia-suggest-action" id="btnGerarSugestaoIa" title="Preenche automaticamente o campo abaixo com um resumo técnico das respostas" style="display:inline-flex; align-items:center; gap:6px;">
-              ${Icons.aiSparkle(16)} Gerar Resumo das Respostas com IA
+              ${Icons.aiSparkle(15)} Gerar Resumo das Respostas com IA
             </button>
           </div>
           <div class="ai-assistant-banner" style="flex-direction: column; align-items: flex-start; gap: 2px;">
             <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-              <span class="ai-robot-icon" style="display:inline-flex; align-items:center; gap:6px;">${Icons.aiSparkle(15)} Assistente de Parecer IA BBVision</span>
+              <span class="ai-robot-icon">Assistente de Parecer IA BBVision</span>
               <span class="ai-warning-human">Revise antes de enviar</span>
             </div>
             <span style="font-size: 11px; color: #475569;">
@@ -150,7 +151,7 @@ export function renderChecklistDinamico() {
             </span>
           </div>
           <div class="ia-saved-feedback-banner hidden" id="iaDinamicoFeedbackBanner" style="margin-bottom: 8px;">
-            <span style="display:inline-flex; align-items:center; gap:6px;">${Icons.checkVerified(15)} <strong>Resumo gerado pela IA e inserido no campo abaixo!</strong></span>
+            <span><strong>Resumo gerado pela IA e inserido no campo abaixo.</strong></span>
           </div>
           <textarea
             class="field-textarea"
@@ -192,8 +193,16 @@ export function bindChecklistDinamicoEvents() {
   const btnVoltar = document.getElementById('btnVoltarPerguntaAnterior');
   if (btnVoltar) {
     btnVoltar.addEventListener('click', () => {
-      state.checklistQuestionIndex = 3;
+      const perguntas = getPerguntasChecklistAtual();
+      state.checklistQuestionIndex = Math.max(0, perguntas.length - 1);
       state.navigate('checklist-pergunta');
+    });
+  }
+
+  const btnOpcoes = document.getElementById('btnChecklistOpcoes');
+  if (btnOpcoes) {
+    btnOpcoes.addEventListener('click', () => {
+      toast.info('Checklist Complementar', 'Preencha sinalização, limpeza e câmeras. Você pode usar a IA para consolidar as observações e revisar antes de avançar.');
     });
   }
 
@@ -279,7 +288,8 @@ export function bindChecklistDinamicoEvents() {
   const btnGerarIa = document.getElementById('btnGerarSugestaoIa');
   if (btnGerarIa && txtObs) {
     btnGerarIa.addEventListener('click', async () => {
-      btnGerarIa.innerText = '⏳ Gerando resumo...';
+      const originalHtml = btnGerarIa.innerHTML;
+      btnGerarIa.innerText = 'Gerando resumo...';
       btnGerarIa.disabled = true;
 
       const sinStr = respostas.sinalizacao ? `Sinalização ${respostas.sinalizacao.toLowerCase()}` : 'Sinalização verificada';
@@ -298,7 +308,7 @@ export function bindChecklistDinamicoEvents() {
         txtObs.value = resumoFallback;
         respostas.observacoes = resumoFallback;
       } finally {
-        btnGerarIa.innerText = '✨ Gerar Resumo das Respostas com IA';
+        btnGerarIa.innerHTML = originalHtml;
         btnGerarIa.disabled = false;
         if (iaBanner) iaBanner.classList.remove('hidden');
         txtObs.classList.add('textarea-ia-highlight');

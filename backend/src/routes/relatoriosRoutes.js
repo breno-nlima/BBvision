@@ -12,7 +12,7 @@ const { upload } = require('../middlewares/uploadMiddleware');
 // Criação e listagem de relatórios
 router.post('/', requireAuth, relatoriosController.criar);
 router.get('/', optionalAuth, relatoriosController.listar);
-router.get('/painel/resumo', requireAuth, relatoriosController.obterPainelAuditoria);
+router.get('/painel/resumo', requireAuth, requireRole(['fiscal', 'engenheiro', 'admin']), relatoriosController.obterPainelAuditoria);
 
 // Sincronização offline em lote ou individual (HU05) - Antes do parâmetro :id
 router.post('/sincronizar-offline', requireAuth, relatoriosController.sincronizarOffline);

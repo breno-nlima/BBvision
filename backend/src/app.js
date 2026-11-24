@@ -23,6 +23,9 @@ const { generalLimiter } = require('./middlewares/rateLimiter');
 
 const app = express();
 
+// Confia no primeiro proxy reverso (Hostinger / Nginx / Cloudflare) para IP real e HTTPS
+app.set('trust proxy', 1);
+
 // 1. Compressão HTTP (Gzip / Deflate) para máxima escalabilidade e economia de banda
 app.use(compression({
   threshold: 1024, // Comprime respostas maiores que 1KB

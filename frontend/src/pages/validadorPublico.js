@@ -9,6 +9,7 @@ import { state } from '../services/state.js';
 import { api } from '../services/api.js';
 import { modal } from '../components/modal.js';
 import { toast } from '../components/toast.js';
+import { escapeHtml } from '../utils/formatters.js';
 
 let resultadoConsulta = null;
 let termoConsultadoAtual = '';
@@ -28,14 +29,14 @@ export function renderValidadorPublico() {
           </button>
         </div>
         <div class="header-actions">
-          <span class="badge-tag-gov">🛡️ FÉ PÚBLICA • BACEN / BB</span>
+          <span class="badge-tag-gov">FÉ PÚBLICA • BACEN / BB</span>
         </div>
       </header>
 
       <!-- Hero Card Institucional de Fé Pública -->
       <section class="validador-hero-card">
         <div class="validador-hero-icon">
-          ${Icons.shieldYellow(38)}
+          ${Icons.shieldYellow(26, '#FED304')}
         </div>
         <div class="validador-hero-text">
           <h1>Validador de Integridade e Fé Pública</h1>
@@ -46,7 +47,7 @@ export function renderValidadorPublico() {
       <!-- Card Explicativo: Como Funciona a Validação por Fé Pública (Item 16) -->
       <section class="fe-publica-explainer-card">
         <h2 class="fe-explainer-title">
-          <span style="display:inline-flex; align-items:center; gap:6px;">${Icons.infoBadge(18)} Como funciona a Validação por Fé Pública?</span>
+          Como funciona a Validação por Fé Pública?
         </h2>
         <div class="fe-steps-grid">
           <div class="fe-step-box">
@@ -87,7 +88,7 @@ export function renderValidadorPublico() {
               name="codigoOuHash"
               class="validador-input" 
               placeholder="Ex.: 8F4A2C19E70B34DF ou clique em um relatório abaixo..."
-              value="${termoConsultadoAtual}"
+              value="${escapeHtml(termoConsultadoAtual)}"
               autocomplete="off"
               spellcheck="false"
             />
@@ -96,21 +97,21 @@ export function renderValidadorPublico() {
 
           ${relatoriosDisponiveis.length > 0 ? `
             <div class="quick-test-codes-wrap" style="margin: 10px 0 12px;">
-              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #475569; margin-bottom: 6px;">
-                ${Icons.boltFlash(15)} Toque em um relatório emitido para testar a validação agora:
+              <span style="display: block; font-size: 11.5px; font-weight: 600; color: #475569; margin-bottom: 6px;">
+                Toque em um relatório emitido para testar a validação agora:
               </span>
               <div style="display: flex; flex-wrap: wrap; gap: 6px;">
                 ${relatoriosDisponiveis.slice(0, 4).map(r => `
-                  <button type="button" class="quick-code-pill-btn" data-codigo="${r.codigoUnico}" style="display:inline-flex; align-items:center; gap:5px;">
-                    ${Icons.keyProtocolo(14)} <strong>${r.codigoUnico}</strong> (${r.obraNome})
+                  <button type="button" class="quick-code-pill-btn" data-codigo="${escapeHtml(r.codigoUnico)}">
+                    <strong>${escapeHtml(r.codigoUnico)}</strong> (${escapeHtml(r.obraNome)})
                   </button>
                 `).join('')}
               </div>
             </div>
           ` : ''}
 
-          <button type="submit" class="btn-action-primary" id="btnConsultarIntegridade" style="display:inline-flex; align-items:center; justify-content:center; gap:8px;">
-            ${carregandoConsulta ? '<span class="loading-spinner"></span> Validando no Banco...' : `${Icons.search(18)} Consultar Fé Pública e Integridade`}
+          <button type="submit" class="btn-action-primary" id="btnConsultarIntegridade">
+            ${carregandoConsulta ? '<span class="loading-spinner"></span> Validando no Banco...' : 'Consultar Fé Pública e Integridade'}
           </button>
         </form>
       </section>
@@ -155,7 +156,7 @@ function renderResultadoConteudo() {
           </div>
         </div>
         <div class="resultado-detalhes">
-          <p><strong>Identificador pesquisado:</strong> <code>${termoConsultadoAtual}</code></p>
+          <p><strong>Identificador pesquisado:</strong> <code>${escapeHtml(termoConsultadoAtual)}</code></p>
           <p class="alerta-fraude">Atenção: Se este documento foi impresso ou recebido por e-mail, pode ter sofrido adulteração física ou adulteração de hash.</p>
         </div>
       </div>
@@ -165,7 +166,6 @@ function renderResultadoConteudo() {
   if (!resultadoConsulta) {
     return `
       <div class="resultado-empty-hint">
-        <span style="display:flex; justify-content:center; margin-bottom:6px;">${Icons.shieldFePublica(36)}</span>
         <p>Insira o código de 16 caracteres ou o hash de 64 caracteres do relatório para certificar a autenticidade.</p>
       </div>
     `;
@@ -174,12 +174,17 @@ function renderResultadoConteudo() {
   const rel = resultadoConsulta.relatorio || resultadoConsulta;
   const obra = rel.obra || {};
   const foto = rel.fotos?.[0] || {};
+  const statusDisplay = rel.status === 'APROVADO'
+    ? 'REGULAR / HOMOLOGADO'
+    : rel.status === 'PENDENTE_AJUSTE'
+    ? 'PENDENTE DE AJUSTE'
+    : (rel.status || 'FINALIZADO');
 
   return `
     <div class="resultado-box valido fade-in">
       <div class="resultado-header-status">
         <div class="status-seal-valid">
-          ${Icons.shieldYellow(32)}
+          ${Icons.shieldYellow(24, '#059669')}
         </div>
         <div>
           <span class="badge-selo-oficial">BANCO DO BRASIL S.A. • FÉ PÚBLICA</span>
@@ -191,51 +196,51 @@ function renderResultadoConteudo() {
       <div class="resultado-grid-info">
         <div class="rgi-item">
           <span class="rgi-label">CÓDIGO ÚNICO (HEX):</span>
-          <span class="rgi-value highlight-code">${rel.codigo_unico || rel.codigoUnico}</span>
+          <span class="rgi-value highlight-code">${escapeHtml(rel.codigo_unico || rel.codigoUnico)}</span>
         </div>
 
         <div class="rgi-item full-width">
           <span class="rgi-label">HASH CRIPTOGRÁFICO SHA-256:</span>
-          <span class="rgi-value hash-code">${rel.hash_integridade || rel.hashIntegridade || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'}</span>
+          <span class="rgi-value hash-code">${escapeHtml(rel.hash_integridade || rel.hashIntegridade || '')}</span>
         </div>
 
         <div class="rgi-item">
           <span class="rgi-label">UNIDADE / OBRA:</span>
-          <span class="rgi-value">${obra.nome || 'Agência Banco do Brasil'}</span>
+          <span class="rgi-value">${escapeHtml(obra.nome || 'Agência Banco do Brasil')}</span>
         </div>
 
         <div class="rgi-item">
           <span class="rgi-label">SITUAÇÃO DA FISCALIZAÇÃO:</span>
-          <span class="rgi-value status-obra-${(rel.status || 'REGULAR').toLowerCase()}">${rel.status === 'APROVADO' ? 'REGULAR / HOMOLOGADO' : rel.status}</span>
+          <span class="rgi-value status-obra-${escapeHtml((rel.status || 'REGULAR').toLowerCase())}">${escapeHtml(statusDisplay)}</span>
         </div>
 
         <div class="rgi-item">
           <span class="rgi-label">ENDEREÇO:</span>
-          <span class="rgi-value">${obra.endereco || 'Endereço da Unidade BB'}</span>
+          <span class="rgi-value">${escapeHtml(obra.endereco || 'Endereço da Unidade BB')}</span>
         </div>
 
         <div class="rgi-item">
           <span class="rgi-label">AUDITORIA DA IA:</span>
-          <span class="rgi-value">IA BBVision • Confiança ${Math.round((foto.confianca_ia || 0.96) * 100)}% (Aprovado)</span>
+          <span class="rgi-value">IA BBVision • Confiança ${Math.round((foto.confianca_ia || foto.confianca || 0.96) * 100)}% (Aprovado)</span>
         </div>
 
         ${rel.justificativa_fiscal ? `
           <div class="rgi-item full-width">
-            <span class="rgi-label">PARECER DO FISCAL BB (MARIANA):</span>
-            <span class="rgi-value parecer-text">"${rel.justificativa_fiscal}"</span>
+            <span class="rgi-label">PARECER DO FISCAL BB:</span>
+            <span class="rgi-value parecer-text">"${escapeHtml(rel.justificativa_fiscal)}"</span>
           </div>
         ` : ''}
       </div>
 
       <div class="resultado-acoes-footer">
-        <button class="btn-download-pdf-valid" id="btnAbrirPdfValidador" style="display:inline-flex; align-items:center; justify-content:center; gap:8px;">
-          ${Icons.pdfDocument(18)} Visualizar PDF Oficial com Carimbo Criptográfico
+        <button class="btn-download-pdf-valid" id="btnAbrirPdfValidador">
+          Visualizar PDF Oficial com Carimbo Criptográfico
         </button>
-        <button class="btn-download-pdf-valid" id="btnCopiarLinkValidador" style="background: rgba(254, 211, 4, 0.15); color: #003882; border: 1px solid rgba(0, 56, 130, 0.3); display:inline-flex; align-items:center; justify-content:center; gap:8px;">
-          ${Icons.hashCrypto(16)} Copiar Link de Validação Pública
+        <button class="btn-download-pdf-valid" id="btnCopiarLinkValidador" style="background: rgba(254, 211, 4, 0.15); color: #003882; border: 1px solid rgba(0, 56, 130, 0.3);">
+          Copiar Link de Validação Pública
         </button>
-        <button class="btn-download-pdf-valid" id="btnImprimirCertidao" style="background: #F8FAFC; color: #475569; border: 1px solid #CBD5E1; display:inline-flex; align-items:center; justify-content:center; gap:8px;">
-          ${Icons.shieldFePublica(16)} Imprimir Certidão de Fé Pública
+        <button class="btn-download-pdf-valid" id="btnImprimirCertidao" style="background: #F8FAFC; color: #475569; border: 1px solid #CBD5E1;">
+          Imprimir Certidão de Fé Pública
         </button>
       </div>
     </div>

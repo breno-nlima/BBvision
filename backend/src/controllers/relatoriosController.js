@@ -13,6 +13,57 @@ const { generateUniqueCode, generateReportIntegrityHash, generateSha256 } = requ
 const { resolveSafePath, sanitizeString, validateImageMagicBytes } = require('../utils/securityUtils');
 const { UPLOAD_ROOT, EVIDENCIAS_DIR } = require('../middlewares/uploadMiddleware');
 
+/**
+ * Decodifica e salva uma imagem Base64 validando assinatura binária (Magic Bytes)
+ * e limites seguros antes de gravar em disco.
+ */
+async function salvarFotoBase64Segura(rawBase64, prefix = 'evidencia_rel') {
+  if (!rawBase64 || typeof rawBase64 !== 'string') return null;
+  if (rawBase64.length > 25 * 1024 * 1024) {
+    const err = new Error('A evidência fotográfica excede o limite máximo permitido de 15MB.');
+    err.status = 400;
+    throw err;
+  }
+
+  let mimeType = 'image/jpeg';
+  let base64Part = rawBase64;
+  if (rawBase64.includes(',')) {
+    const parts = rawBase64.split(',');
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    if (mimeMatch) mimeType = mimeMatch[1];
+    base64Part = parts[1];
+  }
+
+  const buffer = Buffer.from(base64Part, 'base64');
+  const magic = validateImageMagicBytes(buffer);
+  if (!magic.valid && buffer.length > 500) {
+    const err = new Error('A evidência enviada não possui assinatura binária válida de imagem (JPEG, PNG ou WEBP).');
+    err.status = 400;
+    throw err;
+  }
+  if (magic.valid) {
+    mimeType = magic.mimeType;
+  }
+
+  const ext = mimeType === 'image/png' ? '.png' : mimeType === 'image/webp' ? '.webp' : '.jpg';
+  const fileName = `${prefix}_${Date.now()}_${Math.round(Math.random() * 1e6)}${ext}`;
+  const filePath = path.join(EVIDENCIAS_DIR, fileName);
+  await fs.promises.writeFile(filePath, buffer);
+
+  return {
+    caminhoRelativo: path.join('uploads', 'evidencias', fileName).replace(/\\/g, '/'),
+    hash: generateSha256(buffer),
+  };
+}
+
+function verificarPermissaoMutacaoRelatorio(req, relatorio) {
+  if (!req.user) return false;
+  if (req.user.cargo === 'empreiteira' && relatorio.usuario_id && relatorio.usuario_id !== req.user.id) {
+    return false;
+  }
+  return true;
+}
+
 const relatoriosController = {
   /**
    * POST /api/relatorios
@@ -65,15 +116,16 @@ const relatoriosController = {
           let b64 = f.imagemBase64 || (typeof f.url === 'string' && f.url.startsWith('data:image/') ? f.url : null);
 
           if (b64) {
-            let base64Part = b64;
-            if (base64Part.includes(',')) base64Part = base64Part.split(',')[1];
-            const buffer = Buffer.from(base64Part, 'base64');
-            hashFoto = hashFoto || generateSha256(buffer);
-            const ext = '.jpg';
-            const fileName = `evidencia_rel_${Date.now()}_${Math.round(Math.random() * 1e6)}${ext}`;
-            const filePath = path.join(EVIDENCIAS_DIR, fileName);
-            await fs.promises.writeFile(filePath, buffer);
-            caminhoRelativo = path.join('uploads', 'evidencias', fileName).replace(/\\/g, '/');
+            const saved = await salvarFotoBase64Segura(b64, 'evidencia_rel');
+            if (saved) {
+              caminhoRelativo = saved.caminhoRelativo;
+              hashFoto = hashFoto || saved.hash;
+            }
+          } else if (caminhoRelativo && !resolveSafePath(caminhoRelativo, UPLOAD_ROOT)) {
+            return res.status(400).json({
+              status: 400,
+              erro: 'Caminho de arquivo da evidência inválido ou não autorizado.',
+            });
           }
 
           if (caminhoRelativo || b64) {
@@ -141,15 +193,11 @@ const relatoriosController = {
           let hashFoto = itemFoto.hash_integridade || '';
 
           if (itemFoto.imagemBase64) {
-            let base64Data = itemFoto.imagemBase64;
-            if (base64Data.includes(',')) base64Data = base64Data.split(',')[1];
-            const buffer = Buffer.from(base64Data, 'base64');
-            hashFoto = generateSha256(buffer);
-
-            const fileName = `offline_${Date.now()}_${Math.round(Math.random() * 1e6)}.jpg`;
-            const filePath = path.join(EVIDENCIAS_DIR, fileName);
-            await fs.promises.writeFile(filePath, buffer);
-            caminhoRelativo = path.join('uploads', 'evidencias', fileName).replace(/\\/g, '/');
+            const saved = await salvarFotoBase64Segura(itemFoto.imagemBase64, 'offline');
+            if (saved) {
+              caminhoRelativo = saved.caminhoRelativo;
+              hashFoto = saved.hash;
+            }
           }
 
           mockData.addFoto(novoRelatorio.id, {
@@ -167,6 +215,7 @@ const relatoriosController = {
         const respostasSanitizadas = respostas.map(r => ({
           pergunta: sanitizeString(r.pergunta || 'Item não especificado'),
           valor: sanitizeString(r.valor || 'Não informado'),
+          justificativa: r.justificativa ? sanitizeString(r.justificativa) : null,
           sugestao_ia: r.sugestao_ia ? sanitizeString(r.sugestao_ia) : null,
           tipo: r.tipo === 'multipla_escolha' ? 'multipla_escolha' : 'texto',
         }));
@@ -178,7 +227,8 @@ const relatoriosController = {
         ? codigo_unico.toUpperCase()
         : generateUniqueCode();
 
-      const timeFinal = timestamp ? new Date(timestamp).getTime() : Date.now();
+      const parsedTime = timestamp ? new Date(timestamp).getTime() : NaN;
+      const timeFinal = Number.isNaN(parsedTime) ? Date.now() : parsedTime;
       const hashIntegridade = generateReportIntegrityHash(codigo, timeFinal);
 
       const relatorioFormatado = mockData.formatRelatorio({
@@ -294,6 +344,13 @@ const relatoriosController = {
         });
       }
 
+      if (!verificarPermissaoMutacaoRelatorio(req, relatorio)) {
+        return res.status(403).json({
+          status: 403,
+          erro: 'Acesso negado. Você não tem permissão para alterar respostas de um relatório de outro responsável.',
+        });
+      }
+
       // Regra de Inviolabilidade TakeOff: Não permite editar se estiver finalizado
       if (relatorio.status !== 'EM_ANDAMENTO') {
         return res.status(403).json({
@@ -339,6 +396,13 @@ const relatoriosController = {
         });
       }
 
+      if (!verificarPermissaoMutacaoRelatorio(req, relatorio)) {
+        return res.status(403).json({
+          status: 403,
+          erro: 'Acesso negado. Você não tem permissão para anexar fotos a um relatório de outro responsável.',
+        });
+      }
+
       if (relatorio.status !== 'EM_ANDAMENTO') {
         return res.status(403).json({
           status: 403,
@@ -371,23 +435,13 @@ const relatoriosController = {
         hash_integridade = generateSha256(buffer);
       } else if (imagemBase64 || (url && typeof url === 'string' && url.startsWith('data:image/'))) {
         const rawCandidate = imagemBase64 || url;
-        if (typeof rawCandidate === 'string' && (rawCandidate.startsWith('data:image/') || rawCandidate.length > 256)) {
-          let base64Part = rawCandidate;
-          let mimeType = 'image/jpeg';
-          if (rawCandidate.includes(',')) {
-            const parts = rawCandidate.split(',');
-            const mimeMatch = parts[0].match(/:(.*?);/);
-            if (mimeMatch) mimeType = mimeMatch[1];
-            base64Part = parts[1];
-          }
-          const buffer = Buffer.from(base64Part, 'base64');
-          const ext = mimeType === 'image/png' ? '.png' : mimeType === 'image/webp' ? '.webp' : '.jpg';
-          const fileName = `evidencia_rel_${Date.now()}_${Math.round(Math.random() * 1e6)}${ext}`;
-          const filePath = path.join(EVIDENCIAS_DIR, fileName);
-          await fs.promises.writeFile(filePath, buffer);
-          caminho_arquivo = path.join('uploads', 'evidencias', fileName).replace(/\\/g, '/');
-          if (!hash_integridade) {
-            hash_integridade = generateSha256(buffer);
+        if (typeof rawCandidate === 'string' && rawCandidate.trim().length > 0) {
+          const saved = await salvarFotoBase64Segura(rawCandidate, 'evidencia_rel');
+          if (saved) {
+            caminho_arquivo = saved.caminhoRelativo;
+            if (!hash_integridade) {
+              hash_integridade = saved.hash;
+            }
           }
         }
       } else if (!caminho_arquivo && url && typeof url === 'string') {
@@ -398,6 +452,14 @@ const relatoriosController = {
         return res.status(400).json({
           status: 400,
           erro: 'Caminho do arquivo e hash de integridade SHA-256 são obrigatórios.',
+        });
+      }
+
+      // Validação contra Path Traversal em caminhos fornecidos diretamente
+      if (!caminho_arquivo.startsWith('data:image/') && !resolveSafePath(caminho_arquivo, UPLOAD_ROOT)) {
+        return res.status(400).json({
+          status: 400,
+          erro: 'Caminho de arquivo da foto inválido ou fora do diretório de uploads autorizado.',
         });
       }
 
@@ -447,6 +509,13 @@ const relatoriosController = {
         });
       }
 
+      if (!verificarPermissaoMutacaoRelatorio(req, relatorio)) {
+        return res.status(403).json({
+          status: 403,
+          erro: 'Acesso negado. Você não tem permissão para finalizar um relatório de outro responsável.',
+        });
+      }
+
       // Regra de Imutabilidade e Prevenção de Duplicidade
       if (relatorio.status !== 'EM_ANDAMENTO') {
         return res.status(400).json({
@@ -458,7 +527,10 @@ const relatoriosController = {
         });
       }
 
-      // Processa fotos adicionais se enviadas diretamente na finalização
+      // Processa fotos adicionais enviadas na finalização com deduplicação por hash SHA-256 / caminho
+      const existingHashes = new Set((relatorio.fotos || []).map(f => f.hash_integridade || f.hash_sha256).filter(Boolean));
+      const existingPaths = new Set((relatorio.fotos || []).map(f => f.caminho_arquivo || f.url).filter(Boolean));
+
       const fotosParaAnexar = req.body.fotos || (req.body.foto ? [req.body.foto] : (req.body.imagemBase64 ? [req.body] : []));
       if (Array.isArray(fotosParaAnexar) && fotosParaAnexar.length > 0) {
         for (const itemFoto of fotosParaAnexar) {
@@ -466,15 +538,23 @@ const relatoriosController = {
           let hashFoto = itemFoto.hash_integridade || itemFoto.hash_sha256 || '';
           let b64 = itemFoto.imagemBase64 || (typeof itemFoto.url === 'string' && itemFoto.url.startsWith('data:image/') ? itemFoto.url : null);
 
+          // Evita anexar foto duplicada se já foi vinculada anteriormente via POST /fotos
+          if ((hashFoto && existingHashes.has(hashFoto)) || (caminhoRel && existingPaths.has(caminhoRel))) {
+            continue;
+          }
+
           if (b64) {
-            let base64Part = b64;
-            if (base64Part.includes(',')) base64Part = base64Part.split(',')[1];
-            const buffer = Buffer.from(base64Part, 'base64');
-            hashFoto = hashFoto || generateSha256(buffer);
-            const fileName = `evidencia_fin_${Date.now()}_${Math.round(Math.random() * 1e6)}.jpg`;
-            const filePath = path.join(EVIDENCIAS_DIR, fileName);
-            await fs.promises.writeFile(filePath, buffer);
-            caminhoRel = path.join('uploads', 'evidencias', fileName).replace(/\\/g, '/');
+            const saved = await salvarFotoBase64Segura(b64, 'evidencia_fin');
+            if (saved) {
+              caminhoRel = saved.caminhoRelativo;
+              hashFoto = hashFoto || saved.hash;
+            }
+          } else if (caminhoRel && !resolveSafePath(caminhoRel, UPLOAD_ROOT)) {
+            continue;
+          }
+
+          if (hashFoto && existingHashes.has(hashFoto)) {
+            continue;
           }
 
           if (caminhoRel || b64) {
@@ -491,6 +571,8 @@ const relatoriosController = {
               motivo: itemFoto.motivo || itemFoto.motivo_ia || 'Evidência fotográfica capturada in-loco.',
               motivo_ia: itemFoto.motivo || itemFoto.motivo_ia || 'Evidência fotográfica capturada in-loco.',
             });
+            if (hashFoto) existingHashes.add(hashFoto);
+            if (caminhoRel) existingPaths.add(caminhoRel);
           }
         }
       }
@@ -620,6 +702,13 @@ const relatoriosController = {
         });
       }
 
+      if (relatorio.status === 'EM_ANDAMENTO') {
+        return res.status(400).json({
+          status: 400,
+          erro: 'Somente relatórios finalizados pela empreiteira podem receber parecer técnico fiscal.',
+        });
+      }
+
       // 'APROVADO' e 'REGULAR' homologam a vistoria
       // 'REPROVADO' e 'PENDENTE_AJUSTE' exigem correções da empreiteira
       const statusNormalizado = (statusUpper === 'APROVADO' || statusUpper === 'REGULAR') ? 'APROVADO' : 'PENDENTE_AJUSTE';
@@ -628,6 +717,17 @@ const relatoriosController = {
 
       mockData.atualizarStatusFiscal(id, statusNormalizado, justificativaSanitizada);
 
+      // Recompila o PDF oficial com o parecer e status atualizados do fiscal
+      try {
+        const relatorioAtualizado = mockData.findRelatorioById(id);
+        if (relatorioAtualizado) {
+          const novoPdf = await pdfService.salvarRelatorioPdf(relatorioAtualizado);
+          mockData.atualizarPdfRelatorio(id, novoPdf.relativePath);
+        }
+      } catch (pdfErr) {
+        console.warn('[Relatorios] Aviso ao recompilar PDF após parecer fiscal:', pdfErr.message);
+      }
+
       const acaoTexto = statusNormalizado === 'APROVADO' ? 'aprovada' : 'reprovada';
 
       return res.status(200).json({
@@ -635,6 +735,7 @@ const relatoriosController = {
         id,
         status: statusNormalizado,
         obraStatus: obraNovoStatus,
+        pdfUrl: `/api/relatorios/${id}/pdf`,
       });
     } catch (err) {
       next(err);

@@ -44,7 +44,7 @@ export function renderAssinaturaResponsavel() {
       <!-- Card do Canvas de Assinatura Digital -->
       <div class="assinatura-pad-card">
         <div class="canvas-wrapper">
-          <canvas id="signatureCanvas" class="signature-canvas" width="340" height="180"></canvas>
+          <canvas id="signatureCanvas" class="signature-canvas" width="340" height="180" style="touch-action: none;"></canvas>
           <div class="canvas-pen-indicator" id="penIndicator">
             <span class="pen-icon" style="display:inline-flex; align-items:center;">${Icons.penAssinatura(22)}</span>
             <span class="pen-sample-sig">${state.user?.nome || vistoria.responsavel || 'Assinatura Digital'}</span>
@@ -60,13 +60,15 @@ export function renderAssinaturaResponsavel() {
       <div class="assinatura-declaracao-card">
         <div class="declaracao-inner-box">
           <div class="senha-field-group">
-            <label class="senha-label">Digite sua senha de acesso</label>
+            <label class="senha-label" for="inputSenhaAssinatura">Confirme sua senha de acesso</label>
             <input 
               type="password" 
               id="inputSenhaAssinatura" 
               class="senha-input" 
-              placeholder="••••••••" 
-              value="123456"
+              placeholder="Digite sua senha corporativa" 
+              value=""
+              autocomplete="current-password"
+              required
             />
           </div>
 
@@ -137,17 +139,22 @@ export function bindAssinaturaResponsavelEvents() {
 
     function getPos(e) {
       const rect = canvas.getBoundingClientRect();
+      const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+      const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
       return {
-        x: clientX - rect.left,
-        y: clientY - rect.top
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
       };
     }
 
     function startDraw(e) {
       isDrawing = true;
       hasDrawn = true;
+      if (canvas.setPointerCapture && e.pointerId !== undefined) {
+        try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+      }
       if (penIndicator) penIndicator.style.display = 'none';
       const pos = getPos(e);
       ctx.beginPath();
@@ -161,17 +168,18 @@ export function bindAssinaturaResponsavelEvents() {
       ctx.stroke();
     }
 
-    function stopDraw() {
+    function stopDraw(e) {
+      if (!isDrawing) return;
       isDrawing = false;
+      if (canvas.releasePointerCapture && e && e.pointerId !== undefined) {
+        try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+      }
     }
 
-    canvas.addEventListener('mousedown', startDraw);
-    canvas.addEventListener('mousemove', draw);
-    window.addEventListener('mouseup', stopDraw);
-
-    canvas.addEventListener('touchstart', startDraw, { passive: true });
-    canvas.addEventListener('touchmove', draw, { passive: true });
-    window.addEventListener('touchend', stopDraw);
+    canvas.addEventListener('pointerdown', startDraw);
+    canvas.addEventListener('pointermove', draw);
+    canvas.addEventListener('pointerup', stopDraw);
+    canvas.addEventListener('pointercancel', stopDraw);
 
     if (btnClear) {
       btnClear.addEventListener('click', () => {
@@ -185,6 +193,7 @@ export function bindAssinaturaResponsavelEvents() {
   // Alternar check de declaração
   const rowDeclaracao = document.getElementById('rowDeclaracao');
   const chkDeclaracao = document.getElementById('chkDeclaracao');
+  const inputSenha = document.getElementById('inputSenhaAssinatura');
   const btnFinalizar = document.getElementById('btnFinalizarEAssinar');
   const modalConfirmar = document.getElementById('modalConfirmarConclusaoRelatorio');
   const btnCancelarModal = document.getElementById('btnCancelarConclusaoModal');
@@ -199,11 +208,17 @@ export function bindAssinaturaResponsavelEvents() {
     });
   }
 
-  // Abre modal de confirmação antes de concluir (Item 13)
+  // Abre modal de confirmação antes de concluir (Item 13) exigindo senha e declaração
   if (btnFinalizar) {
     btnFinalizar.addEventListener('click', () => {
       if (!state.currentVistoria.declaracaoAceita) {
         toast.warning('Declaração Obrigatória', 'Marque a declaração de veracidade das informações antes de concluir.');
+        return;
+      }
+      const senhaDigitada = (inputSenha?.value || '').trim();
+      if (senhaDigitada.length < 4) {
+        toast.warning('Senha Obrigatória', 'Confirme sua senha de acesso antes de assinar e bloquear o relatório.');
+        inputSenha?.focus();
         return;
       }
       if (modalConfirmar) {

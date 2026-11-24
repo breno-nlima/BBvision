@@ -43,11 +43,11 @@ export function renderCameraIa() {
           
           <div class="cam-status-pill">
             <span class="ai-status-pulse" id="aiStatusPulse"></span>
-            <span id="aiStatusBadgeText">Câmera Ativa • IA Gemini Pronta</span>
+            <span id="aiStatusBadgeText">Câmera Ativa • IA Pronta</span>
           </div>
 
           <div style="display: flex; gap: 6px;">
-            <button class="cam-top-btn" id="btnAlternarCamera" title="Inverter Câmera (Frontal/Traseira)" style="display:inline-flex; align-items:center; justify-content:center;">
+            <button class="cam-top-btn" id="btnAlternarCamera" title="Alternar Câmera (Traseira / Selfie)" style="display:inline-flex; align-items:center; justify-content:center;">
               ${Icons.cameraFlip(20)}
             </button>
           </div>
@@ -80,15 +80,28 @@ export function renderCameraIa() {
           <div class="ai-scanner-overlay hidden" id="aiScannerOverlay">
             <div class="ai-laser-bar"></div>
             <div class="ai-scanning-info">
-              <span class="scanning-title">IA GEMINI VERIFICANDO CONDIÇÕES DA FOTO...</span>
-              <span class="scanning-sub">SLA ≤ 15s • Iluminação, Ausência de Rosto/Selfie e Contexto de Obra</span>
+              <span class="scanning-title">IA VERIFICANDO CONDIÇÕES DA FOTO...</span>
+              <span class="scanning-sub">SLA ≤ 15s • Iluminação, Obra/Prédio/Casa/Construção e Centro Livre</span>
             </div>
           </div>
 
           <!-- Alerta Visual de Rejeição / Ajuste de Qualidade -->
           <div class="ai-warning-box hidden" id="aiWarningBox">
-            <span class="warning-icon" style="display:inline-flex; align-items:center;">${Icons.warningAlert(18)}</span>
-            <span class="warning-msg" id="aiWarningMsg">Foto reprovada pela IA Gemini. Reenquadre o local da obra.</span>
+            <span class="warning-msg" id="aiWarningMsg">Foto reprovada pela IA. Reenquadre o local da obra.</span>
+          </div>
+
+          <!-- Overlay de Câmera Real Obrigatória (quando permissão negada ou câmera inativa) -->
+          <div class="hidden" id="cameraUnavailableOverlay" style="position:absolute; inset:0; z-index:25; background:rgba(0, 27, 61, 0.92); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; color:#FFFFFF; gap:12px;">
+            <div style="width:52px; height:52px; border-radius:50%; background:rgba(254, 211, 4, 0.14); border:1.5px solid #FED304; display:flex; align-items:center; justify-content:center; color:#FED304;">
+              ${Icons.cameraAiLens(24)}
+            </div>
+            <strong style="font-size:16px; color:#FED304;">Câmera do Dispositivo Obrigatória</strong>
+            <p id="cameraUnavailableMsg" style="font-size:13px; color:#E2E8F0; max-width:340px; line-height:1.5; margin:0;">
+              Para validar a obra com a IA, é obrigatório autorizar e usar a câmera real do seu dispositivo (não são permitidas imagens simuladas ou da galeria).
+            </p>
+            <button type="button" id="btnReativarCamera" style="margin-top:4px; background:#FED304; color:#002D62; border:none; border-radius:10px; padding:10px 18px; font-weight:800; font-size:13.5px; cursor:pointer;">
+              Ativar Câmera do Dispositivo
+            </button>
           </div>
 
           <!-- Overlay com Metadados Invioláveis Registrados em Tempo Real -->
@@ -110,7 +123,7 @@ export function renderCameraIa() {
         <div class="camera-bottom-controls">
           <div class="controls-aux-bar">
             <span class="cam-step-hint" id="camStepHint">
-              ${fotoValidaExistente ? 'Foto capturada e validada! Confirme abaixo ou tire outra foto.' : 'Fotografe a obra/local bem iluminado (sem rostos/selfies)'}
+              ${fotoValidaExistente ? 'Foto capturada e validada! Confirme abaixo ou tire outra foto.' : 'Enquadre a obra, prédio, casa ou construção no centro (selfie/pessoas permitidas nas laterais)'}
             </span>
             <span class="cam-security-note" style="display:inline-flex; align-items:center; gap:5px;">${Icons.lockInviolavel(14)} Galeria bloqueada (Inviolabilidade)</span>
           </div>
@@ -120,7 +133,7 @@ export function renderCameraIa() {
             <span class="verified-icon-check" id="verifiedBannerIcon">✓</span>
             <div class="verified-banner-texts">
               <strong id="lblVerifiedText">Foto Capturada e Validada</strong>
-              <span id="lblVerifiedSub">IA Gemini ${confiancaPct}% • Obra/local e iluminação aprovados</span>
+              <span id="lblVerifiedSub">IA ${confiancaPct}% • Obra/construção e centro livre aprovados</span>
             </div>
           </div>
 
@@ -133,11 +146,11 @@ export function renderCameraIa() {
 
             <!-- Ações Pós-Captura (Visíveis após capturar a foto) -->
             <div class="camera-post-capture-actions ${fotoValidaExistente ? '' : 'hidden'}" id="postCaptureActions" style="display: flex; gap: 10px; width: 100%;">
-              <button class="btn-retake-clear" id="btnRetakePhoto" type="button" style="flex: 1; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
-                ${Icons.cameraFlip(18)} Tirar Outra Foto
+              <button class="btn-retake-clear" id="btnRetakePhoto" type="button" style="flex: 1;">
+                Tirar Outra Foto
               </button>
               <button class="btn-confirm-photo-advance" id="btnAvancarVerificado" type="button" style="flex: 1.6;">
-                ✓ Confirmar Foto e Avançar →
+                Confirmar Foto e Avançar →
               </button>
             </div>
           </div>
@@ -198,12 +211,40 @@ export function bindCameraIaEvents() {
   const elMetaHora = document.getElementById('metaHoraFoto');
   const elMetaLocal = document.getElementById('metaLocalFoto');
   const elMetaHash = document.getElementById('metaHashFoto');
+  const cameraUnavailableOverlay = document.getElementById('cameraUnavailableOverlay');
+  const cameraUnavailableMsg = document.getElementById('cameraUnavailableMsg');
+  const btnReativarCamera = document.getElementById('btnReativarCamera');
 
   let streamAtivo = null;
   let facingModeAtual = 'environment';
   let relogioInterval = null;
   let watchGpsId = null;
   let fotoCongelada = false;
+
+  function mostrarOverlayCameraIndisponivel(mensagem) {
+    if (cameraUnavailableMsg && mensagem) {
+      cameraUnavailableMsg.textContent = mensagem;
+    }
+    if (cameraUnavailableOverlay) {
+      cameraUnavailableOverlay.classList.remove('hidden');
+      cameraUnavailableOverlay.style.display = 'flex';
+    }
+    if (btnDisparar) {
+      btnDisparar.disabled = true;
+      btnDisparar.style.opacity = '0.55';
+    }
+  }
+
+  function ocultarOverlayCameraIndisponivel() {
+    if (cameraUnavailableOverlay) {
+      cameraUnavailableOverlay.classList.add('hidden');
+      cameraUnavailableOverlay.style.display = 'none';
+    }
+    if (btnDisparar) {
+      btnDisparar.disabled = false;
+      btnDisparar.style.opacity = '1';
+    }
+  }
 
   // --------------------------------------------------------------------------
   // 1. RELÓGIO EM TEMPO REAL (DATA E HORA ATUAIS DA FOTO)
@@ -315,65 +356,106 @@ export function bindCameraIaEvents() {
   }
 
   // --------------------------------------------------------------------------
-  // 3. ENTRADA DIRETA NA CÂMERA (STREAM DE VÍDEO AO VIVO)
+  // 3. ENTRADA DIRETA NA CÂMERA REAL DO USUÁRIO (STREAM DE VÍDEO AO VIVO)
   // --------------------------------------------------------------------------
+  function aguardarVideoPronto(videoEl, timeoutMs = 4000) {
+    return new Promise((resolve) => {
+      if (!videoEl) return resolve(false);
+      if (videoEl.readyState >= 2 && videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
+        return resolve(true);
+      }
+      let finalizado = false;
+      const concluir = (ok) => {
+        if (finalizado) return;
+        finalizado = true;
+        videoEl.removeEventListener('loadedmetadata', onReady);
+        videoEl.removeEventListener('loadeddata', onReady);
+        videoEl.removeEventListener('playing', onReady);
+        clearTimeout(timer);
+        resolve(ok);
+      };
+      const onReady = () => {
+        if (videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
+          concluir(true);
+        }
+      };
+      const timer = setTimeout(() => {
+        concluir(videoEl.videoWidth > 0 && videoEl.videoHeight > 0);
+      }, timeoutMs);
+      videoEl.addEventListener('loadedmetadata', onReady);
+      videoEl.addEventListener('loadeddata', onReady);
+      videoEl.addEventListener('playing', onReady);
+    });
+  }
+
   async function iniciarCamera() {
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      try {
-        pararStream();
-        let stream = null;
-
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: facingModeAtual, width: { ideal: 1280 }, height: { ideal: 720 } },
-            audio: false
-          });
-        } catch (firstErr) {
-          console.warn('[Camera] Tentando fallback para qualquer câmera de vídeo:', firstErr.message);
-          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-        }
-
-        streamAtivo = stream;
-        if (videoFeed) {
-          videoFeed.srcObject = streamAtivo;
-          videoFeed.classList.remove('hidden');
-          if (mainStreamImg) mainStreamImg.classList.add('hidden');
-          try {
-            await videoFeed.play();
-          } catch (e) {
-            console.warn('[Camera] videoFeed.play():', e.message);
-          }
-          if (statusBadge) statusBadge.innerText = 'Câmera Ativa • IA Pronta';
-          if (pulseDot) pulseDot.style.background = '#10B981';
-        }
-      } catch (err) {
-        console.warn('[Camera] Câmera física não iniciada:', err.message);
-        if (statusBadge) statusBadge.innerText = 'Câmera Indisponível';
-        if (pulseDot) pulseDot.style.background = '#EF4444';
-        if (mainStreamImg) {
-          if (state.currentVistoria.fotoCamera) {
-            mainStreamImg.src = state.currentVistoria.fotoCamera;
-            mainStreamImg.classList.remove('hidden');
-          } else {
-            mainStreamImg.classList.add('hidden');
-          }
-        }
-        if (videoFeed) videoFeed.classList.add('hidden');
-        toast.warning('Permissão de Câmera', 'Câmera não detectada ou permissão negada. Por favor, habilite a câmera do dispositivo.');
-      }
-    } else {
-      if (statusBadge) statusBadge.innerText = 'Dispositivo sem Câmera';
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const msgSemSuporte = !window.isSecureContext
+        ? 'O navegador bloqueia a câmera em conexões HTTP inseguras. Acesse o BBVision via HTTPS ou localhost.'
+        : 'Este dispositivo ou navegador não suporta acesso à câmera ao vivo.';
+      if (statusBadge) statusBadge.innerText = 'Câmera Indisponível';
       if (pulseDot) pulseDot.style.background = '#EF4444';
-      if (mainStreamImg) {
-        if (state.currentVistoria.fotoCamera) {
-          mainStreamImg.src = state.currentVistoria.fotoCamera;
-          mainStreamImg.classList.remove('hidden');
-        } else {
-          mainStreamImg.classList.add('hidden');
-        }
-      }
       if (videoFeed) videoFeed.classList.add('hidden');
-      toast.warning('Dispositivo sem Câmera', 'Este dispositivo não possui suporte a câmera ao vivo.');
+      mostrarOverlayCameraIndisponivel(msgSemSuporte);
+      toast.warning('Câmera Necessária', msgSemSuporte);
+      return false;
+    }
+
+    try {
+      pararStream();
+      let stream = null;
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: facingModeAtual }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+      } catch (firstErr) {
+        console.warn('[Camera] Tentando fallback para qualquer câmera real disponível:', firstErr.message);
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
+
+      streamAtivo = stream;
+      if (videoFeed) {
+        videoFeed.srcObject = streamAtivo;
+        videoFeed.classList.remove('hidden');
+        if (mainStreamImg) mainStreamImg.classList.add('hidden');
+        try {
+          await videoFeed.play();
+        } catch (e) {
+          console.warn('[Camera] videoFeed.play():', e.message);
+        }
+
+        const pronto = await aguardarVideoPronto(videoFeed, 4000);
+        if (!pronto) {
+          throw new Error('A câmera foi aberta, mas ainda não enviou quadros de vídeo.');
+        }
+
+        ocultarOverlayCameraIndisponivel();
+        if (statusBadge) statusBadge.innerText = 'Câmera Ativa • IA Pronta';
+        if (pulseDot) pulseDot.style.background = '#10B981';
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.warn('[Camera] Câmera física não iniciada:', err.name, err.message);
+      pararStream();
+      if (statusBadge) statusBadge.innerText = 'Câmera Indisponível';
+      if (pulseDot) pulseDot.style.background = '#EF4444';
+      if (videoFeed) videoFeed.classList.add('hidden');
+
+      let msgErro = 'Câmera não detectada ou permissão negada. Autorize o acesso à câmera no navegador e clique em "Ativar Câmera do Dispositivo".';
+      if (err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
+        msgErro = 'Permissão da câmera negada. Libere o acesso à câmera no cadeado da barra de endereço do navegador e tente novamente.';
+      } else if (err && (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError')) {
+        msgErro = 'Nenhuma câmera foi encontrada neste dispositivo. Conecte ou habilite a câmera para realizar a vistoria.';
+      } else if (err && (err.name === 'NotReadableError' || err.name === 'TrackStartError')) {
+        msgErro = 'A câmera está sendo usada por outro aplicativo. Feche o outro aplicativo e clique em "Ativar Câmera do Dispositivo".';
+      }
+
+      mostrarOverlayCameraIndisponivel(msgErro);
+      toast.warning('Permissão de Câmera', msgErro);
+      return false;
     }
   }
 
@@ -397,78 +479,55 @@ export function bindCameraIaEvents() {
   }
 
   // --------------------------------------------------------------------------
-  // 4. DISPARO DA FOTO E AVALIAÇÃO COM IA BBVISION (SLA <= 15s)
+  // 4. DISPARO DA FOTO REAL DA CÂMERA E AVALIAÇÃO COM IA (SLA <= 15s)
   // --------------------------------------------------------------------------
-  function desenharCenaObraNoCanvas(ctx, width, height) {
-    // Céu / iluminação diurna do canteiro
-    const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
-    skyGrad.addColorStop(0, '#BFDBFE');
-    skyGrad.addColorStop(0.7, '#EFF6FF');
-    skyGrad.addColorStop(1, '#94A3B8');
-    ctx.fillStyle = skyGrad;
-    ctx.fillRect(0, 0, width, height);
-
-    // Calçada técnica e piso tátil
-    const groundY = Math.round(height * 0.72);
-    ctx.fillStyle = '#94A3B8';
-    ctx.fillRect(0, groundY, width, height - groundY);
-    ctx.fillStyle = '#FCFC00';
-    ctx.fillRect(0, groundY, width, 6);
-
-    // Edificação Agência Banco do Brasil
-    const bx = Math.round(width * 0.1);
-    const by = Math.round(height * 0.14);
-    const bw = Math.round(width * 0.8);
-    const bh = groundY - by;
-    ctx.fillStyle = '#F8FAFC';
-    ctx.fillRect(bx, by, bw, bh);
-
-    // Testeira Institucional BB
-    const headerH = Math.round(bh * 0.24);
-    ctx.fillStyle = '#002D72';
-    ctx.fillRect(bx, by, bw, headerH);
-    ctx.fillStyle = '#FCFC00';
-    ctx.fillRect(bx, by + headerH - 6, bw, 6);
-
-    ctx.fillStyle = '#FCFC00';
-    ctx.font = `bold ${Math.max(14, Math.round(width * 0.028))}px sans-serif`;
-    ctx.fillText('BANCO DO BRASIL • VISTORIA TÉCNICA IN-LOCO', bx + 20, by + Math.round(headerH * 0.58));
-
-    // Painéis de vidro e estrutura
-    const paneCount = 4;
-    const paneGap = 16;
-    const paneW = Math.floor((bw - 48 - paneGap * (paneCount - 1)) / paneCount);
-    const paneY = by + headerH + 16;
-    const paneH = bh - headerH - 24;
-    for (let i = 0; i < paneCount; i++) {
-      const px = bx + 24 + i * (paneW + paneGap);
-      ctx.fillStyle = '#93C5FD';
-      ctx.fillRect(px, paneY, paneW, paneH);
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(px, paneY, paneW, paneH);
-    }
-  }
 
   /**
-   * Motor de Visão Computacional IA Gemini no Frame Bruto (antes da estampa)
+   * Motor de Visão Computacional IA no Frame Bruto (antes da estampa)
    * Verifica obrigatoriamente:
    * 1. Baixa luz / subexposição / câmera coberta -> Reprova (BAIXA_LUZ)
-   * 2. Rosto humano / selfie / foto de si mesmo -> Reprova (ROSTO_SELFIE)
-   * 3. Contexto de obra / fiscalização de lugares bem iluminados -> Aprova (OBRA_LOCAL)
+   * 2. Selfie / pessoas são PERMITIDAS, mas NÃO podem ocupar a parte central da foto -> Reprova se centro obstruído (PESSOA_NO_CENTRO)
+   * 3. Contexto estrito de obra, prédio, edifício, casa ou construção -> Fora disso reprova (FORA_DE_CONTEXTO)
    */
   async function analisarCondicoesVisuaisIA(canvas, ctx, width, height) {
-    // 1. Tenta API nativa de detecção facial do navegador (Shape Detection API), se disponível
+    // 1. API nativa de detecção facial (Shape Detection API), distinguindo rosto nas laterais (permitido) vs centro (reprovado)
     let facesDetectadasApi = 0;
+    let facesNoCentroApi = 0;
+
+    // Zona central estrita reservada à obra/prédio/casa/construção (nx: 28%..72%, ny: 20%..78%)
+    const cMinX = width * 0.28;
+    const cMaxX = width * 0.72;
+    const cMinY = height * 0.20;
+    const cMaxY = height * 0.78;
+    const centerZoneArea = Math.max(1, (cMaxX - cMinX) * (cMaxY - cMinY));
+
     if (typeof window !== 'undefined' && 'FaceDetector' in window) {
       try {
         const detector = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 5 });
         const faces = await detector.detect(canvas);
         if (Array.isArray(faces) && faces.length > 0) {
           facesDetectadasApi = faces.length;
+          for (const face of faces) {
+            const box = face.boundingBox;
+            if (!box) continue;
+            const cx = box.x + box.width / 2;
+            const cy = box.y + box.height / 2;
+
+            // Interseção do rosto (e tronco superior estimado) com a zona central
+            const interW = Math.max(0, Math.min(box.x + box.width, cMaxX) - Math.max(box.x, cMinX));
+            const interH = Math.max(0, Math.min(box.y + box.height, cMaxY) - Math.max(box.y, cMinY));
+            const faceArea = Math.max(1, box.width * box.height);
+            const overlapFaceRatio = (interW * interH) / faceArea;
+            const overlapCenterRatio = (interW * interH) / centerZoneArea;
+
+            const centroDentroDaZona = cx >= cMinX && cx <= cMaxX && cy >= cMinY && cy <= cMaxY;
+            if (centroDentroDaZona || overlapFaceRatio >= 0.45 || overlapCenterRatio >= 0.22) {
+              facesNoCentroApi++;
+            }
+          }
         }
       } catch (e) {
-        // Continua para análise matricial de pixels (YCbCr + RGB + Gradientes Biométricos)
+        // Continua para análise matricial de pixels (YCbCr + RGB + Gradientes Estruturais)
       }
     }
 
@@ -503,6 +562,10 @@ export function bindCameraIaEvents() {
     let cantosSuperioresTotal = 0;
     let cantosSuperioresPele = 0;
 
+    // Métricas de bordas retilíneas (horizontais e verticais) típicas de construções, prédios, casas e obras
+    let bordasEstruturais = 0;
+    let gradSamplesTotais = 0;
+
     const step = 2;
     const stride = width * 4;
 
@@ -531,7 +594,21 @@ export function bindCameraIaEvents() {
         if (lum < 30) pixelsMuitoEscuros++;
         if (lum >= 75) pixelsBrilhoUtil++;
 
-        // Conversão cromática YCbCr + Saturação HSV para detecção de pele humana sob luz natural, quente ou fria (webcam/celular)
+        // Gradientes estruturais (horizontal e vertical) para detecção de linhas arquitetônicas/estruturas
+        if (x >= step && y >= step) {
+          const leftIdx = y * stride + (x - step) * 4;
+          const topIdx = (y - step) * stride + x * 4;
+          const lumLeft = 0.299 * data[leftIdx] + 0.587 * data[leftIdx + 1] + 0.114 * data[leftIdx + 2];
+          const lumTop = 0.299 * data[topIdx] + 0.587 * data[topIdx + 1] + 0.114 * data[topIdx + 2];
+          const gx = Math.abs(lum - lumLeft);
+          const gy = Math.abs(lum - lumTop);
+          gradSamplesTotais++;
+          if (gx >= 18 || gy >= 18) {
+            bordasEstruturais++;
+          }
+        }
+
+        // Conversão cromática YCbCr + Saturação HSV para detecção de pele humana sob luz natural, quente ou fria
         const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
         const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
         const maxRgb = Math.max(r, g, b);
@@ -570,9 +647,9 @@ export function bindCameraIaEvents() {
         if (isPele) cellSkin[cellIdx]++;
         if (lum < 68) cellDarkFeatures[cellIdx]++;
 
-        // Zona central típica de rosto / selfie
-        const isZonaCentral = nx >= 0.18 && nx <= 0.82 && ny >= 0.08 && ny <= 0.86;
-        if (isZonaCentral) {
+        // Zona central ESTRITA da foto (30%..70% horizontal, 20%..78% vertical) — pessoas nas laterais são permitidas!
+        const isZonaCentralEstrita = nx >= 0.30 && nx <= 0.70 && ny >= 0.20 && ny <= 0.78;
+        if (isZonaCentralEstrita) {
           centroTotal++;
           centroSomaY += lum;
           centroSomaY2 += lum * lum;
@@ -587,12 +664,12 @@ export function bindCameraIaEvents() {
           }
         }
 
-        // Bordas laterais extremas e cantos superiores (fundo da cena)
-        if (nx < 0.12 || nx > 0.88) {
+        // Bordas laterais extremas e cantos superiores
+        if (nx < 0.20 || nx > 0.80) {
           bordaLateralTotal++;
           if (isPele) bordaLateralPele++;
         }
-        if (ny < 0.22 && (nx < 0.20 || nx > 0.80)) {
+        if (ny < 0.22 && (nx < 0.22 || nx > 0.78)) {
           cantosSuperioresTotal++;
           if (isPele) cantosSuperioresPele++;
         }
@@ -605,6 +682,7 @@ export function bindCameraIaEvents() {
     const percentualEscuros = totalSamples > 0 ? pixelsEscuros / totalSamples : 1;
     const percentualMuitoEscuros = totalSamples > 0 ? pixelsMuitoEscuros / totalSamples : 1;
     const percentualBrilhoUtil = totalSamples > 0 ? pixelsBrilhoUtil / totalSamples : 0;
+    const taxaBordasEstruturais = gradSamplesTotais > 0 ? bordasEstruturais / gradSamplesTotais : 0;
 
     // ------------------------------------------------------------------------
     // REGRA 1: VERIFICAÇÃO DE BAIXA LUZ
@@ -617,7 +695,7 @@ export function bindCameraIaEvents() {
       (luminanciaMedia < 78 && desvioLuminancia < 14);
 
     // ------------------------------------------------------------------------
-    // REGRA 2: VERIFICAÇÃO DE ROSTO / SELFIE (FOTO DE SI MESMO)
+    // REGRA 2: SELFIE E PESSOAS PERMITIDAS, MAS SEM OCUPAR A PARTE CENTRAL
     // ------------------------------------------------------------------------
     const taxaPeleCentro = centroTotal > 0 ? centroPele / centroTotal : 0;
     const taxaFeicoesEscurasCentro = centroTotal > 0 ? centroFeicoesEscuras / centroTotal : 0;
@@ -630,14 +708,14 @@ export function bindCameraIaEvents() {
     const taxaPeleBordas = bordaLateralTotal > 0 ? bordaLateralPele / bordaLateralTotal : 0;
     const taxaPeleCantosSuperiores = cantosSuperioresTotal > 0 ? cantosSuperioresPele / cantosSuperioresTotal : 0;
 
-    // Análise das células centrais (col 1..6, row 1..4) para detectar o cluster da cabeça/rosto
-    let celulasCentraisComPele = 0;
-    let maxPeleCelulaCentral = 0;
-    let desvioNoClusterFacial = 0;
-    let feicoesEscurasNoCluster = 0;
+    // Análise restrita ao MIOLO CENTRAL (col 2..5, row 1..4) — pessoas posicionadas nas laterais (col 0..1 ou 6..7) NÃO são reprovadas
+    let celulasMioloCentralComPele = 0;
+    let maxPeleMioloCentral = 0;
+    let desvioNoClusterCentral = 0;
+    let feicoesEscurasNoClusterCentral = 0;
 
     for (let r = 1; r <= 4; r++) {
-      for (let c = 1; c <= 6; c++) {
+      for (let c = 2; c <= 5; c++) {
         const idx = r * cols + c;
         const tot = cellTotal[idx];
         if (tot <= 0) continue;
@@ -646,32 +724,18 @@ export function bindCameraIaEvents() {
         const meanCell = cellSumY[idx] / tot;
         const stdCell = Math.sqrt(Math.max(0, (cellSumY2[idx] / tot) - (meanCell * meanCell)));
 
-        if (ratio >= 0.20) {
-          celulasCentraisComPele++;
-          if (stdCell > desvioNoClusterFacial) desvioNoClusterFacial = stdCell;
-          if (darkRatio > feicoesEscurasNoCluster) feicoesEscurasNoCluster = darkRatio;
+        if (ratio >= 0.24) {
+          celulasMioloCentralComPele++;
+          if (stdCell > desvioNoClusterCentral) desvioNoClusterCentral = stdCell;
+          if (darkRatio > feicoesEscurasNoClusterCentral) feicoesEscurasNoClusterCentral = darkRatio;
         }
-        if (ratio > maxPeleCelulaCentral) {
-          maxPeleCelulaCentral = ratio;
-        }
-      }
-    }
-
-    // Conta quantas células de borda externa têm pouca ou nenhuma pele (fundo ao redor da pessoa)
-    let celulasBordaSemPele = 0;
-    let totalCelulasBorda = 0;
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        if (r === 0 || c === 0 || c === cols - 1) {
-          totalCelulasBorda++;
-          const idx = r * cols + c;
-          const ratio = cellTotal[idx] > 0 ? cellSkin[idx] / cellTotal[idx] : 0;
-          if (ratio < 0.14) celulasBordaSemPele++;
+        if (ratio > maxPeleMioloCentral) {
+          maxPeleMioloCentral = ratio;
         }
       }
     }
 
-    // Verifica se a câmera ativa é frontal/selfie explícita
+    // Verifica se a câmera ativa é frontal/selfie (informativo — selfie é PERMITIDA!)
     let isSelfieCamera = facingModeAtual === 'user';
     try {
       const track = streamAtivo && streamAtivo.getVideoTracks ? streamAtivo.getVideoTracks()[0] : null;
@@ -681,45 +745,61 @@ export function bindCameraIaEvents() {
       // Ignora falha de leitura de track
     }
 
-    // Cluster facial localizado no centro com contraste de feições (olhos, sobrancelhas, cabelo, boca)
-    // e cercado por fundo nas bordas/cantos superiores (diferenciando rosto de uma parede bege uniforme)
-    const razaoPicoCantos = maxPeleCelulaCentral / Math.max(0.02, taxaPeleCantosSuperiores);
-    const razaoPicoBordas = maxPeleCelulaCentral / Math.max(0.02, taxaPeleBordas);
+    // Só reprova se houver pessoa/rosto claramente concentrado NO CENTRO da foto (obstruindo a construção)
+    const razaoPicoCantos = maxPeleMioloCentral / Math.max(0.02, taxaPeleCantosSuperiores);
+    const razaoPicoBordas = maxPeleMioloCentral / Math.max(0.02, taxaPeleBordas);
 
-    const padraoSelfieRetrato =
-      (maxPeleCelulaCentral >= 0.26 && celulasCentraisComPele >= 2) &&
-      (razaoPicoCantos >= 1.45 || razaoPicoBordas >= 1.35 || celulasBordaSemPele >= Math.floor(totalCelulasBorda * 0.55)) &&
-      (desvioLuminanciaCentro >= 11.5 || desvioNoClusterFacial >= 11.0) &&
-      (gradienteVerticalCentro >= 4.2 || taxaFeicoesEscurasCentro >= 0.012 || feicoesEscurasNoCluster >= 0.015);
+    const padraoPessoaNoCentro =
+      (maxPeleMioloCentral >= 0.34 && celulasMioloCentralComPele >= 3 && taxaPeleCentro >= 0.24) &&
+      (razaoPicoCantos >= 1.50 || razaoPicoBordas >= 1.40) &&
+      (desvioLuminanciaCentro >= 12.0 || desvioNoClusterCentral >= 11.5) &&
+      (gradienteVerticalCentro >= 4.5 || taxaFeicoesEscurasCentro >= 0.014 || feicoesEscurasNoClusterCentral >= 0.018);
 
-    const padraoRostoProximo =
-      taxaPeleCentro >= 0.22 &&
-      celulasCentraisComPele >= 4 &&
-      desvioLuminanciaCentro >= 14.0 &&
-      gradienteVerticalCentro >= 5.5 &&
-      taxaFeicoesEscurasCentro >= 0.015 &&
-      (razaoPicoCantos >= 1.20 || celulasBordaSemPele >= 4);
+    const pessoaNoCentro =
+      facesNoCentroApi > 0 ||
+      padraoPessoaNoCentro;
 
-    const padraoCameraFrontalComPele =
-      isSelfieCamera && (maxPeleCelulaCentral >= 0.18 || taxaPeleCentro >= 0.055);
+    const selfieLateral =
+      !pessoaNoCentro &&
+      (facesDetectadasApi > 0 || taxaPeleBordas >= 0.10 || isSelfieCamera);
 
-    const rostoDetectado =
-      facesDetectadasApi > 0 ||
-      padraoSelfieRetrato ||
-      padraoRostoProximo ||
-      padraoCameraFrontalComPele;
+    // ------------------------------------------------------------------------
+    // REGRA 3: SINAIS BÁSICOS DE ESTRUTURA (CONSTRUÇÃO/OBRA/PRÉDIO/CASA)
+    // (Leitura semântica profunda feita no backend pela IA; aqui reprova cenas totalmente lisas/obstruídas)
+    // ------------------------------------------------------------------------
+    const semEstruturaArquitetonica =
+      !baixaLuz &&
+      desvioLuminancia < 11.5 &&
+      taxaBordasEstruturais < 0.015;
+
+    const foraDeContexto = semEstruturaArquitetonica;
 
     return {
       baixaLuz,
-      rostoDetectado,
-      facesDetectadas: facesDetectadasApi || (rostoDetectado ? 1 : 0),
+      pessoaNoCentro,
+      rostoNoCentro: pessoaNoCentro,
+      rostoDetectado: pessoaNoCentro,
+      selfiePermitida: true,
+      selfieLateral,
+      isSelfieCamera,
+      facesDetectadas: facesDetectadasApi,
+      facesNoCentro: facesNoCentroApi || (pessoaNoCentro ? 1 : 0),
+      foraDeContexto,
+      contextoConstrucao: !foraDeContexto,
       luminanciaMedia: Number(luminanciaMedia.toFixed(1)),
       desvioLuminancia: Number(desvioLuminancia.toFixed(1)),
       percentualEscuros: Number(percentualEscuros.toFixed(3)),
       percentualMuitoEscuros: Number(percentualMuitoEscuros.toFixed(3)),
       taxaPeleCentro: Number(taxaPeleCentro.toFixed(3)),
-      maxPeleCelulaCentral: Number(maxPeleCelulaCentral.toFixed(3)),
-      categoriaSugerida: baixaLuz ? 'BAIXA_LUZ' : rostoDetectado ? 'ROSTO_SELFIE' : 'OBRA_LOCAL',
+      maxPeleCelulaCentral: Number(maxPeleMioloCentral.toFixed(3)),
+      taxaBordasEstruturais: Number(taxaBordasEstruturais.toFixed(4)),
+      categoriaSugerida: baixaLuz
+        ? 'BAIXA_LUZ'
+        : pessoaNoCentro
+        ? 'PESSOA_NO_CENTRO'
+        : foraDeContexto
+        ? 'FORA_DE_CONTEXTO'
+        : 'OBRA_LOCAL',
     };
   }
 
@@ -763,14 +843,36 @@ export function bindCameraIaEvents() {
 
     if (camStepHint) {
       if (isAprovado) {
-        camStepHint.innerText = '✅ Foto da obra/local validada pela IA Gemini! Clique em "Confirmar Foto e Avançar".';
+        camStepHint.innerText = 'Foto da obra/local validada pela IA. Clique em "Confirmar Foto e Avançar".';
       } else {
-        camStepHint.innerText = `❌ ${resultado.motivo || 'Foto reprovada pela IA Gemini.'} Clique em "Tirar Outra Foto".`;
+        camStepHint.innerText = `${resultado.motivo || 'Foto reprovada pela IA.'} Clique em "Tirar Outra Foto".`;
       }
     }
   }
 
   async function executarAvaliacao() {
+    // REGRA OBRIGATÓRIA DE INVIOLABILIDADE: somente captura real pela câmera ativa do usuário
+    const hasLiveVideo = Boolean(
+      streamAtivo &&
+      videoFeed &&
+      videoFeed.readyState >= 2 &&
+      videoFeed.videoWidth > 0 &&
+      videoFeed.videoHeight > 0
+    );
+
+    if (!hasLiveVideo) {
+      fotoCongelada = false;
+      toast.error(
+        'Câmera Real Obrigatória',
+        'Ative e autorize a câmera do seu dispositivo para capturar a foto real da obra e validar com a IA.'
+      );
+      mostrarOverlayCameraIndisponivel(
+        'A câmera do dispositivo não está ativa. Autorize a câmera para capturar a foto real da obra.'
+      );
+      await iniciarCamera();
+      return;
+    }
+
     fotoCongelada = true;
     if (relogioInterval) clearInterval(relogioInterval);
 
@@ -786,7 +888,7 @@ export function bindCameraIaEvents() {
     if (elMetaHora) elMetaHora.textContent = horaCaptura;
 
     if (scannerOverlay) scannerOverlay.classList.remove('hidden');
-    if (statusBadge) statusBadge.innerText = 'IA Gemini verificando iluminação, rosto e contexto de obra...';
+    if (statusBadge) statusBadge.innerText = 'IA verificando obra/construção, iluminação e centro livre...';
     if (pulseDot) pulseDot.style.background = '#FED304';
     if (warningBox) warningBox.classList.add('hidden');
 
@@ -797,20 +899,19 @@ export function bindCameraIaEvents() {
       const canvas = document.getElementById('liveCaptureCanvas');
       let base64Foto = null;
 
-      if (canvas) {
-        const hasLiveVideo = videoFeed && videoFeed.videoWidth > 0;
-        canvas.width = hasLiveVideo ? videoFeed.videoWidth : 640;
-        canvas.height = hasLiveVideo ? videoFeed.videoHeight : 420;
-        const ctx = canvas.getContext('2d');
+      if (!canvas) {
+        throw new Error('Canvas de captura indisponível.');
+      }
 
-        if (hasLiveVideo) {
-          ctx.drawImage(videoFeed, 0, 0, canvas.width, canvas.height);
-        } else {
-          desenharCenaObraNoCanvas(ctx, canvas.width, canvas.height);
-        }
+      canvas.width = videoFeed.videoWidth;
+      canvas.height = videoFeed.videoHeight;
+      const ctx = canvas.getContext('2d');
 
-        // Analisa as condições visuais do frame bruto ANTES da estampa (Baixa Luz, Rosto/Selfie, Obra/Local)
-        telemetriaVisual = await analisarCondicoesVisuaisIA(canvas, ctx, canvas.width, canvas.height);
+      // Captura exclusivamente o quadro real da câmera do usuário
+      ctx.drawImage(videoFeed, 0, 0, canvas.width, canvas.height);
+
+      // Analisa as condições visuais do frame real bruto ANTES da estampa
+      telemetriaVisual = await analisarCondicoesVisuaisIA(canvas, ctx, canvas.width, canvas.height);
 
         // Estampa Criptográfica de Fé Pública In-Loco na Foto
         const bannerH = Math.max(46, Math.round(canvas.height * 0.11));
@@ -841,9 +942,8 @@ export function bindCameraIaEvents() {
         if (videoFeed) videoFeed.classList.add('hidden');
         state.currentVistoria.fotoCamera = base64Foto;
         state.currentVistoria.fotoBase64 = base64Foto;
-      }
 
-      // Envia para API backend oficial (IA Gemini + Telemetria Visual + Geração de Hash SHA-256)
+      // Envia a foto REAL capturada pela câmera do usuário para validação pela IA no backend + Hash SHA-256
       const resultado = await api.avaliarFoto(base64Foto, telemetriaVisual);
       const elapsedSec = ((performance.now() - startTime) / 1000).toFixed(1);
 
@@ -858,11 +958,11 @@ export function bindCameraIaEvents() {
 
       if (resultado.status === 'APROVADO') {
         const confiancaPct = Math.round((resultado.confianca || 0.95) * 100);
-        if (statusBadge) statusBadge.innerText = `IA Gemini: Obra Validada (${elapsedSec}s ≤ 15s)`;
+        if (statusBadge) statusBadge.innerText = `IA: Obra Validada (${elapsedSec}s ≤ 15s)`;
         if (pulseDot) pulseDot.style.background = '#10B981';
-        if (lblVerified) lblVerified.innerText = 'Foto de Obra/Local Validada pela IA Gemini';
+        if (lblVerified) lblVerified.innerText = 'Foto de Obra/Local Validada pela IA';
         if (lblSub) lblSub.innerText = `Confiança ${confiancaPct}% • Iluminação adequada e contexto de fiscalização aprovado`;
-        toast.success('Foto Validada pela IA Gemini', `Local de obra e iluminação aprovados (${confiancaPct}% de confiança).`);
+        toast.success('Foto Validada pela IA', `Local de obra e iluminação aprovados (${confiancaPct}% de confiança).`);
       } else if (resultado.status === 'VALIDACAO_MANUAL') {
         if (statusBadge) statusBadge.innerText = 'Validação Manual Liberada';
         if (pulseDot) pulseDot.style.background = '#F59E0B';
@@ -871,46 +971,60 @@ export function bindCameraIaEvents() {
         if (modalManual) modalManual.classList.remove('hidden');
         toast.warning('Modo Resiliente', 'Validação manual assistida disponível.');
       } else {
-        // Rejeitado pela IA Gemini (Baixa Luz, Rosto/Selfie ou Fora de Contexto)
+        // Rejeitado pela IA (Baixa Luz, Pessoa no Centro ou Fora do Contexto de Obra/Construção)
         state.currentVistoria.fotoCamera = null;
         const tituloRejeicao =
           resultado.categoria === 'BAIXA_LUZ'
             ? 'Foto Reprovada • Baixa Iluminação'
-            : resultado.categoria === 'ROSTO_SELFIE'
-            ? 'Foto Reprovada • Rosto / Selfie Não Permitido'
-            : 'Foto Reprovada pela IA Gemini';
+            : resultado.categoria === 'PESSOA_NO_CENTRO' || resultado.categoria === 'ROSTO_SELFIE'
+            ? 'Foto Reprovada • Pessoa Ocupando o Centro'
+            : resultado.categoria === 'FORA_DE_CONTEXTO'
+            ? 'Foto Reprovada • Fora do Contexto de Construção'
+            : 'Foto Reprovada pela IA';
 
         if (statusBadge) statusBadge.innerText = tituloRejeicao;
         if (pulseDot) pulseDot.style.background = '#EF4444';
         if (lblVerified) lblVerified.innerText = tituloRejeicao;
-        if (lblSub) lblSub.innerText = resultado.motivo || 'Fotografe apenas o local da obra com boa iluminação.';
+        if (lblSub) lblSub.innerText = resultado.motivo || 'Enquadre uma obra, prédio, casa ou construção sem pessoas no centro.';
         if (warningBox && warningMsg) {
-          warningMsg.innerText = resultado.motivo || 'Foto reprovada pela IA Gemini. Fotografe o local da obra com boa iluminação.';
+          warningMsg.innerText = resultado.motivo || 'Foto reprovada pela IA. Enquadre uma obra, prédio, casa ou construção com o centro livre.';
           warningBox.classList.remove('hidden');
         }
-        toast.error(tituloRejeicao, resultado.motivo || 'Tire uma nova foto do local da obra com boa iluminação.');
+        toast.error(tituloRejeicao, resultado.motivo || 'Tire uma nova foto focando na obra, prédio, casa ou construção.');
       }
     } catch (err) {
       if (scannerOverlay) scannerOverlay.classList.add('hidden');
       console.warn('[Camera] Avaliando condições com motor IA embarcado:', err.message);
 
-      // Mesmo se o backend estiver offline, aplica rigorosamente a verificação de Baixa Luz e Rosto/Selfie
-      if (telemetriaVisual && (telemetriaVisual.baixaLuz || telemetriaVisual.rostoDetectado)) {
+      // Mesmo offline, aplica verificação de Baixa Luz, Pessoa no Centro e Contexto de Construção
+      if (telemetriaVisual && (telemetriaVisual.baixaLuz || telemetriaVisual.pessoaNoCentro || telemetriaVisual.foraDeContexto)) {
         state.currentVistoria.fotoCamera = null;
-        const isLuz = telemetriaVisual.baixaLuz;
-        const motivoRejeicao = isLuz
-          ? 'Reprovado pela IA Gemini: Imagem com baixa luz. Ilumine o local da obra antes de capturar.'
-          : 'Reprovado pela IA Gemini: Foto de rosto ou selfie não é permitida. Fotografe apenas a obra ou local.';
+        const categoriaRejeicao = telemetriaVisual.baixaLuz
+          ? 'BAIXA_LUZ'
+          : telemetriaVisual.pessoaNoCentro
+          ? 'PESSOA_NO_CENTRO'
+          : 'FORA_DE_CONTEXTO';
+        const motivoRejeicao =
+          categoriaRejeicao === 'BAIXA_LUZ'
+            ? 'Reprovado pela IA: Imagem com baixa luz. Ilumine o local da obra antes de capturar.'
+            : categoriaRejeicao === 'PESSOA_NO_CENTRO'
+            ? 'Reprovado pela IA: Pessoas e selfies são permitidas, mas não devem ocupar a parte central da foto. Deixe a obra ou construção livre no centro.'
+            : 'Reprovado pela IA: A foto deve retratar exclusivamente uma obra, prédio, edifício, casa ou construção.';
         const resultadoRejeitado = {
           status: 'REJEITADO',
-          categoria: isLuz ? 'BAIXA_LUZ' : 'ROSTO_SELFIE',
-          confianca: isLuz ? 0.22 : 0.14,
+          categoria: categoriaRejeicao,
+          confianca: categoriaRejeicao === 'BAIXA_LUZ' ? 0.22 : categoriaRejeicao === 'PESSOA_NO_CENTRO' ? 0.18 : 0.25,
           motivo: motivoRejeicao,
         };
         state.setResultadoAvaliacaoIa(resultadoRejeitado);
         mostrarControlesPosCaptura('REJEITADO', resultadoRejeitado);
 
-        const tituloRejeicao = isLuz ? 'Foto Reprovada • Baixa Iluminação' : 'Foto Reprovada • Rosto / Selfie Não Permitido';
+        const tituloRejeicao =
+          categoriaRejeicao === 'BAIXA_LUZ'
+            ? 'Foto Reprovada • Baixa Iluminação'
+            : categoriaRejeicao === 'PESSOA_NO_CENTRO'
+            ? 'Foto Reprovada • Pessoa Ocupando o Centro'
+            : 'Foto Reprovada • Fora do Contexto de Construção';
         if (statusBadge) statusBadge.innerText = tituloRejeicao;
         if (pulseDot) pulseDot.style.background = '#EF4444';
         if (lblVerified) lblVerified.innerText = tituloRejeicao;
@@ -927,21 +1041,27 @@ export function bindCameraIaEvents() {
         status: 'APROVADO',
         categoria: 'OBRA_LOCAL',
         confianca: 0.94,
-        motivo: 'Foto de obra/fiscalização de local validada pela IA Gemini com boa iluminação.',
+        motivo: 'Foto de obra, prédio ou construção validada pela IA com boa iluminação e centro livre.',
       };
       state.setResultadoAvaliacaoIa(resultadoAprovadoLocal);
       mostrarControlesPosCaptura('APROVADO', resultadoAprovadoLocal);
-      if (statusBadge) statusBadge.innerText = 'IA Gemini: Obra Validada • Hash SHA-256 Gerado';
+      if (statusBadge) statusBadge.innerText = 'IA: Obra Validada • Hash SHA-256 Gerado';
       if (pulseDot) pulseDot.style.background = '#10B981';
-      if (lblVerified) lblVerified.innerText = 'Foto de Obra/Local Validada pela IA Gemini';
-      if (lblSub) lblSub.innerText = 'IA Gemini 94% • Iluminação e contexto de obra aprovados';
-      toast.success('Foto Validada pela IA Gemini', 'Imagem de obra aprovada e protegida com carimbo temporal.');
+      if (lblVerified) lblVerified.innerText = 'Foto de Obra/Construção Validada pela IA';
+      if (lblSub) lblSub.innerText = 'IA 94% • Obra/construção e centro livre aprovados';
+      toast.success('Foto Validada pela IA', 'Imagem de obra aprovada e protegida com carimbo temporal.');
     }
   }
 
   // --------------------------------------------------------------------------
   // BIND DE EVENTOS E CONTROLES
   // --------------------------------------------------------------------------
+  if (btnReativarCamera) {
+    btnReativarCamera.addEventListener('click', () => {
+      iniciarCamera();
+    });
+  }
+
   if (btnDisparar) {
     btnDisparar.addEventListener('click', () => {
       executarAvaliacao();
@@ -958,7 +1078,7 @@ export function bindCameraIaEvents() {
   if (btnAvancar) {
     btnAvancar.addEventListener('click', () => {
       if (state.currentVistoria.statusIA === 'REJEITADO') {
-        toast.error('Foto Reprovada pela IA Gemini', 'A foto atual foi reprovada. Tire uma nova foto da obra/local com boa iluminação.');
+        toast.error('Foto Reprovada pela IA', 'A foto atual foi reprovada. Tire uma nova foto da obra/local com boa iluminação.');
         return;
       }
       if (!state.currentVistoria.fotoCamera) {
@@ -971,27 +1091,30 @@ export function bindCameraIaEvents() {
   }
 
   if (btnRetake) {
-    btnRetake.addEventListener('click', () => {
+    btnRetake.addEventListener('click', async () => {
       fotoCongelada = false;
       state.currentVistoria.fotoCamera = null;
       state.currentVistoria.statusIA = null;
       iniciarRelogioTempoReal();
-      if (statusBadge) statusBadge.innerText = 'Câmera Ativa • IA Gemini Pronta';
-      if (pulseDot) pulseDot.style.background = '#10B981';
       if (warningBox) warningBox.classList.add('hidden');
       if (btnDisparar) btnDisparar.classList.remove('hidden');
       if (postCaptureActions) postCaptureActions.classList.add('hidden');
       if (camVerifiedBanner) camVerifiedBanner.classList.add('hidden');
-      if (camStepHint) camStepHint.innerText = 'Fotografe a obra/local bem iluminado (sem rostos/selfies)';
+      if (camStepHint) camStepHint.innerText = 'Enquadre a obra, prédio, casa ou construção no centro (selfie/pessoas permitidas nas laterais)';
 
-      if (videoFeed) {
-        videoFeed.classList.remove('hidden');
-        if (mainStreamImg) mainStreamImg.classList.add('hidden');
-      }
+      if (mainStreamImg) mainStreamImg.classList.add('hidden');
       if (!streamAtivo) {
-        iniciarCamera();
+        const ok = await iniciarCamera();
+        if (ok) {
+          toast.info('Nova Captura', 'Câmera reativada. Enquadre a obra, prédio, casa ou construção.');
+        }
+      } else {
+        if (videoFeed) videoFeed.classList.remove('hidden');
+        ocultarOverlayCameraIndisponivel();
+        if (statusBadge) statusBadge.innerText = 'Câmera Ativa • IA Pronta';
+        if (pulseDot) pulseDot.style.background = '#10B981';
+        toast.info('Nova Captura', 'Câmera reativada. Enquadre a obra, prédio, casa ou construção.');
       }
-      toast.info('Nova Captura', 'Câmera reativada. Fotografe o local da obra com boa iluminação.');
     });
   }
 

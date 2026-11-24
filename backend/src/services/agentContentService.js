@@ -57,7 +57,7 @@ function getLlmsTxt() {
 
 > ${siteConfig.shortDescription}
 
-O BBVision é a plataforma de monitoramento, auditoria e fiscalização remota de obras para o Banco do Brasil, desenvolvida pela Equipe TakeOff no programa Residência Tecnológica em Software & IA (Porto Digital). Empreiteiras executam vistorias de campo com captura fotográfica exclusivamente in-loco (bloqueio de galeria), validação visual instantânea por Google Gemini 1.5 Flash (SLA <= 15s, confiança >= 75%), checklists dinâmicos, modo offline e assinatura digital com bloqueio imediato do laudo. Fiscais de engenharia do Banco do Brasil auditam os relatórios PDF carimbados com Código Único (16 caracteres hex) e Hash criptográfico SHA-256, homologando obras como REGULAR ou PENDENTE_AJUSTE.
+O BBVision é a plataforma de monitoramento, auditoria e fiscalização remota de obras para o Banco do Brasil, desenvolvida pela Equipe TakeOff no programa Residência Tecnológica em Software & IA (Porto Digital). Empreiteiras executam vistorias de campo com captura fotográfica exclusivamente in-loco (bloqueio de galeria), validação visual instantânea por IA (SLA <= 15s, confiança >= 75%), checklists dinâmicos, modo offline e assinatura digital com bloqueio imediato do laudo. Fiscais de engenharia do Banco do Brasil auditam os relatórios PDF carimbados com Código Único (16 caracteres hex) e Hash criptográfico SHA-256, homologando obras como REGULAR ou PENDENTE_AJUSTE.
 
 ## Páginas Principais
 
@@ -226,7 +226,7 @@ ${siteConfig.longDescription}
 - Seleciona a obra atribuída e o tipo de local de vistoria.
 - Preenche checklist técnico dinâmico com sugestões editáveis de Inteligência Artificial.
 - Realiza captura fotográfica exclusivamente ao vivo pela câmera (upload via galeria bloqueado).
-- Recebe validação visual em tempo real via **Google Gemini 1.5 Flash** (SLA <= 15s, limiar de confiança >= 75%, com fallback manual assistido).
+- Recebe validação visual em tempo real via **IA** (SLA <= 15s, limiar de confiança >= 75%, com fallback manual assistido).
 - Assina digitalmente, bloqueia o relatório contra alterações posteriores e gera Código Único (16 hex) + Hash SHA-256 + PDF oficial enviado por e-mail.
 - Conta com modo offline de contingência com fila local e sincronização automática.
 
@@ -290,7 +290,7 @@ O modelo tradicional de fiscalização de obras exige deslocamentos frequentes d
 
 - **Frontend Corporativo:** HTML5, CSS3 moderno e Vanilla JavaScript (mobile-first, PWA e modo offline).
 - **Backend RESTful:** Node.js com Express, headers OWASP Top 10, rate limiting e camada de dados desacoplada (memória e Supabase/PostgreSQL).
-- **Inteligência Artificial Responsável:** Google Gemini 1.5 Flash com SLA <= 15s, confiança mínima de 75%, fallback manual e revisão humana obrigatória (Human-in-the-loop).
+- **Inteligência Artificial Responsável:** Validação visual por IA com SLA <= 15s, confiança mínima de 75%, fallback manual e revisão humana obrigatória (Human-in-the-loop).
 - **Inviolabilidade e Fé Pública:** Proibição de upload pela galeria, geração de Código Único criptográfico (16 caracteres hex), Hash SHA-256 e bloqueio imediato pós-assinatura.
 - **Emissão Documental:** Geração automática de PDF oficial via PDFKit e notificações institucionais via Resend / Nodemailer.
 
@@ -373,7 +373,7 @@ O **BBVision** destina-se exclusivamente ao monitoramento, registro de vistorias
 
 ## 4. Governança de Inteligência Artificial
 
-As análises do Google Gemini 1.5 Flash têm caráter de apoio técnico à verificação de qualidade visual e sugestão de texto. Toda decisão final de vistoria e homologação é de responsabilidade humana (Human-in-the-loop).
+As análises de IA têm caráter de apoio técnico à verificação de qualidade visual e sugestão de texto. Toda decisão final de vistoria e homologação é de responsabilidade humana (Human-in-the-loop).
 
 ## 5. Contato Jurídico e Institucional
 
@@ -402,7 +402,7 @@ O tratamento é realizado para execução contratual, cumprimento de obrigaçõe
 
 - Senhas protegidas por hash criptográfico (bcrypt) e sessões autenticadas via JWT.
 - Cabeçalhos corporativos de segurança HTTP (CSP, HSTS, X-Frame-Options, nosniff) e controle de taxa contra abuso.
-- Proteção contra captura indevida de rostos/selfies durante vistorias de obra por meio de triagem automatizada.
+- Validação por IA do enquadramento de obras, prédios, edifícios, casas ou construções com área central livre de pessoas.
 
 ## 4. Direitos do Titular e Encarregado (DPO)
 
@@ -582,7 +582,7 @@ function renderInstitutionalPage(pageKey) {
       pageKey: 'about',
       title: 'Sobre o BBVision | Fiscalização Remota de Obras do Banco do Brasil',
       description:
-        'Conheça a arquitetura, personas, governança de IA Google Gemini 1.5 Flash e garantias criptográficas SHA-256 do BBVision (Porto Digital / TakeOff).',
+        'Conheça a arquitetura, personas, governança de IA e garantias criptográficas SHA-256 do BBVision (Porto Digital / TakeOff).',
       canonicalPath: '/about',
       mdPath: '/about.md',
       h1: 'Sobre o BBVision',
@@ -606,7 +606,7 @@ function renderInstitutionalPage(pageKey) {
           <h2>Arquitetura e Governança de IA</h2>
           <ul>
             <li><strong>Captura Inviolável:</strong> Bloqueio de galeria no fluxo de campo, selo temporal e Hash SHA-256 por imagem e relatório.</li>
-            <li><strong>Google Gemini 1.5 Flash:</strong> Validação de nitidez, iluminação e enquadramento com SLA &le; 15s, limiar de confiança &ge; 75% e fallback manual assistido.</li>
+            <li><strong>Validação por IA:</strong> Validação de nitidez, iluminação e enquadramento com SLA &le; 15s, limiar de confiança &ge; 75% e fallback manual assistido.</li>
             <li><strong>Resiliência Offline:</strong> Fila local com sincronização automática para canteiros com oscilação de rede 4G/5G.</li>
             <li><strong>Equipe TakeOff:</strong> Arthur Lucas, Breno Lima, Fábio Pereira, George Rafhael, Isabela Melo, Jefferson Veiga, Lucas Antonio, Luiz Augusto e Vitória Celeste.</li>
           </ul>
@@ -723,7 +723,7 @@ function renderInstitutionalPage(pageKey) {
           </ul>
 
           <h2>4. Governança de Inteligência Artificial</h2>
-          <p>A validação automática via Google Gemini 1.5 Flash atua como ferramenta auxiliar de qualidade visual e sugestão de texto editável. A decisão final de envio e homologação é sempre humana (Human-in-the-loop).</p>
+          <p>A validação automática via IA atua como ferramenta auxiliar de qualidade visual e sugestão de texto editável. A decisão final de envio e homologação é sempre humana (Human-in-the-loop).</p>
 
           <h2>5. Contato e Esclarecimentos</h2>
           <p>Para dúvidas jurídicas ou técnicas sobre estes termos, escreva para <a href="mailto:${escapeHtml(org.email)}">${escapeHtml(org.email)}</a> ou ligue para <a href="${escapeHtml(telHref)}">${escapeHtml(org.telephoneDisplay)}</a>. Consulte também nossa <a href="/privacy">Política de Privacidade e LGPD</a>.</p>
@@ -766,7 +766,7 @@ function renderInstitutionalPage(pageKey) {
           <p>O BBVision trata exclusivamente dados profissionais necessários à operação: nome completo, e-mail corporativo, vínculo empresarial, registro profissional (CREA/CAU/Matrícula), fotografias técnicas do canteiro de obras, carimbos temporais, respostas de checklists e pareceres fiscais.</p>
 
           <h2>2. Segurança e Integridade</h2>
-          <p>Credenciais são protegidas por hashing criptográfico bcrypt, sessões operam via JWT, comunicações utilizam headers corporativos OWASP (HSTS, CSP, nosniff, X-Frame-Options) e evidências recebem selo SHA-256 para prevenção a fraudes. A triagem de IA rejeita automaticamente capturas indevidas de rostos/selfies em vistorias.</p>
+          <p>Credenciais são protegidas por hashing criptográfico bcrypt, sessões operam via JWT, comunicações utilizam headers corporativos OWASP (HSTS, CSP, nosniff, X-Frame-Options) e evidências recebem selo SHA-256 para prevenção a fraudes. A triagem por IA verifica que a foto retrata uma obra, prédio, edifício, casa ou construção sem obstrução de pessoas na parte central.</p>
 
           <h2>3. Direitos dos Titulares</h2>
           <p>Titulares podem solicitar confirmação de tratamento, acesso ou retificação de seus dados cadastrais pelo canal oficial <a href="mailto:${escapeHtml(org.email)}">${escapeHtml(org.email)}</a> ou telefone <a href="${escapeHtml(telHref)}">${escapeHtml(org.telephoneDisplay)}</a>.</p>

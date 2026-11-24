@@ -28,6 +28,7 @@ function resolveApiBaseUrl() {
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
+export { API_BASE_URL };
 
 class BBVisionApiClient {
   constructor() {

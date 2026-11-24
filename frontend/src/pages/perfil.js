@@ -13,8 +13,8 @@ export function renderPerfil() {
   const user = state.user;
   const isEmpreiteira = user?.cargo === 'empreiteira';
   const roleLabel = isEmpreiteira
-    ? `${Icons.perfilObras(18)} Empreiteira (Campo & Vistorias)`
-    : `${Icons.perfilBb(18)} Fiscal de Obra (Banco do Brasil)`;
+    ? 'Empreiteira (Campo & Vistorias)'
+    : 'Fiscal de Obra (Banco do Brasil)';
   const dataCadastro = user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : '10/10/2026';
 
   return `
@@ -24,25 +24,25 @@ export function renderPerfil() {
       <!-- Card do Usuário Autenticado -->
       <div class="profile-card-top">
         <div class="profile-avatar-large" style="display:flex; align-items:center; justify-content:center; background:transparent; border:none; box-shadow:none;">
-          ${isEmpreiteira ? Icons.perfilObras(76) : Icons.perfilBb(76)}
+          ${isEmpreiteira ? Icons.perfilObras(72) : Icons.perfilBb(72)}
         </div>
         <h2 class="profile-name">${user?.nome || 'Usuário BBVision'}</h2>
-        <span class="profile-role-badge ${isEmpreiteira ? 'empreiteira' : 'fiscal'}" style="display:inline-flex; align-items:center; gap:6px;">
+        <span class="profile-role-badge ${isEmpreiteira ? 'empreiteira' : 'fiscal'}">
           ${roleLabel}
         </span>
         <span class="profile-email">${user?.email || 'usuario@empresa.com.br'}</span>
 
         <div class="profile-meta-tags-row" style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
-          <span style="background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #94A3B8; display:inline-flex; align-items:center; gap:6px;">
-            ${Icons.iconeBanco(14)} ${user?.empresa || (isEmpreiteira ? 'Empreiteira Contratada' : 'Banco do Brasil - DIPAT')}
+          <span style="background: #F1F5F9; border: 1px solid #E2E8F0; padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #475569; font-weight: 500;">
+            ${user?.empresa || (isEmpreiteira ? 'Empreiteira Contratada' : 'Banco do Brasil - DIPAT')}
           </span>
           ${user?.registro_profissional ? `
-            <span style="background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #94A3B8; display: inline-flex; align-items: center; gap: 6px;">
-              ${Icons.iconeCrea(16)} ${user.registro_profissional}
+            <span style="background: #F1F5F9; border: 1px solid #E2E8F0; padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #475569; font-weight: 500;">
+              ${user.registro_profissional}
             </span>
           ` : ''}
-          <span style="background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #94A3B8; display: inline-flex; align-items: center; gap: 6px;">
-            ${Icons.iconeCadastro(16)} Cadastro: ${dataCadastro}
+          <span style="background: #F1F5F9; border: 1px solid #E2E8F0; padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #475569; font-weight: 500;">
+            Cadastro: ${dataCadastro}
           </span>
         </div>
       </div>
@@ -62,8 +62,8 @@ export function renderPerfil() {
           </ul>
         ` : `
           <ul class="perm-list">
-            <li style="display: flex; align-items: center; gap: 6px;">✓ ${Icons.iconeControle(16)} Acesso ao Centro de Controle e Governança do Banco do Brasil</li>
-            <li style="display: flex; align-items: center; gap: 6px;">✓ ${Icons.iconeCadastro(16)} Cadastro e credenciamento de novas obras e agências BB</li>
+            <li>✓ Acesso ao Centro de Controle e Governança do Banco do Brasil</li>
+            <li>✓ Cadastro e credenciamento de novas obras e agências BB</li>
             <li>✓ Auditoria de evidências com verificação de hashes SHA-256</li>
             <li>✓ Inspeção e download de PDFs oficiais certificados</li>
             <li>✓ Julgamento técnico com Fé Pública: Aprovação (Regular) ou Reprovação (Pendente de Ajuste)</li>
@@ -76,7 +76,7 @@ export function renderPerfil() {
       <div class="system-info-box">
         <div class="info-row">
           <span>Instituição:</span>
-          <strong style="display: inline-flex; align-items: center; gap: 6px;">${Icons.iconeBanco(18)} Banco do Brasil S.A.</strong>
+          <strong>Banco do Brasil S.A.</strong>
         </div>
         <div class="info-row">
           <span>Sistema:</span>
@@ -98,17 +98,12 @@ export function renderPerfil() {
 
       <!-- Ações da Conta e Encerramento Seguro de Sessão -->
       <div class="profile-logout-section">
-        <div class="logout-notice-box">
-          <div class="logout-notice-icon">
-            ${Icons.logOut(24, '#DC2626')}
-          </div>
-          <div class="logout-notice-text">
-            <h4>Encerrar Sessão do Usuário</h4>
-            <p>Desconecte com segurança após finalizar suas vistorias e relatórios no sistema.</p>
-          </div>
+        <div class="logout-notice-text">
+          <h4>Encerrar Sessão do Usuário</h4>
+          <p>Desconecte com segurança após finalizar suas vistorias e relatórios no sistema.</p>
         </div>
         <button class="btn-logout-full" id="btnLogout" title="Sair da Conta">
-          ${Icons.logOut(18, '#FFFFFF')}
+          ${Icons.logOut(16, '#FFFFFF')}
           <span>Sair da Conta (Encerrar Sessão)</span>
         </button>
       </div>

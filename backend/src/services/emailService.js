@@ -5,7 +5,7 @@
  */
 
 const { transporter, emailFrom, fiscalEmailPadrao } = require('../config/email');
-const { isValidEmail } = require('../utils/securityUtils');
+const { isValidEmail, sanitizeString } = require('../utils/securityUtils');
 
 /**
  * Envia o PDF do relatório por e-mail após a finalização da vistoria técnica
@@ -25,13 +25,16 @@ async function enviarRelatorioEmail(relatorio, pdfBuffer, destinatario = null) {
 
   const codigo = relatorio.codigo_unico || 'N/A';
   const obraNome = (relatorio.obra && relatorio.obra.nome) || relatorio.obra_nome || 'Obra Monitorada';
+  const obraNomeSafe = sanitizeString(obraNome);
+  const codigoSafe = sanitizeString(codigo);
+  const hashSafe = sanitizeString(relatorio.hash_integridade || 'N/A');
 
   const mailOptions = {
     from: `"BBVision - Banco do Brasil" <${emailFrom}>`,
     to: targetEmail,
     subject: `[BBVision] Relatório de Vistoria Finalizado - ${obraNome} (Cód: ${codigo})`,
     text: 
-      `Prezado(a) Fiscal Mariana,\n\n` +
+      `Prezado(a) Fiscal,\n\n` +
       `A vistoria técnica in-loco da obra "${obraNome}" foi finalizada com sucesso.\n\n` +
       `Código Único: ${codigo}\n` +
       `Hash de Integridade: ${relatorio.hash_integridade || 'N/A'}\n` +
@@ -51,15 +54,15 @@ async function enviarRelatorioEmail(relatorio, pdfBuffer, destinatario = null) {
           <table style="width: 100%; border-collapse: collapse; margin: 16px 0; background-color: #f8fafc; border-radius: 6px;">
             <tr>
               <td style="padding: 10px; font-weight: bold; width: 140px; border-bottom: 1px solid #e2e8f0;">Obra:</td>
-              <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${obraNome}</td>
+              <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${obraNomeSafe}</td>
             </tr>
             <tr>
               <td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #e2e8f0;">Código Único:</td>
-              <td style="padding: 10px; font-family: monospace; font-size: 15px; color: #003882; font-weight: bold; border-bottom: 1px solid #e2e8f0;">${codigo}</td>
+              <td style="padding: 10px; font-family: monospace; font-size: 15px; color: #003882; font-weight: bold; border-bottom: 1px solid #e2e8f0;">${codigoSafe}</td>
             </tr>
             <tr>
               <td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #e2e8f0;">Hash SHA-256:</td>
-              <td style="padding: 10px; font-family: monospace; font-size: 11px; word-break: break-all; border-bottom: 1px solid #e2e8f0;">${relatorio.hash_integridade || 'N/A'}</td>
+              <td style="padding: 10px; font-family: monospace; font-size: 11px; word-break: break-all; border-bottom: 1px solid #e2e8f0;">${hashSafe}</td>
             </tr>
             <tr>
               <td style="padding: 10px; font-weight: bold;">Status:</td>
@@ -67,7 +70,7 @@ async function enviarRelatorioEmail(relatorio, pdfBuffer, destinatario = null) {
             </tr>
           </table>
           <p style="font-size: 14px; color: #475569;">
-            O arquivo PDF oficial completo com as fotos in-loco, pareceres do Google Gemini 1.5 Flash e respostas do checklist segue anexado a esta mensagem.
+            O arquivo PDF oficial completo com as fotos in-loco, análises de IA e respostas do checklist segue anexado a esta mensagem.
           </p>
         </div>
         <div style="background-color: #f1f5f9; padding: 12px; text-align: center; font-size: 11px; color: #64748b;">

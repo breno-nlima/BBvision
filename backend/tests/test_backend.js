@@ -196,14 +196,17 @@ async function runTests() {
     assert(relRes.body.status === 'EM_ANDAMENTO', 'Status inicial é EM_ANDAMENTO');
     const relatorioId = relRes.body.id;
 
-    // 8. Avaliação de Foto com IA Gemini e Hash SHA-256
-    console.log('\n8. Testando Avaliação de Imagem com Gemini & Hash SHA-256 (/api/fotos/avaliar)...');
+    // 8. Avaliação de Foto com IA e Hash SHA-256
+    console.log('\n8. Testando Avaliação de Imagem com IA & Hash SHA-256 (/api/fotos/avaliar)...');
     const fakeImageB64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
     const fotoEval = await request('POST', '/api/fotos/avaliar', {
       imagemBase64: fakeImageB64,
       telemetriaVisual: {
         baixaLuz: false,
+        pessoaNoCentro: false,
         rostoDetectado: false,
+        contextoConstrucao: true,
+        foraDeContexto: false,
         luminanciaMedia: 175.4,
         percentualEscuros: 0.08,
       },
@@ -211,7 +214,7 @@ async function runTests() {
     assert(fotoEval.status === 200, 'Avaliação de foto de obra retornou HTTP 200');
     assert(fotoEval.body.hash_integridade, 'Hash SHA-256 gerado para a foto');
     assert(fotoEval.body.hash_integridade.length === 64, 'Hash tem 64 caracteres');
-    assert(fotoEval.body.status === 'APROVADO', 'Foto de obra/fiscalização bem iluminada foi APROVADA pela IA');
+    assert(fotoEval.body.status === 'APROVADO', 'Foto de obra/construção bem iluminada foi APROVADA pela IA');
     assert(fotoEval.body.categoria === 'OBRA_LOCAL', 'Categoria da foto aprovada é OBRA_LOCAL');
 
     // 8.1 Rejeição obrigatória de foto com Baixa Luz
@@ -219,7 +222,7 @@ async function runTests() {
       imagemBase64: fakeImageB64,
       telemetriaVisual: {
         baixaLuz: true,
-        rostoDetectado: false,
+        pessoaNoCentro: false,
         luminanciaMedia: 28.5,
         percentualEscuros: 0.84,
       },
@@ -228,20 +231,56 @@ async function runTests() {
     assert(fotoBaixaLuz.body.status === 'REJEITADO', 'Foto com baixa luz NÃO aprovou (status REJEITADO)');
     assert(fotoBaixaLuz.body.categoria === 'BAIXA_LUZ', 'Categoria identificada como BAIXA_LUZ');
 
-    // 8.2 Rejeição obrigatória de foto de Rosto / Selfie
-    const fotoRostoSelfie = await request('POST', '/api/fotos/avaliar', {
+    // 8.2 Selfie permitida na lateral (pessoa fora da parte central + obra/construção visível)
+    const fotoSelfieLateral = await request('POST', '/api/fotos/avaliar', {
       imagemBase64: fakeImageB64,
       telemetriaVisual: {
         baixaLuz: false,
-        rostoDetectado: true,
+        isSelfieCamera: true,
+        selfiePermitida: true,
+        selfieLateral: true,
         facesDetectadas: 1,
-        luminanciaMedia: 142.0,
-        taxaPeleCentro: 0.34,
+        facesNoCentro: 0,
+        pessoaNoCentro: false,
+        contextoConstrucao: true,
+        foraDeContexto: false,
+        luminanciaMedia: 162.0,
       },
     });
-    assert(fotoRostoSelfie.status === 200, 'Avaliação de foto de rosto/selfie retornou HTTP 200');
-    assert(fotoRostoSelfie.body.status === 'REJEITADO', 'Foto de rosto/selfie NÃO aprovou (status REJEITADO)');
-    assert(fotoRostoSelfie.body.categoria === 'ROSTO_SELFIE', 'Categoria identificada como ROSTO_SELFIE');
+    assert(fotoSelfieLateral.status === 200, 'Avaliação de selfie lateral com obra retornou HTTP 200');
+    assert(fotoSelfieLateral.body.status === 'APROVADO', 'Selfie com pessoa fora do centro e construção visível foi APROVADA');
+    assert(fotoSelfieLateral.body.categoria === 'OBRA_LOCAL', 'Categoria da selfie lateral aprovada é OBRA_LOCAL');
+
+    // 8.3 Rejeição obrigatória quando pessoa ocupa a parte central da foto
+    const fotoPessoaNoCentro = await request('POST', '/api/fotos/avaliar', {
+      imagemBase64: fakeImageB64,
+      telemetriaVisual: {
+        baixaLuz: false,
+        pessoaNoCentro: true,
+        facesDetectadas: 1,
+        facesNoCentro: 1,
+        luminanciaMedia: 142.0,
+        taxaPeleCentro: 0.38,
+      },
+    });
+    assert(fotoPessoaNoCentro.status === 200, 'Avaliação de pessoa ocupando o centro retornou HTTP 200');
+    assert(fotoPessoaNoCentro.body.status === 'REJEITADO', 'Foto com pessoa ocupando a parte central foi REJEITADA');
+    assert(fotoPessoaNoCentro.body.categoria === 'PESSOA_NO_CENTRO', 'Categoria identificada como PESSOA_NO_CENTRO');
+
+    // 8.4 Rejeição obrigatória quando foto NÃO é de obra, prédio, edifício, casa ou construção
+    const fotoForaContexto = await request('POST', '/api/fotos/avaliar', {
+      imagemBase64: fakeImageB64,
+      telemetriaVisual: {
+        baixaLuz: false,
+        pessoaNoCentro: false,
+        contextoConstrucao: false,
+        foraDeContexto: true,
+        luminanciaMedia: 155.0,
+      },
+    });
+    assert(fotoForaContexto.status === 200, 'Avaliação de foto fora do contexto de construção retornou HTTP 200');
+    assert(fotoForaContexto.body.status === 'REJEITADO', 'Foto fora do contexto de obra/construção foi REJEITADA');
+    assert(fotoForaContexto.body.categoria === 'FORA_DE_CONTEXTO', 'Categoria identificada como FORA_DE_CONTEXTO');
 
     // 9. Proteção contra Path Traversal
     console.log('\n9. Testando Proteção contra Path Traversal em Fotos (/api/fotos/sugerir-observacao)...');
@@ -569,8 +608,69 @@ async function runTests() {
     });
     assert(mcpValidate.status === 200 && mcpValidate.body.result && mcpValidate.body.result.content[0].text.includes('"autentico": true'), 'Ferramenta MCP validate_report_authenticity valida código real');
 
+    // 26. Auditoria Master: Segurança Avançada (CWE-22 irmão, IDOR, RBAC painel, deduplicação de fotos e PDF pós-julgamento)
+    console.log('\n26. Testando Auditoria Master (CWE-22 irmão, IDOR, RBAC painel, Deduplicação de fotos e Recompilação PDF)...');
+    const { resolveSafePath } = require('../src/utils/securityUtils');
+    const { UPLOAD_ROOT } = require('../src/middlewares/uploadMiddleware');
+    assert(resolveSafePath('../uploads_secret/vazamento.png', UPLOAD_ROOT) === null, 'resolveSafePath bloqueia bypass por diretório irmão (CWE-22)');
+
+    // RBAC em /api/relatorios/painel/resumo
+    const painelEmp = await request('GET', '/api/relatorios/painel/resumo', null, { Authorization: `Bearer ${tokenRodrigo}` });
+    assert(painelEmp.status === 403, 'Empreiteira bloqueada no painel fiscal (/painel/resumo) com HTTP 403');
+    const painelFisc = await request('GET', '/api/relatorios/painel/resumo', null, { Authorization: `Bearer ${tokenMariana}` });
+    assert(painelFisc.status === 200 && typeof painelFisc.body.totalRelatorios === 'number', 'Fiscal autorizada no painel fiscal (/painel/resumo) com HTTP 200');
+
+    // Cria relatório novo para testar IDOR, path traversal em /fotos, julgamento prematuro e deduplicação
+    const relAudit = await request('POST', '/api/relatorios', { obra_id: obraId }, { Authorization: `Bearer ${tokenRodrigo}` });
+    const relAuditId = relAudit.body.id;
+
+    // IDOR: outro usuário empreiteira tentando editar relatório do Rodrigo
+    const tokenOutroEmp = regSucesso.body.token;
+    const idorResp = await request('PUT', `/api/relatorios/${relAuditId}/respostas`, [{ pergunta: 'Hack', valor: 'Invasão' }], { Authorization: `Bearer ${tokenOutroEmp}` });
+    assert(idorResp.status === 403, 'IDOR: outra empreiteira bloqueada ao tentar alterar relatório alheio (HTTP 403)');
+
+    // Path Traversal via caminho_arquivo em /fotos
+    const fotoPathAttack = await request('POST', `/api/relatorios/${relAuditId}/fotos`, {
+      caminho_arquivo: '../../../Windows/win.ini',
+      hash_integridade: 'a'.repeat(64),
+    }, { Authorization: `Bearer ${tokenRodrigo}` });
+    assert(fotoPathAttack.status === 400, 'Path Traversal em POST /relatorios/:id/fotos bloqueado com HTTP 400');
+
+    // Julgamento fiscal em relatório ainda EM_ANDAMENTO deve retornar 400
+    const julgPrematuro = await request('PATCH', `/api/relatorios/${relAuditId}/status`, {
+      status: 'REGULAR',
+      justificativa: 'Tentativa prematura',
+    }, { Authorization: `Bearer ${tokenMariana}` });
+    assert(julgPrematuro.status === 400, 'Julgamento fiscal em relatório EM_ANDAMENTO bloqueado com HTTP 400');
+
+    // Deduplicação de foto entre POST /fotos e POST /finalizar
+    const anexoDedup = await request('POST', `/api/relatorios/${relAuditId}/fotos`, {
+      imagemBase64: fakeImageB64,
+      motivo: 'Evidência única da obra',
+    }, { Authorization: `Bearer ${tokenRodrigo}` });
+    assert(anexoDedup.status === 201, 'Foto anexada antes da finalização');
+    const hashUnicoFoto = anexoDedup.body.foto.hash_integridade;
+
+    const finDedup = await request('POST', `/api/relatorios/${relAuditId}/finalizar`, {
+      fotos: [{ imagemBase64: fakeImageB64, hash_integridade: hashUnicoFoto, motivo: 'Foto repetida na finalização' }],
+    }, { Authorization: `Bearer ${tokenRodrigo}` });
+    assert(finDedup.status === 200, 'Finalização com foto repetida respondeu HTTP 200');
+
+    const consultaDedup = await request('GET', `/api/relatorios/${relAuditId}`, null, { Authorization: `Bearer ${tokenRodrigo}` });
+    assert(consultaDedup.body.fotos.length === 1, 'Deduplicação manteve exatamente 1 foto no relatório (sem duplicação no PDF)');
+
+    // Parecer fiscal PENDENTE_AJUSTE deve recompilar o PDF sem erro
+    const julgAjuste = await request('PATCH', `/api/relatorios/${relAuditId}/status`, {
+      status: 'PENDENTE_AJUSTE',
+      justificativa: 'Ajustar sinalização externa conforme NBR 9050.',
+    }, { Authorization: `Bearer ${tokenMariana}` });
+    assert(julgAjuste.status === 200 && julgAjuste.body.status === 'PENDENTE_AJUSTE' && julgAjuste.body.obraStatus === 'PENDENTE_AJUSTE', 'Parecer PENDENTE_AJUSTE registrado com sucesso');
+
+    const pdfPosJulg = await request('GET', `/api/relatorios/${relAuditId}/pdf`);
+    assert(pdfPosJulg.status === 200 && pdfPosJulg.headers['content-type'] === 'application/pdf' && pdfPosJulg.rawBuffer.length > 1500, 'PDF recompilado após parecer fiscal baixado com sucesso');
+
     console.log('\n======================================================');
-    console.log('  TODOS OS 25 GRUPOS DE TESTES PASSARAM COM SUCESSO!');
+    console.log('  TODOS OS 26 GRUPOS DE TESTES PASSARAM COM SUCESSO!');
     console.log('======================================================\n');
   } catch (err) {
     console.error('\n❌ ERRO DURANTE A EXECUÇÃO DOS TESTES:', err);

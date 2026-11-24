@@ -38,7 +38,7 @@ export function renderVistoria() {
         <!-- Banner Imagem de Referência (HU02) -->
         <div class="reference-box">
           <div class="reference-badge">
-            <span>📷 Imagem Padrão de Referência</span>
+            <span>Imagem Padrão de Referência</span>
           </div>
           <div class="reference-visual">
             ${Icons.cadHouse1('100%', 110)}
@@ -65,7 +65,7 @@ export function renderVistoria() {
             </button>
           </div>
           <div class="camera-notice">
-            <small>🔒 Captura direta pelo aplicativo. Envio da galeria desabilitado.</small>
+            <small>Captura direta pelo aplicativo. Envio da galeria desabilitado.</small>
           </div>
         </div>
       </div>
@@ -132,7 +132,7 @@ export function renderVistoria() {
             </select>
             <div class="ai-suggestion-box">
               <div class="ai-sug-header">
-                <span>🤖 Sugestão IA (P3)</span>
+                <span>Sugestão IA (P3)</span>
                 <span class="badge-review">Revise antes de enviar</span>
               </div>
               <textarea class="cl-textarea" id="sugestaoAlvenaria" rows="2">Alvenaria externa erguida conforme gabarito de referência, juntas regulares e sem fissuras visíveis.</textarea>
@@ -147,7 +147,7 @@ export function renderVistoria() {
             </select>
             <div class="ai-suggestion-box">
               <div class="ai-sug-header">
-                <span>🤖 Sugestão IA (P3)</span>
+                <span>Sugestão IA (P3)</span>
                 <span class="badge-review">Revise antes de enviar</span>
               </div>
               <textarea class="cl-textarea" id="sugestaoCobertura" rows="2">Estrutura de telhado montada aguardando fechamento final de telhas e rufos.</textarea>
@@ -159,7 +159,7 @@ export function renderVistoria() {
             <button class="btn-submit-primary" id="btnFinalizarVistoria">
               Finalizar Vistoria e Gerar PDF Inviolável
             </button>
-            <small class="lock-notice">🔒 O relatório receberá código único, hash SHA-256 e será bloqueado para edição.</small>
+            <small class="lock-notice">O relatório receberá código único, hash SHA-256 e será bloqueado para edição.</small>
           </div>
         </div>
       </div>
@@ -193,7 +193,7 @@ export function renderVistoria() {
 
           <div style="display: flex; gap: 10px; margin-top: 14px;">
             <a id="btnAbrirPdfOficial" href="#" target="_blank" class="btn-secondary-white" style="text-align: center; text-decoration: none; display: none; align-items: center; justify-content: center;">
-              📄 Ver PDF Oficial
+              Ver PDF Oficial
             </a>
             <button class="btn-submit-primary" id="btnFecharModalSucesso" style="flex: 1;">
               Voltar ao Início

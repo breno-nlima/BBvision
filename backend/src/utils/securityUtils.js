@@ -32,8 +32,13 @@ function resolveSafePath(userPath, allowedBaseDir) {
 
   const resolvedTarget = path.resolve(resolvedBase, cleanUserPath);
 
-  // Garante que o caminho de destino inicia estritamente com o diretório base
-  if (!resolvedTarget.startsWith(resolvedBase)) {
+  // Garante que o caminho de destino está estritamente contido no diretório base (previne bypass por diretório irmão ex: uploads_secret)
+  const isWin = process.platform === 'win32';
+  const normBase = isWin ? resolvedBase.toLowerCase() : resolvedBase;
+  const normTarget = isWin ? resolvedTarget.toLowerCase() : resolvedTarget;
+  const baseWithSep = normBase.endsWith(path.sep) ? normBase : normBase + path.sep;
+
+  if (normTarget !== normBase && !normTarget.startsWith(baseWithSep)) {
     console.warn(`[Security Alert] Tentativa de Path Traversal detectada: "${userPath}" fora de "${allowedBaseDir}"`);
     return null;
   }

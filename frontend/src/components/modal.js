@@ -6,6 +6,7 @@
 import { Icons } from '../assets/icons.js';
 import { state, PERGUNTAS_PADRAO_BB } from '../services/state.js';
 import { toast } from './toast.js';
+import { escapeHtml } from '../utils/formatters.js';
 
 class BBVisionModal {
   constructor() {
@@ -19,6 +20,11 @@ class BBVisionModal {
   openPdfViewer({ title = 'Relatório Oficial de Fiscalização', pdfUrl, codigo = '', hash = '' }) {
     this.close();
 
+    const safeTitle = escapeHtml(title);
+    const safeCodigo = escapeHtml(codigo || 'Não informado');
+    const safeHash = escapeHtml(hash || '');
+    const cacheBustedPdfUrl = pdfUrl ? `${pdfUrl}${pdfUrl.includes('?') ? '&' : '?'}t=${Date.now()}` : '';
+
     const overlay = document.createElement('div');
     overlay.className = 'bb-modal-overlay fade-in';
     overlay.id = 'bbPdfModalOverlay';
@@ -27,9 +33,9 @@ class BBVisionModal {
       <div class="bb-modal-dialog bb-pdf-dialog">
         <header class="bb-modal-header">
           <div class="bb-modal-header-brand">
-            <span class="bb-stamp-icon" style="display:inline-flex; align-items:center;">${Icons.shieldFePublica(26)}</span>
+            <span class="bb-stamp-icon" style="display:inline-flex; align-items:center; color:#FED304;">${Icons.shieldFePublica(22, '#FED304')}</span>
             <div>
-              <h3 class="bb-modal-title">${title}</h3>
+              <h3 class="bb-modal-title">${safeTitle}</h3>
               <span class="bb-modal-subtitle">Documento Criptografado • Fé Pública Banco do Brasil</span>
             </div>
           </div>
@@ -39,28 +45,28 @@ class BBVisionModal {
         <div class="bb-modal-meta-bar">
           <div class="bb-meta-item">
             <span class="label">Código Único:</span>
-            <strong class="code-val">${codigo || 'Não informado'}</strong>
+            <strong class="code-val">${safeCodigo}</strong>
           </div>
           <div class="bb-meta-item">
             <span class="label">Integridade SHA-256:</span>
-            <span class="hash-val" title="${hash}">${hash ? hash.substring(0, 24) + '...' : 'Pendente'}</span>
+            <span class="hash-val" title="${safeHash}">${safeHash ? safeHash.substring(0, 24) + '...' : 'Pendente'}</span>
           </div>
           <div class="bb-meta-actions">
-            <a href="${pdfUrl}" target="_blank" download="BBVision_${codigo || 'Relatorio'}.pdf" class="btn-modal-action btn-download" title="Baixar PDF Oficial" style="display:inline-flex; align-items:center; gap:5px;">
-              ${Icons.downloadFile(15)} Baixar PDF
+            <a href="${escapeHtml(cacheBustedPdfUrl)}" target="_blank" rel="noopener" download="BBVision_${escapeHtml(codigo || 'Relatorio')}.pdf" class="btn-modal-action btn-download" title="Baixar PDF Oficial" style="display:inline-flex; align-items:center; gap:5px;">
+              ${Icons.downloadFile(14)} Baixar PDF
             </a>
-            <a href="${pdfUrl}" target="_blank" class="btn-modal-action btn-open-external" title="Abrir em Nova Aba" style="display:inline-flex; align-items:center; gap:5px;">
-              ${Icons.externalOpen(15)} Abrir Aba
+            <a href="${escapeHtml(cacheBustedPdfUrl)}" target="_blank" rel="noopener" class="btn-modal-action btn-open-external" title="Abrir em Nova Aba" style="display:inline-flex; align-items:center; gap:5px;">
+              ${Icons.externalOpen(14)} Abrir Aba
             </a>
           </div>
         </div>
 
         <div class="bb-modal-pdf-container">
-          <iframe src="${pdfUrl}#toolbar=1" class="bb-pdf-iframe" title="Visualizador de PDF BBVision"></iframe>
+          <iframe src="${escapeHtml(cacheBustedPdfUrl)}#toolbar=1" class="bb-pdf-iframe" title="Visualizador de PDF BBVision"></iframe>
         </div>
 
         <footer class="bb-modal-footer">
-          <span class="bb-security-seal" style="display:inline-flex; align-items:center; gap:6px;">${Icons.lockInviolavel(16)} Documento inviolável com carimbo temporal ICP-Brasil / Banco do Brasil S.A.</span>
+          <span class="bb-security-seal">Documento inviolável com carimbo temporal ICP-Brasil / Banco do Brasil S.A.</span>
           <button class="btn-modal-close" id="btnDismissPdfModal">Fechar Visualizador</button>
         </footer>
       </div>
@@ -80,8 +86,11 @@ class BBVisionModal {
   /**
    * Abre o modal de Parecer Técnico para Fiscal Mariana
    */
-  openParecerFiscal({ obraNome, onConfirm }) {
+  openParecerFiscal({ obraNome, initialDecision = 'APROVADO', onConfirm }) {
     this.close();
+
+    const isReprovarInicial = initialDecision === 'REPROVADO';
+    const safeObraNome = escapeHtml(obraNome || 'Unidade BB');
 
     const overlay = document.createElement('div');
     overlay.className = 'bb-modal-overlay fade-in';
@@ -91,10 +100,10 @@ class BBVisionModal {
       <div class="bb-modal-dialog bb-parecer-dialog">
         <header class="bb-modal-header warning">
           <div class="bb-modal-header-brand">
-            <span class="bb-stamp-icon" style="display:inline-flex; align-items:center;">${Icons.gavelAuditoria(26)}</span>
+            <span class="bb-stamp-icon" style="display:inline-flex; align-items:center; color:#FED304;">${Icons.gavelAuditoria(22, '#FED304')}</span>
             <div>
               <h3 class="bb-modal-title">Emitir Parecer Técnico de Auditoria</h3>
-              <span class="bb-modal-subtitle">${obraNome} — Fiscalização BB</span>
+              <span class="bb-modal-subtitle">${safeObraNome} — Fiscalização BB</span>
             </div>
           </div>
           <button class="bb-modal-close-btn" id="btnCloseParecerModal">✕</button>
@@ -107,18 +116,18 @@ class BBVisionModal {
           </p>
 
           <div class="parecer-type-select">
-            <label class="parecer-option selected" id="optAprovar">
-              <input type="radio" name="decisaoFiscal" value="APROVADO" checked />
+            <label class="parecer-option ${!isReprovarInicial ? 'selected' : ''}" id="optAprovar">
+              <input type="radio" name="decisaoFiscal" value="APROVADO" ${!isReprovarInicial ? 'checked' : ''} />
               <div class="opt-body">
-                <strong style="display:inline-flex; align-items:center; gap:6px;">${Icons.checkVerified(16)} Aprovar Vistoria (Obra REGULAR)</strong>
+                <strong>Aprovar Vistoria (Obra REGULAR)</strong>
                 <span>Todos os itens do checklist e fotos atendem aos requisitos do Banco do Brasil.</span>
               </div>
             </label>
 
-            <label class="parecer-option" id="optReprovar">
-              <input type="radio" name="decisaoFiscal" value="REPROVADO" />
+            <label class="parecer-option ${isReprovarInicial ? 'selected' : ''}" id="optReprovar">
+              <input type="radio" name="decisaoFiscal" value="REPROVADO" ${isReprovarInicial ? 'checked' : ''} />
               <div class="opt-body">
-                <strong style="display:inline-flex; align-items:center; gap:6px;">${Icons.warningAlert(16)} Solicitar Ajuste Técnico (PENDENTE_AJUSTE)</strong>
+                <strong>Solicitar Ajuste Técnico (PENDENTE_AJUSTE)</strong>
                 <span>Identificadas inconformidades nos registros fotográficos ou checklist de campo.</span>
               </div>
             </label>
@@ -143,22 +152,30 @@ class BBVisionModal {
     const optAprovar = overlay.querySelector('#optAprovar');
     const optReprovar = overlay.querySelector('#optReprovar');
     const txtJustificativa = overlay.querySelector('#txtJustificativaFiscal');
+    const msgAprovarPadrao = 'Vistoria aprovada. Fachada e estruturas em total conformidade com os manuais de arquitetura do Banco do Brasil.';
+    const msgReprovarPadrao = 'Identificada inconformidade nos itens vistoriados. Necessário realizar ajustes técnicos e nova captura com luz natural uniforme.';
 
     optAprovar.addEventListener('click', () => {
       optAprovar.classList.add('selected');
       optReprovar.classList.remove('selected');
-      if (!txtJustificativa.value || txtJustificativa.value.includes('Identificada inconformidade')) {
-        txtJustificativa.value = 'Vistoria aprovada. Fachada e estruturas em total conformidade com os manuais de arquitetura do Banco do Brasil.';
+      const r = optAprovar.querySelector('input');
+      if (r) r.checked = true;
+      if (!txtJustificativa.value || txtJustificativa.value === msgReprovarPadrao) {
+        txtJustificativa.value = msgAprovarPadrao;
       }
     });
 
     optReprovar.addEventListener('click', () => {
       optReprovar.classList.add('selected');
       optAprovar.classList.remove('selected');
-      txtJustificativa.value = 'Identificada inconformidade na sinalização externa e acabamento de prumo. Necessário refazer a captura com luz natural uniforme.';
+      const r = optReprovar.querySelector('input');
+      if (r) r.checked = true;
+      if (!txtJustificativa.value || txtJustificativa.value === msgAprovarPadrao) {
+        txtJustificativa.value = msgReprovarPadrao;
+      }
     });
 
-    txtJustificativa.value = 'Vistoria aprovada. Fachada e estruturas em total conformidade com os manuais de arquitetura do Banco do Brasil.';
+    txtJustificativa.value = isReprovarInicial ? msgReprovarPadrao : msgAprovarPadrao;
 
     const closeHandler = () => this.close();
     overlay.querySelector('#btnCloseParecerModal').addEventListener('click', closeHandler);
@@ -180,12 +197,10 @@ class BBVisionModal {
   confirmLogout({ user, onConfirm }) {
     this.close();
 
-    const userName = user?.nome || 'Usuário Autenticado';
+    const userName = escapeHtml(user?.nome || 'Usuário Autenticado');
     const isFiscal = user?.cargo === 'fiscal';
     const cargoLabel = isFiscal ? 'Fiscalização e Engenharia BB' : 'Empreiteira de Campo & Vistorias';
-    const avatarUrl = user?.avatar || (isFiscal
-      ? 'src/assets/icons/perfil_bb.png'
-      : 'src/assets/icons/perfil_obras.png');
+    const avatarSvg = isFiscal ? Icons.perfilBb(44) : Icons.perfilObras(44);
 
     const overlay = document.createElement('div');
     overlay.className = 'bb-modal-overlay fade-in';
@@ -196,7 +211,7 @@ class BBVisionModal {
         <header class="bb-modal-header" style="background: #001B3D; border-bottom: 3px solid #EF4444; padding: 16px 20px;">
           <div class="bb-modal-header-brand">
             <span class="bb-stamp-icon" style="color: #F87171; display: flex; align-items: center;">
-              ${Icons.logOut ? Icons.logOut(24, '#F87171') : '🚪'}
+              ${Icons.logOut(22, '#F87171')}
             </span>
             <div>
               <h3 class="bb-modal-title" style="color: #FFFFFF; font-size: 16px;">Encerrar Sessão do BBVision</h3>
@@ -209,15 +224,11 @@ class BBVisionModal {
         <div style="padding: 22px 20px; display: flex; flex-direction: column; gap: 16px;">
           <!-- Card de identificação do usuário logado -->
           <div style="display: flex; align-items: center; gap: 14px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px 14px;">
-            <img 
-              src="${avatarUrl}" 
-              alt="${userName}" 
-              style="width: 46px; height: 46px; border-radius: 50%; object-fit: cover; border: 2px solid ${isFiscal ? '#93C5FD' : '#FED304'};"
-            />
+            <div style="display:flex; align-items:center; flex-shrink:0;">${avatarSvg}</div>
             <div style="display: flex; flex-direction: column;">
               <strong style="color: #0F172A; font-size: 14px; font-weight: 700;">${userName}</strong>
               <span style="color: #002D62; font-size: 12px; font-weight: 600;">${cargoLabel}</span>
-              <span style="color: #64748B; font-size: 11px;">${user?.email || 'usuario@bbvision.com.br'}</span>
+              <span style="color: #64748B; font-size: 11px;">${escapeHtml(user?.email || 'usuario@bbvision.com.br')}</span>
             </div>
           </div>
 
@@ -226,9 +237,8 @@ class BBVisionModal {
           </p>
 
           <!-- Aviso de segurança de dados em campo / contingência -->
-          <div style="background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10B981; padding: 10px 14px; border-radius: 6px; font-size: 12px; color: #065F46; display: flex; align-items: flex-start; gap: 10px; line-height: 1.45;">
-            <span style="font-size: 16px;">🛡️</span>
-            <span><strong>Garantia de Integridade:</strong> Vistorias concluídas, relatórios bloqueados e dados salvos em contingência offline permanecem preservados com segurança neste dispositivo.</span>
+          <div style="background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10B981; padding: 10px 14px; border-radius: 6px; font-size: 12px; color: #065F46; line-height: 1.45;">
+            <strong>Garantia de Integridade:</strong> Vistorias concluídas, relatórios bloqueados e dados salvos em contingência offline permanecem preservados com segurança neste dispositivo.
           </div>
         </div>
 
@@ -237,7 +247,7 @@ class BBVisionModal {
             Permanecer Conectado
           </button>
           <button class="btn-modal-confirm" id="btnConfirmLogoutAction" style="background: #DC2626; color: #FFFFFF; padding: 9px 20px; font-size: 13px; font-weight: 700; border-radius: 6px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);">
-            ${Icons.logOut ? Icons.logOut(16, '#FFFFFF') : ''}
+            ${Icons.logOut(15, '#FFFFFF')}
             <span>Sim, Sair da Conta</span>
           </button>
         </footer>
@@ -316,7 +326,6 @@ class BBVisionModal {
       <div class="bb-modal-dialog bb-editar-pergunta-dialog" style="max-width: 580px; width: 95%; box-shadow: 0 25px 60px rgba(0,0,0,0.5);">
         <header class="bb-modal-header" style="background: #002D62; border-bottom: 3px solid #FED304; padding: 14px 18px;">
           <div class="bb-modal-header-brand">
-            <span class="bb-stamp-icon" style="font-size: 20px;">⚙️</span>
             <div>
               <h3 class="bb-modal-title" style="font-size: 15px; color: #FFFFFF;">
                 ${isEdit ? `Editar Pergunta ${(index !== null ? '#' + (index + 1) : '')}` : 'Nova Pergunta Técnica do Checklist'}
@@ -367,9 +376,9 @@ class BBVisionModal {
               class="form-control-input"
               style="padding: 9px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13px; background: #FFFFFF; outline: none;"
             >
-              <option value="multipla_escolha" ${initialTipo === 'multipla_escolha' ? 'selected' : ''}>🔘 Múltipla Escolha (Opção única com avaliação de conformidade)</option>
-              <option value="caixa" ${initialTipo === 'caixa' ? 'selected' : ''}>☑️ Caixas de Seleção (Múltiplas opções cumulativas de checklist)</option>
-              <option value="texto" ${initialTipo === 'texto' ? 'selected' : ''}>📝 Campo de Texto Descritivo (Relato livre com chips sugestivos)</option>
+              <option value="multipla_escolha" ${initialTipo === 'multipla_escolha' ? 'selected' : ''}>Múltipla Escolha (Opção única com avaliação de conformidade)</option>
+              <option value="caixa" ${initialTipo === 'caixa' ? 'selected' : ''}>Caixas de Seleção (Múltiplas opções cumulativas de checklist)</option>
+              <option value="texto" ${initialTipo === 'texto' ? 'selected' : ''}>Campo de Texto Descritivo (Relato livre com chips sugestivos)</option>
             </select>
           </div>
 
@@ -379,7 +388,7 @@ class BBVisionModal {
           </div>
 
           <div style="background: rgba(0, 45, 98, 0.04); border-left: 3px solid #002D62; padding: 8px 12px; border-radius: 4px; font-size: 11.5px; color: #475569;">
-            💡 <strong>Diretriz BB:</strong> Esta pergunta será apresentada diretamente à empreiteira durante o checklist de vistoria in-loco da obra.
+            <strong>Diretriz BB:</strong> Esta pergunta será apresentada diretamente à empreiteira durante o checklist de vistoria in-loco da obra.
           </div>
 
           <footer class="bb-modal-footer" style="padding: 12px 0 0 0; background: transparent; border-top: 1px solid #E2E8F0; display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px;">
@@ -426,7 +435,7 @@ class BBVisionModal {
               const tag = typeof op === 'object' ? (op.tag || '') : '';
               return `
                 <div style="display: flex; align-items: center; gap: 8px; background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; padding: 6px 10px;">
-                  <span style="font-size: 12px; color: #64748B; font-weight: 700;">${isMultipla ? '🔘' : '☑️'}</span>
+                  <span style="font-size: 11px; color: #64748B; font-weight: 700;">${opIdx + 1}.</span>
                   <input 
                     type="text" 
                     class="txt-opcao-item" 
@@ -614,7 +623,7 @@ class BBVisionModal {
       }
 
       const tipoLabel = tipo === 'multipla_escolha' ? 'Múltipla Escolha' : (tipo === 'caixa' ? 'Caixas de Seleção' : 'Campo de Texto Descritivo');
-      const tipoIcon = tipo === 'multipla_escolha' ? '🔘' : (tipo === 'caixa' ? '☑️' : '📝');
+      const tipoIcon = '';
       const chaveResposta = pergunta?.chaveResposta || pergunta?.id || `perg_${Date.now()}`;
 
       const perguntaEditada = {
@@ -666,7 +675,7 @@ class BBVisionModal {
         <header class="bb-modal-header" style="background: #001B3D; border-bottom: 3px solid #FED304; padding: 16px 20px;">
           <div class="bb-modal-header-brand">
             <span class="bb-stamp-icon" style="color: #FED304; display: flex; align-items: center;">
-              ${Icons.iconeCadastro(28)}
+              ${Icons.iconeCadastro(22, '#FED304')}
             </span>
             <div>
               <h3 class="bb-modal-title" style="color: #FFFFFF; font-size: 16px;">Cadastrar Nova Obra BB</h3>
@@ -680,10 +689,10 @@ class BBVisionModal {
           <div style="padding: 20px 22px; display: flex; flex-direction: column; gap: 16px;">
             <!-- Badge de fiscal responsável cadastrador -->
             <div style="background: #F1F5F9; border-left: 3px solid #002D62; padding: 10px 14px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
-              <span style="color: #002D62; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
-                ${Icons.perfilBb(18)} Fiscal Cadastrador(a):
+              <span style="color: #002D62; font-weight: 700;">
+                Fiscal Cadastrador(a):
               </span>
-              <span style="color: #334155; font-weight: 600;">${fiscalNome} (${fiscalMatricula})</span>
+              <span style="color: #334155; font-weight: 600;">${escapeHtml(fiscalNome)} (${escapeHtml(fiscalMatricula)})</span>
             </div>
 
             <!-- Campo 1: Nome da Obra / Agência -->
@@ -790,7 +799,7 @@ class BBVisionModal {
               <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
                 <div>
                   <div style="display: flex; align-items: center; gap: 8px;">
-                    <strong style="color: #002D62; font-size: 13.5px;">📋 Perguntas do Checklist Desta Obra</strong>
+                    <strong style="color: #002D62; font-size: 13.5px;">Perguntas do Checklist Desta Obra</strong>
                     <span id="badgePerguntasNovaObraCount" style="background: #002D62; color: #FED304; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px;">
                       ${perguntasObra.length} perguntas
                     </span>
@@ -801,11 +810,11 @@ class BBVisionModal {
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 6px;">
-                  <button type="button" id="btnRestaurarPerguntasNovaObra" title="Restaurar Perguntas Padrão BB" style="background: #FFFFFF; border: 1px solid #CBD5E1; color: #475569; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                    🔄 Padrão BB
+                  <button type="button" id="btnRestaurarPerguntasNovaObra" title="Restaurar Perguntas Padrão BB" style="background: #FFFFFF; border: 1px solid #CBD5E1; color: #475569; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 600; cursor: pointer;">
+                    Padrão BB
                   </button>
-                  <button type="button" id="btnAddPerguntaNovaObra" title="Adicionar Nova Pergunta" style="background: #002D62; color: #FED304; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 1px 4px rgba(0,45,98,0.25);">
-                    ➕ Nova Pergunta
+                  <button type="button" id="btnAddPerguntaNovaObra" title="Adicionar Nova Pergunta" style="background: #002D62; color: #FED304; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; box-shadow: 0 1px 4px rgba(0,45,98,0.25);">
+                    + Nova Pergunta
                   </button>
                 </div>
               </div>
@@ -817,9 +826,8 @@ class BBVisionModal {
             </div>
 
             <!-- Aviso de Governança e Regras de Negócio BB -->
-            <div style="background: rgba(0, 45, 98, 0.05); border: 1px dashed rgba(0, 45, 98, 0.25); border-radius: 8px; padding: 10px 14px; font-size: 11.5px; color: #475569; display: flex; gap: 10px; align-items: flex-start;">
-              <span style="font-size: 16px;">📌</span>
-              <span><strong>Regra de Negócio:</strong> Conforme diretrizes oficiais do BB, a Empreiteira designada receberá esta obra automaticamente em sua lista para vistorias in-loco com o checklist configurado e IA Gemini.</span>
+            <div style="background: rgba(0, 45, 98, 0.05); border: 1px dashed rgba(0, 45, 98, 0.25); border-radius: 8px; padding: 10px 14px; font-size: 11.5px; color: #475569; line-height: 1.45;">
+              <strong>Regra de Negócio:</strong> Conforme diretrizes oficiais do BB, a Empreiteira designada receberá esta obra automaticamente em sua lista para vistorias in-loco com o checklist configurado e IA.
             </div>
           </div>
 
@@ -867,7 +875,6 @@ class BBVisionModal {
       if (perguntasObra.length === 0) {
         container.innerHTML = `
           <div style="text-align: center; padding: 20px 12px; background: #FFFFFF; border: 1.5px dashed #CBD5E1; border-radius: 8px; color: #64748B;">
-            <span style="font-size: 24px; display: block; margin-bottom: 4px;">📋</span>
             <strong style="font-size: 13px; color: #1E293B;">Nenhuma pergunta configurada</strong>
             <p style="font-size: 11.5px; margin: 4px 0 10px;">Adicione ao menos uma pergunta ou restaure o modelo padrão do Banco do Brasil.</p>
             <button type="button" id="btnRestaurarVazio" style="background: #002D62; color: #FED304; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;">
@@ -884,7 +891,6 @@ class BBVisionModal {
 
       container.innerHTML = perguntasObra.map((p, idx) => {
         const tipoLabel = p.tipo === 'multipla_escolha' ? 'Múltipla Escolha' : (p.tipo === 'caixa' ? 'Caixas de Seleção' : 'Texto Descritivo');
-        const tipoIcon = p.tipo === 'multipla_escolha' ? '🔘' : (p.tipo === 'caixa' ? '☑️' : '📝');
         const tipoTagStyle = p.tipo === 'multipla_escolha' 
           ? 'background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE;' 
           : (p.tipo === 'caixa' ? 'background: #F0FDF4; color: #15803D; border: 1px solid #BBF7D0;' : 'background: #FEF3C7; color: #B45309; border: 1px solid #FDE68A;');
@@ -895,7 +901,7 @@ class BBVisionModal {
             <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;">
               ${p.opcoes.map(op => {
                 const label = typeof op === 'string' ? op : (op.label || op.valor || '');
-                return `<span style="font-size: 10.5px; padding: 2px 7px; background: #F1F5F9; border-radius: 4px; color: #475569;">${label}</span>`;
+                return `<span style="font-size: 10.5px; padding: 2px 7px; background: #F1F5F9; border-radius: 4px; color: #475569;">${escapeHtml(label)}</span>`;
               }).join('')}
             </div>
           `;
@@ -908,14 +914,14 @@ class BBVisionModal {
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
               <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                 <span style="background: #002D62; color: #FFFFFF; font-weight: 800; font-size: 11px; padding: 2px 7px; border-radius: 4px;">#${idx + 1}</span>
-                <span style="font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px; ${tipoTagStyle}">${tipoIcon} ${tipoLabel}</span>
+                <span style="font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; ${tipoTagStyle}">${tipoLabel}</span>
               </div>
               <div style="display: flex; align-items: center; gap: 4px;">
-                <button type="button" class="btn-editar-pergunta-obra" data-idx="${idx}" title="Editar Pergunta" style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #002D62; padding: 3px 8px; border-radius: 5px; font-size: 11.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 3px;">
-                  ✏️ Editar
+                <button type="button" class="btn-editar-pergunta-obra" data-idx="${idx}" title="Editar Pergunta" style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #002D62; padding: 3px 9px; border-radius: 5px; font-size: 11.5px; font-weight: 600; cursor: pointer;">
+                  Editar
                 </button>
-                <button type="button" class="btn-remover-pergunta-obra" data-idx="${idx}" title="Remover Pergunta" style="background: #FEE2E2; border: 1px solid #FECACA; color: #DC2626; padding: 3px 7px; border-radius: 5px; font-size: 11.5px; font-weight: 600; cursor: pointer;">
-                  🗑️
+                <button type="button" class="btn-remover-pergunta-obra" data-idx="${idx}" title="Remover Pergunta" style="background: #FEE2E2; border: 1px solid #FECACA; color: #DC2626; padding: 3px 8px; border-radius: 5px; font-size: 11.5px; font-weight: 600; cursor: pointer;">
+                  Excluir
                 </button>
               </div>
             </div>
@@ -1072,11 +1078,11 @@ class BBVisionModal {
       <div class="bb-modal-dialog bb-gerenciador-perguntas-dialog" style="max-width: 680px; width: 95%;">
         <header class="bb-modal-header" style="background: #001B3D; border-bottom: 3px solid #FED304; padding: 16px 20px;">
           <div class="bb-modal-header-brand">
-            <span class="bb-stamp-icon" style="color: #FED304; display: flex; align-items: center; font-size: 22px;">
-              📋
+            <span class="bb-stamp-icon" style="color: #FED304; display: flex; align-items: center;">
+              ${Icons.checklistBb(22, '#FED304')}
             </span>
             <div>
-              <h3 class="bb-modal-title" style="color: #FFFFFF; font-size: 16px;">${tituloModal}</h3>
+              <h3 class="bb-modal-title" style="color: #FFFFFF; font-size: 16px;">${escapeHtml(tituloModal)}</h3>
               <span class="bb-modal-subtitle" style="color: #94A3B8;">${subtituloModal}</span>
             </div>
           </div>
@@ -1095,11 +1101,11 @@ class BBVisionModal {
             </div>
 
             <div style="display: flex; align-items: center; gap: 8px;">
-              <button type="button" id="btnRestaurarGerenciador" style="background: #FFFFFF; border: 1px solid #CBD5E1; color: #475569; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                🔄 Padrão BB
+              <button type="button" id="btnRestaurarGerenciador" style="background: #FFFFFF; border: 1px solid #CBD5E1; color: #475569; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 600; cursor: pointer;">
+                Padrão BB
               </button>
-              <button type="button" id="btnAddPerguntaGerenciador" style="background: #002D62; color: #FED304; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 1px 4px rgba(0,45,98,0.25);">
-                ➕ Nova Pergunta
+              <button type="button" id="btnAddPerguntaGerenciador" style="background: #002D62; color: #FED304; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; box-shadow: 0 1px 4px rgba(0,45,98,0.25);">
+                + Nova Pergunta
               </button>
             </div>
           </div>
@@ -1111,7 +1117,7 @@ class BBVisionModal {
 
           <!-- Aviso de Governança -->
           <div style="background: rgba(0, 45, 98, 0.04); border-left: 3px solid #002D62; padding: 10px 12px; border-radius: 4px; font-size: 11.5px; color: #475569;">
-            🔒 <strong>Acesso Exclusivo Fiscal BB:</strong> Alterações nas perguntas passarão a vigorar imediatamente nas vistorias técnicas executadas pelas empreiteiras no aplicativo móvel.
+            <strong>Acesso Exclusivo Fiscal BB:</strong> Alterações nas perguntas passarão a vigorar imediatamente nas vistorias técnicas executadas pelas empreiteiras no aplicativo móvel.
           </div>
         </div>
 
@@ -1145,7 +1151,6 @@ class BBVisionModal {
       if (perguntas.length === 0) {
         container.innerHTML = `
           <div style="text-align: center; padding: 28px 16px; background: #F8FAFC; border: 1.5px dashed #CBD5E1; border-radius: 8px; color: #64748B;">
-            <span style="font-size: 28px; display: block; margin-bottom: 6px;">📋</span>
             <strong style="font-size: 13.5px; color: #1E293B;">Nenhuma pergunta cadastrada</strong>
             <p style="font-size: 12px; margin: 4px 0 12px;">Adicione ao menos uma pergunta ou restaure o modelo padrão do Banco do Brasil.</p>
             <button type="button" id="btnRestaurarVazioGerenciador" style="background: #002D62; color: #FED304; border: none; padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;">
@@ -1162,7 +1167,6 @@ class BBVisionModal {
 
       container.innerHTML = perguntas.map((p, idx) => {
         const tipoLabel = p.tipo === 'multipla_escolha' ? 'Múltipla Escolha' : (p.tipo === 'caixa' ? 'Caixas de Seleção' : 'Texto Descritivo');
-        const tipoIcon = p.tipo === 'multipla_escolha' ? '🔘' : (p.tipo === 'caixa' ? '☑️' : '📝');
         const tipoTagStyle = p.tipo === 'multipla_escolha' 
           ? 'background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE;' 
           : (p.tipo === 'caixa' ? 'background: #F0FDF4; color: #15803D; border: 1px solid #BBF7D0;' : 'background: #FEF3C7; color: #B45309; border: 1px solid #FDE68A;');
@@ -1173,7 +1177,7 @@ class BBVisionModal {
             <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px;">
               ${p.opcoes.map(op => {
                 const label = typeof op === 'string' ? op : (op.label || op.valor || '');
-                return `<span style="font-size: 11px; padding: 2px 8px; background: #F1F5F9; border-radius: 4px; color: #475569;">${label}</span>`;
+                return `<span style="font-size: 11px; padding: 2px 8px; background: #F1F5F9; border-radius: 4px; color: #475569;">${escapeHtml(label)}</span>`;
               }).join('')}
             </div>
           `;
@@ -1186,7 +1190,7 @@ class BBVisionModal {
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
               <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                 <span style="background: #002D62; color: #FFFFFF; font-weight: 800; font-size: 11px; padding: 2px 8px; border-radius: 4px;">#${idx + 1}</span>
-                <span style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; ${tipoTagStyle}">${tipoIcon} ${tipoLabel}</span>
+                <span style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; ${tipoTagStyle}">${tipoLabel}</span>
               </div>
               <div style="display: flex; align-items: center; gap: 4px;">
                 <!-- Botões de mover para cima/baixo -->
@@ -1196,11 +1200,11 @@ class BBVisionModal {
                 <button type="button" class="btn-mover-pergunta" data-idx="${idx}" data-dir="down" title="Mover para baixo" ${idx === perguntas.length - 1 ? 'disabled' : ''} style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #475569; padding: 3px 6px; border-radius: 4px; font-size: 11px; cursor: ${idx === perguntas.length - 1 ? 'not-allowed' : 'pointer'}; opacity: ${idx === perguntas.length - 1 ? '0.4' : '1'};">
                   ▼
                 </button>
-                <button type="button" class="btn-editar-gerenciador" data-idx="${idx}" title="Editar Pergunta" style="background: #EFF6FF; border: 1px solid #BFDBFE; color: #1D4ED8; padding: 3px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 3px;">
-                  ✏️ Editar
+                <button type="button" class="btn-editar-gerenciador" data-idx="${idx}" title="Editar Pergunta" style="background: #EFF6FF; border: 1px solid #BFDBFE; color: #1D4ED8; padding: 3px 9px; border-radius: 4px; font-size: 11.5px; font-weight: 600; cursor: pointer;">
+                  Editar
                 </button>
-                <button type="button" class="btn-remover-gerenciador" data-idx="${idx}" title="Remover Pergunta" style="background: #FEE2E2; border: 1px solid #FECACA; color: #DC2626; padding: 3px 7px; border-radius: 4px; font-size: 11.5px; font-weight: 600; cursor: pointer;">
-                  🗑️
+                <button type="button" class="btn-remover-gerenciador" data-idx="${idx}" title="Remover Pergunta" style="background: #FEE2E2; border: 1px solid #FECACA; color: #DC2626; padding: 3px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 600; cursor: pointer;">
+                  Excluir
                 </button>
               </div>
             </div>

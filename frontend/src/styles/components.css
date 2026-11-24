@@ -1044,13 +1044,13 @@
 }
 
 /* --------------------------------------------------------------------------
-   15. BBVision Custom Vector Icon System v3.0 — Micro-Interações & Personalidade
+   15. BBVision Minimalist Vector Icon System v4.0 — Contraste & Precisão
    -------------------------------------------------------------------------- */
 .bbv-icon {
   display: inline-block;
   vertical-align: middle;
   flex-shrink: 0;
-  transition: transform 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.22s ease;
+  transition: transform 0.18s ease, color 0.18s ease;
 }
 
 .nav-svg-slot {
@@ -1060,56 +1060,71 @@
   margin-right: 4px;
 }
 
-.bb-nav-link:hover .bbv-icon,
 .quick-action-card:hover .bbv-icon,
-.nav-item-btn:hover .bbv-icon,
 .local-option-card:hover .bbv-icon {
-  transform: scale(1.1) translateY(-1px);
-  filter: drop-shadow(0 3px 6px rgba(0, 45, 98, 0.16));
+  transform: translateY(-1px);
 }
 
 .quick-action-icon-badge {
-  width: 44px;
-  height: 44px;
-  border-radius: 13px;
-  background: linear-gradient(135deg, rgba(0, 45, 98, 0.05) 0%, rgba(254, 211, 4, 0.12) 100%);
-  border: 1px solid rgba(0, 45, 98, 0.08);
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  color: #002D62;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  transition: all 0.22s ease;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.quick-action-card.highlight-card .quick-action-icon-badge {
+  background: #FEF9C3;
+  border-color: rgba(254, 211, 4, 0.7);
+  color: #002D62;
 }
 
 .quick-action-card:hover .quick-action-icon-badge {
-  background: linear-gradient(135deg, rgba(254, 211, 4, 0.26) 0%, rgba(0, 45, 98, 0.08) 100%);
-  border-color: rgba(254, 211, 4, 0.65);
-  box-shadow: 0 4px 12px rgba(254, 211, 4, 0.22);
+  background: #002D62;
+  border-color: #002D62;
+  color: #FED304;
 }
 
 .bbv-icon-logo {
-  filter: drop-shadow(0 6px 14px rgba(0, 27, 61, 0.22));
-  animation: bbvFloatSubtle 4.5s ease-in-out infinite;
-}
-
-@keyframes bbvFloatSubtle {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-3px);
-  }
+  filter: drop-shadow(0 4px 10px rgba(0, 27, 61, 0.16));
 }
 
 .bbv-cad-illustration {
   width: 100%;
   height: 100%;
   display: block;
-  transition: transform 0.3s ease;
+  transition: transform 0.25s ease;
 }
 
 .obra-card:hover .bbv-cad-illustration {
-  transform: scale(1.03);
+  transform: scale(1.02);
+}
+
+/* Ponto de status minimalista (substitui ícones repetitivos em listas) */
+.analysis-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #002D62;
+  flex-shrink: 0;
+}
+
+.analysis-status-dot.concluido {
+  background: #059669;
+}
+
+.analysis-status-dot.pendente {
+  background: #D97706;
+}
+
+.analysis-status-dot.andamento {
+  background: #0284C7;
 }
 
 

@@ -3,6 +3,8 @@
  * Padrão Banco do Brasil: Notificações elegantes, acessíveis e não intrusivas
  */
 
+import { escapeHtml } from '../utils/formatters.js';
+
 class BBVisionToast {
   constructor() {
     this.container = null;
@@ -25,21 +27,43 @@ class BBVisionToast {
     toast.className = `bb-toast-item toast-${type} fade-in`;
 
     const iconMap = {
-      success: '✓',
-      error: '✕',
-      warning: '⚠️',
-      info: 'ℹ️'
+      success: `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M8.5 12.3L10.8 14.6L15.8 9.6"/>
+        </svg>
+      `,
+      error: `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M15 9L9 15M9 9L15 15"/>
+        </svg>
+      `,
+      warning: `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10.3 4.3L2.4 18C1.7 19.2 2.6 20.5 4 20.5H20C21.4 20.5 22.3 19.2 21.6 18L13.7 4.3C12.9 3 11.1 3 10.3 4.3Z"/>
+          <path d="M12 9.5V13.5"/>
+          <circle cx="12" cy="17" r="0.7" fill="#D97706"/>
+        </svg>
+      `,
+      info: `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#002D62" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 11.5V16"/>
+          <circle cx="12" cy="8.2" r="0.7" fill="#002D62"/>
+        </svg>
+      `
     };
 
-    const icon = iconMap[type] || 'ℹ️';
+    const icon = iconMap[type] || iconMap.info;
 
     toast.innerHTML = `
       <div class="toast-icon-badge">${icon}</div>
       <div class="toast-body">
-        ${title ? `<div class="toast-title">${title}</div>` : ''}
-        <div class="toast-message">${message}</div>
+        ${title ? `<div class="toast-title">${escapeHtml(title)}</div>` : ''}
+        <div class="toast-message">${escapeHtml(message)}</div>
       </div>
-      <button class="toast-close-btn" title="Fechar">✕</button>
+      <button class="toast-close-btn" title="Fechar" aria-label="Fechar notificação">✕</button>
     `;
 
     const closeBtn = toast.querySelector('.toast-close-btn');

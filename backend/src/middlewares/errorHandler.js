@@ -43,11 +43,16 @@ function errorHandler(err, req, res, next) {
     });
   }
 
+  const isProd = process.env.NODE_ENV === 'production';
+  const publicMessage = isProd && statusCode >= 500
+    ? 'Ocorreu um erro interno no servidor. Tente novamente em instantes.'
+    : mensagem;
+
   res.status(statusCode).json({
     status: statusCode,
-    erro: mensagem,
+    erro: publicMessage,
     timestamp: new Date().toISOString(),
-    ...(process.env.NODE_ENV !== 'production' && statusCode >= 500 ? { stack: err.stack } : {}),
+    ...(!isProd && statusCode >= 500 ? { stack: err.stack } : {}),
   });
 }
 

@@ -39,11 +39,11 @@ export function renderChecklistVerificacao() {
             </button>
             <h1 class="verificacao-title">Checklist de Verificação</h1>
           </div>
-          <span class="etapa-indicator-text">etapa 1 de 3</span>
+          <span class="etapa-indicator-text">etapa 2 de 3</span>
         </div>
 
         <div class="progress-bar-track">
-          <div class="progress-bar-fill-yellow" style="width: 35%;"></div>
+          <div class="progress-bar-fill-yellow" style="width: 66%;"></div>
         </div>
       </header>
 
@@ -96,8 +96,8 @@ export function renderChecklistVerificacao() {
         <div class="resp-text-group" style="flex: 1;">
           <span class="resp-card-title">Responsável Técnico</span>
           <strong class="resp-nome">Nome: ${responsavelNome}</strong>
-          <span class="resp-matricula" style="display: inline-flex; align-items: center; gap: 4px;">
-            ${Icons.iconeCrea(14)} Registro/Doc: ${responsavelDoc}
+          <span class="resp-matricula">
+            Registro/Doc: ${responsavelDoc}
           </span>
         </div>
         <div class="resp-arrow">

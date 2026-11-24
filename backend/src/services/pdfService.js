@@ -71,7 +71,7 @@ function gerarRelatorioPdfBuffer(relatorio) {
       doc.fillColor(AZUL_BB)
         .fontSize(10)
         .font('Helvetica-Bold')
-        .text('🔒 CARIMBO DIGITAL DE INTEGRIDADE & NÃO-REPÚDIO', 58, yBox + 9);
+        .text('CARIMBO DIGITAL DE INTEGRIDADE & NÃO-REPÚDIO', 58, yBox + 9);
 
       // Coluna Esquerda: Código Único
       doc.fillColor(CINZA_ESCURO).fontSize(8.5).font('Helvetica');
@@ -84,10 +84,22 @@ function gerarRelatorioPdfBuffer(relatorio) {
       // Status
       doc.fillColor(CINZA_ESCURO).fontSize(8.5).font('Helvetica');
       doc.text('STATUS DO DOCUMENTO:', 58, yBox + 44);
-      const isFinalizado = relatorio.status === 'FINALIZADO' || relatorio.status === 'APROVADO';
-      doc.fillColor(isFinalizado ? VERDE_SUCESSO : AMARELO_BB)
+      const statusDoc = String(relatorio.status || 'EM_ANDAMENTO').toUpperCase();
+      let statusLabel = 'EM ANDAMENTO';
+      let statusCor = '#D97706';
+      if (statusDoc === 'APROVADO') {
+        statusLabel = 'HOMOLOGADO & IMUTÁVEL (APROVADO)';
+        statusCor = VERDE_SUCESSO;
+      } else if (statusDoc === 'FINALIZADO') {
+        statusLabel = 'IMUTÁVEL & FINALIZADO (BLOQUEADO)';
+        statusCor = VERDE_SUCESSO;
+      } else if (statusDoc === 'PENDENTE_AJUSTE' || statusDoc === 'REPROVADO') {
+        statusLabel = 'PENDENTE DE AJUSTE (REPROVADO PELO FISCAL)';
+        statusCor = VERMELHO_ERRO;
+      }
+      doc.fillColor(statusCor)
         .font('Helvetica-Bold')
-        .text(isFinalizado ? 'IMUTÁVEL & FINALIZADO (BLOQUEADO)' : 'EM ANDAMENTO', 195, yBox + 44);
+        .text(statusLabel, 195, yBox + 44);
 
       // Data de finalização
       doc.fillColor(CINZA_ESCURO).font('Helvetica');
@@ -259,21 +271,19 @@ function gerarRelatorioPdfBuffer(relatorio) {
             }
           }
 
-          // 2. Se não houver Buffer em memória, lê do disco a partir de caminho seguro
+          // 2. Se não houver Buffer em memória, lê do disco SOMENTE a partir de caminho validado dentro de UPLOAD_ROOT
           if (!imgBuffer) {
             const rawSource = foto.caminho_arquivo || foto.url;
             if (rawSource && typeof rawSource === 'string' && !rawSource.startsWith('data:')) {
               try {
-                const fullPath = path.isAbsolute(rawSource)
-                  ? rawSource
-                  : resolveSafePath(rawSource, UPLOAD_ROOT);
+                const fullPath = resolveSafePath(rawSource, UPLOAD_ROOT);
 
                 if (fullPath && fs.existsSync(fullPath)) {
                   imgBuffer = fs.readFileSync(fullPath);
                 } else {
-                  // Fallback para arquivo direto dentro de uploads/evidencias
-                  const directEvidencePath = path.join(UPLOAD_ROOT, 'evidencias', path.basename(rawSource));
-                  if (fs.existsSync(directEvidencePath)) {
+                  // Fallback seguro para arquivo direto dentro de uploads/evidencias
+                  const directEvidencePath = resolveSafePath(path.join('evidencias', path.basename(rawSource)), UPLOAD_ROOT);
+                  if (directEvidencePath && fs.existsSync(directEvidencePath)) {
                     imgBuffer = fs.readFileSync(directEvidencePath);
                   }
                 }
@@ -309,7 +319,7 @@ function gerarRelatorioPdfBuffer(relatorio) {
             .text(`Evidência Fotográfica #${idx + 1} (Captura In-Loco • Câmera BBVision)`, textLeft, fotoBoxY + 10, { width: textWidth });
 
           doc.fillColor(CINZA_ESCURO).fontSize(8).font('Helvetica')
-            .text('Validação IA Gemini:', textLeft, fotoBoxY + 24);
+            .text('Validação IA:', textLeft, fotoBoxY + 24);
 
           const statusIA = foto.avaliacao_gemini || foto.status_ia || 'APROVADO';
           const corIA = statusIA === 'APROVADO' ? VERDE_SUCESSO : '#D97706';
@@ -317,11 +327,11 @@ function gerarRelatorioPdfBuffer(relatorio) {
           const confPercent = confVal ? Math.round(confVal * 100) : 95;
 
           doc.fillColor(corIA).font('Helvetica-Bold')
-            .text(`${statusIA} (Confiança: ${confPercent}%)`, textLeft + 90, fotoBoxY + 24);
+            .text(`${statusIA} (Confiança: ${confPercent}%)`, textLeft + 56, fotoBoxY + 24, { width: Math.max(120, textWidth - 56) });
 
-          const motivoIA = foto.motivo || foto.motivo_ia || 'Foto de obra/fiscalização com boa iluminação e nitidez.';
+          const motivoIA = foto.motivo || foto.motivo_ia || 'Foto de obra/construção com boa iluminação e nitidez.';
           doc.fillColor(CINZA_ESCURO).font('Helvetica')
-            .text(`Parecer Técnico / IA: "${motivoIA}"`, textLeft, fotoBoxY + 38, { width: textWidth });
+            .text(`Parecer Técnico / IA: "${motivoIA}"`, textLeft, fotoBoxY + 38, { width: textWidth, height: 28, ellipsis: true });
 
           const dataHoraStr = foto.data_captura || foto.created_at
             ? new Date(foto.data_captura || foto.created_at).toLocaleString('pt-BR')

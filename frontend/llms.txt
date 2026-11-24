@@ -1,8 +1,8 @@
 # BBVision
 
-> Sistema Inteligente de Fiscalização e Monitoramento Remoto de Obras do Banco do Brasil com IA Google Gemini, Fé Pública e Inviolabilidade Criptográfica SHA-256.
+> Sistema Inteligente de Fiscalização e Monitoramento Remoto de Obras do Banco do Brasil com IA, Fé Pública e Inviolabilidade Criptográfica SHA-256.
 
-O BBVision é a plataforma de monitoramento, auditoria e fiscalização remota de obras para o Banco do Brasil, desenvolvida pela Equipe TakeOff no programa Residência Tecnológica em Software & IA (Porto Digital). Empreiteiras executam vistorias de campo com captura fotográfica exclusivamente in-loco (bloqueio de galeria), validação visual instantânea por Google Gemini 1.5 Flash (SLA <= 15s, confiança >= 75%), checklists dinâmicos, modo offline e assinatura digital com bloqueio imediato do laudo. Fiscais de engenharia do Banco do Brasil auditam os relatórios PDF carimbados com Código Único (16 caracteres hex) e Hash criptográfico SHA-256, homologando obras como REGULAR ou PENDENTE_AJUSTE.
+O BBVision é a plataforma de monitoramento, auditoria e fiscalização remota de obras para o Banco do Brasil, desenvolvida pela Equipe TakeOff no programa Residência Tecnológica em Software & IA (Porto Digital). Empreiteiras executam vistorias de campo com captura fotográfica exclusivamente in-loco (bloqueio de galeria), validação visual instantânea por IA (SLA <= 15s, confiança >= 75%), checklists dinâmicos, modo offline e assinatura digital com bloqueio imediato do laudo. Fiscais de engenharia do Banco do Brasil auditam os relatórios PDF carimbados com Código Único (16 caracteres hex) e Hash criptográfico SHA-256, homologando obras como REGULAR ou PENDENTE_AJUSTE.
 
 ## Páginas Principais
 

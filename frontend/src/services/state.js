@@ -6,6 +6,7 @@
 
 import { api } from './api.js';
 import { offlineSync } from './offlineSync.js';
+import { normalizeImageSrc, generateSecureHex16 } from '../utils/formatters.js';
 
 // Modelo Oficial BB de Perguntas do Checklist da Obra (Editável por Fiscal de Obras)
 export const PERGUNTAS_PADRAO_BB = [
@@ -14,7 +15,7 @@ export const PERGUNTAS_PADRAO_BB = [
     numero: 1,
     tipo: 'multipla_escolha',
     tipoLabel: 'Múltipla Escolha',
-    tipoIcon: '🔘',
+    tipoIcon: '',
     titulo: '1. Fachada da agência está legível e conforme padrão BB?',
     subtitulo: 'Verifique a visibilidade da marca Banco do Brasil, totem institucional e desobstrução visual frontal.',
     chaveResposta: 'fachadaLegivel',
@@ -30,7 +31,7 @@ export const PERGUNTAS_PADRAO_BB = [
     numero: 2,
     tipo: 'caixa',
     tipoLabel: 'Caixas de Seleção',
-    tipoIcon: '☑️',
+    tipoIcon: '',
     titulo: '2. Quais itens de segurança, proteção coletiva (EPC) e sinalização estão ativos no local?',
     subtitulo: 'Marque todas as caixas aplicáveis verificadas in loco nesta vistoria técnica:',
     chaveResposta: 'segurancaEpc',
@@ -48,7 +49,7 @@ export const PERGUNTAS_PADRAO_BB = [
     numero: 3,
     tipo: 'texto',
     tipoLabel: 'Campo de Texto Descritivo',
-    tipoIcon: '📝',
+    tipoIcon: '',
     titulo: '3. Relato técnico sobre alvenaria, acabamentos e anomalias estruturais:',
     subtitulo: 'Descreva o alinhamento, prumo, eventuais fissuras ou conformidade de execução da obra:',
     chaveResposta: 'relatoEstrutural',
@@ -67,7 +68,7 @@ export const PERGUNTAS_PADRAO_BB = [
     numero: 4,
     tipo: 'multipla_escolha',
     tipoLabel: 'Múltipla Escolha',
-    tipoIcon: '🔘',
+    tipoIcon: '',
     titulo: '4. Condição da calçada externa e acessibilidade da entrada principal:',
     subtitulo: 'Avaliação de piso tátil, guia rebaixada e rampas de acesso da agência (NBR 9050):',
     chaveResposta: 'acessibilidade',
@@ -183,37 +184,35 @@ class AppState {
       }
     ];
 
-    // Histórico de análises / relatórios recentes
+    // Histórico inicial de análises / relatórios (alinhado com os IDs oficiais do backend)
     this.relatorios = [
       {
-        id: 'rel-001',
-        obraNome: 'Obra Centro',
-        subtitulo: 'Futura unidade',
+        id: 'rel-seed-001',
+        obraId: 'obr-001',
+        obraNome: 'Obra Centro (Agência Sede)',
+        subtitulo: 'Av. Rio Branco, 120',
         status: 'Concluído',
-        data: '02/10/2026',
+        statusRaw: 'FINALIZADO',
+        data: '10/10/2026',
         codigoUnico: '8F4A2C19E70B34DF',
         confiancaIA: 0.96,
-        hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+        hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        pdfUrl: '/api/relatorios/rel-seed-001/pdf',
+        justificativaFiscal: null
       },
       {
-        id: 'rel-002',
-        obraNome: 'Obra Zona Sul',
-        subtitulo: 'Residência',
-        status: 'Concluído',
+        id: 'rel-seed-002',
+        obraId: 'obr-002',
+        obraNome: 'Obra Zona Sul (Agência Paulista)',
+        subtitulo: 'Av. Paulista, 2163',
+        status: 'Homologado',
+        statusRaw: 'APROVADO',
         data: '01/10/2026',
         codigoUnico: '91BC34EFA87210DC',
         confiancaIA: 0.92,
-        hash: 'd41d8cd98f00b204e9800998ecf8427e98a12c19e70b34dfe3b0c44298fc1c14'
-      },
-      {
-        id: 'rel-003',
-        obraNome: 'Residência Alpha',
-        subtitulo: 'Construção nova',
-        status: 'Em andamento',
-        data: 'Hoje',
-        codigoUnico: 'Pendente',
-        confiancaIA: null,
-        hash: null
+        hash: 'd41d8cd98f00b204e9800998ecf8427e98a12c19e70b34dfe3b0c44298fc1c14',
+        pdfUrl: '/api/relatorios/rel-seed-002/pdf',
+        justificativaFiscal: 'Obra em estrita conformidade com o padrão visual e arquitetônico do Banco do Brasil.'
       }
     ];
 
@@ -294,7 +293,7 @@ class AppState {
 
   async carregarDadosIniciais() {
     try {
-      // 1. Carrega Obras
+      // 1. Carrega Obras preservando perguntas customizadas e vínculos de cardinalidade
       const obrasApi = await api.getObras();
       if (Array.isArray(obrasApi) && obrasApi.length > 0) {
         this.obras = obrasApi.map((o, idx) => ({
@@ -306,42 +305,63 @@ class AppState {
           endereco: o.endereco || 'Endereço da obra',
           status: o.status || 'REGULAR',
           destaque: idx === 0,
-          imagemTipo: idx === 0 ? 'logo' : (idx % 2 === 0 ? 'cad1' : 'cad2')
+          imagemTipo: idx === 0 ? 'logo' : (idx % 2 === 0 ? 'cad1' : 'cad2'),
+          empreiteira_id: o.empreiteira_id,
+          cadastrado_por_fiscal_id: o.cadastrado_por_fiscal_id,
+          fiscal_responsavel_id: o.fiscal_responsavel_id,
+          checklist_perguntas: o.checklist_perguntas,
+          perguntasChecklist: o.checklist_perguntas
         }));
       }
 
       // 2. Carrega Relatórios do Backend
       const relatoriosApi = await api.getRelatorios();
       if (Array.isArray(relatoriosApi) && relatoriosApi.length > 0) {
-        this.relatorios = relatoriosApi.map(r => ({
-          id: r.id,
-          obraNome: r.obra?.nome || 'Obra Banco do Brasil',
-          subtitulo: r.obra?.endereco ? r.obra.endereco.split('-')[0].trim() : 'Agência BB',
-          status: r.status === 'APROVADO' ? 'Homologado' : (r.status === 'FINALIZADO' ? 'Concluído' : 'Em andamento'),
-          statusRaw: r.status,
-          data: r.data_finalizacao ? new Date(r.data_finalizacao).toLocaleDateString('pt-BR') : 'Hoje',
-          codigoUnico: r.codigo_unico || 'Pendente',
-          confiancaIA: r.fotos?.[0]?.confianca_ia || 0.95,
-          hash: r.hash_integridade || null,
-          pdfUrl: r.arquivo_pdf_url || `/api/relatorios/${r.id}/pdf`,
-          fotos: r.fotos || [],
-          respostas: r.respostas || []
-        }));
+        this.relatorios = relatoriosApi.map(r => {
+          const statusLabel =
+            r.status === 'APROVADO'
+              ? 'Homologado'
+              : r.status === 'PENDENTE_AJUSTE'
+              ? 'Pendente de Ajuste'
+              : r.status === 'FINALIZADO'
+              ? 'Concluído'
+              : 'Em andamento';
+          return {
+            id: r.id,
+            obraId: r.obra_id || r.obra?.id || null,
+            obraNome: r.obra?.nome || 'Obra Banco do Brasil',
+            subtitulo: r.obra?.endereco ? r.obra.endereco.split('-')[0].trim() : 'Agência BB',
+            status: statusLabel,
+            statusRaw: r.status,
+            data: r.data_finalizacao ? new Date(r.data_finalizacao).toLocaleDateString('pt-BR') : 'Hoje',
+            codigoUnico: r.codigo_unico || 'Pendente',
+            confiancaIA: r.fotos?.[0]?.confianca_ia || r.fotos?.[0]?.confianca || 0.95,
+            hash: r.hash_integridade || null,
+            pdfUrl: `/api/relatorios/${r.id}/pdf`,
+            justificativaFiscal: r.justificativa_fiscal || null,
+            obraStatus: r.obra?.status || (r.status === 'PENDENTE_AJUSTE' ? 'PENDENTE_AJUSTE' : 'REGULAR'),
+            fotos: r.fotos || [],
+            respostas: r.respostas || []
+          };
+        });
 
-        // Se houver fotos nos relatórios, sincroniza também os registros da fiscal Mariana
+        // Sincroniza também os registros fotográficos da fiscal Mariana com hashes e motivos reais
         const todasFotos = [];
         relatoriosApi.forEach(r => {
           if (Array.isArray(r.fotos)) {
             r.fotos.forEach((f, fIdx) => {
+              const motivoReal = f.motivo || f.motivo_ia || 'Evidência fotográfica capturada in-loco.';
               todasFotos.push({
-                id: f.id || `fot-${fIdx}`,
-                codigo: r.codigo_unico || '8F4A2C19E70B34DF',
-                titulo: f.motivo_ia ? f.motivo_ia.substring(0, 30) : `Foto ${fIdx + 1}`,
+                id: f.id || `fot-${r.id}-${fIdx}`,
+                codigo: r.codigo_unico || 'Pendente',
+                hash: f.hash_integridade || f.hash_sha256 || r.hash_integridade || '',
+                titulo: motivoReal.length > 36 ? `${motivoReal.substring(0, 36)}...` : motivoReal,
+                motivo: motivoReal,
                 local: r.obra?.nome || 'Agência BB',
-                responsavel: r.obra?.responsavel || 'Rodrigo Silva',
-                status: f.status_ia === 'APROVADO' ? 'Validado' : 'Pendente',
-                img: f.url || f.caminho_arquivo || '',
-                confianca: f.confianca_ia || 0.95,
+                responsavel: r.usuario?.nome || r.obra?.responsavel || 'Rodrigo Silva',
+                status: (f.status_ia || f.avaliacao_gemini) === 'APROVADO' ? 'Validado' : 'Pendente',
+                img: normalizeImageSrc(f.previewDataUrl || f.url || f.caminho_arquivo),
+                confianca: f.confianca !== undefined ? f.confianca : (f.confianca_ia || 0.95),
                 relatorioId: r.id
               });
             });
@@ -402,11 +422,19 @@ class AppState {
     this.currentVistoria.fotoCamera = null;
     this.currentVistoria.fotoBase64 = null;
     this.currentVistoria.caminhoArquivoFoto = null;
+    this.currentVistoria.codigoUnico = 'Gerado ao finalizar';
+    this.currentVistoria.codigoHexDoc = '';
+    this.currentVistoria.hashSha256 = '';
+    this.currentVistoria.statusIA = null;
+    this.currentVistoria.categoriaIA = null;
+    this.currentVistoria.confiancaIA = 0.95;
+    this.currentVistoria.motivoIA = '';
     this.currentVistoria.validacaoManual = false;
     this.currentVistoria.assinatura = null;
     this.currentVistoria.declaracaoAceita = false;
     this.currentVistoria.bloqueado = false;
     this.currentVistoria.statusRelatorio = 'EM_ANDAMENTO';
+    this.currentVistoria.justificativaFiscal = null;
     this.currentVistoria.pdfUrl = null;
     this.currentVistoria.respostas = {
       fachadaLegivel: '',
@@ -650,11 +678,8 @@ class AppState {
     this.currentVistoria.bloqueado = true;
     this.currentVistoria.statusRelatorio = 'FINALIZADO';
 
-    // Gera código único oficial no padrão de 16 caracteres hex uppercase
-    const randHex16 = (
-      Math.random().toString(16).substring(2, 10) +
-      Math.random().toString(16).substring(2, 10)
-    ).toUpperCase();
+    // Gera código único criptográfico de 16 caracteres hexadecimais maiúsculos (fallback offline)
+    const randHex16 = generateSecureHex16();
 
     this.currentVistoria.codigoHexDoc = randHex16;
     this.currentVistoria.codigoUnico = randHex16;
@@ -670,7 +695,8 @@ class AppState {
         this.currentVistoria.relatorioId = relId;
       }
 
-      // 2. Anexar foto registrada
+      // 2. Anexar foto registrada (evitando duplicidade na finalização)
+      let fotoAnexadaComSucesso = false;
       try {
         const fotoResp = await api.anexarFoto(relId, {
           caminho_arquivo: this.currentVistoria.caminhoArquivoFoto || '',
@@ -689,70 +715,66 @@ class AppState {
         if (fotoResp?.foto?.caminho_arquivo) {
           this.currentVistoria.caminhoArquivoFoto = fotoResp.foto.caminho_arquivo;
         }
+        fotoAnexadaComSucesso = true;
       } catch (errFoto) {
         console.warn('[State] Aviso ao vincular foto na API:', errFoto.message);
       }
 
-      // 3. Salvar respostas do checklist (Passo a passo com 4 perguntas + dinâmico)
+      // 3. Salvar TODAS as respostas do checklist (incluindo perguntas customizadas pelo Fiscal)
       const justMap = this.currentVistoria.respostas.justificativas || {};
-      const epcFormatado = Array.isArray(this.currentVistoria.respostas.segurancaEpc) && this.currentVistoria.respostas.segurancaEpc.length > 0
-        ? this.currentVistoria.respostas.segurancaEpc.join('; ')
-        : (this.currentVistoria.respostas.segurancaEpc || 'Isolamento e EPIs verificados');
+      const perguntasAtuais = Array.isArray(this.currentVistoria.perguntasChecklist) && this.currentVistoria.perguntasChecklist.length > 0
+        ? this.currentVistoria.perguntasChecklist
+        : PERGUNTAS_PADRAO_BB;
 
-      await api.salvarRespostas(relId, [
-        {
-          pergunta: '1. Fachada da agência está legível e conforme padrão BB?',
-          valor: this.currentVistoria.respostas.fachadaLegivel || 'Sim',
-          justificativa: justMap.fachadaLegivel || null,
-          tipo: 'multipla_escolha',
-          sugestao_ia: 'Fachada frontal avaliada segundo padrão visual oficial do Banco do Brasil.'
-        },
-        {
-          pergunta: '2. Itens de segurança, proteção coletiva (EPC) e sinalização',
-          valor: epcFormatado,
-          justificativa: justMap.segurancaEpc || null,
-          tipo: 'caixa_selecao',
-          sugestao_ia: 'Itens de proteção coletiva e sinalização verificados in loco.'
-        },
-        {
-          pergunta: '3. Relato técnico sobre alvenaria, acabamentos e anomalias',
-          valor: this.currentVistoria.respostas.relatoEstrutural || this.currentVistoria.respostas.observacoes || 'Alvenaria e vigas em conformidade executiva.',
-          tipo: 'texto',
+      const itensRespostas = perguntasAtuais.map((q, idx) => {
+        const chave = q.chaveResposta || q.id || `pergunta_${idx}`;
+        const rawValor = this.currentVistoria.respostas[chave];
+        const valorFormatado = Array.isArray(rawValor)
+          ? (rawValor.length > 0 ? rawValor.join('; ') : 'Não informado')
+          : (rawValor || 'Não informado');
+        return {
+          pergunta: q.titulo || `${idx + 1}. Item do checklist`,
+          valor: String(valorFormatado),
+          justificativa: justMap[chave] || null,
+          tipo: q.tipo === 'multipla_escolha' ? 'multipla_escolha' : 'texto',
           sugestao_ia: null
-        },
-        {
-          pergunta: '4. Calçada externa e acessibilidade da entrada principal (NBR 9050)',
-          valor: this.currentVistoria.respostas.acessibilidade || 'Totalmente acessível (NBR 9050)',
-          justificativa: justMap.acessibilidade || null,
-          tipo: 'multipla_escolha',
-          sugestao_ia: 'Condição de acessibilidade avaliada conforme diretrizes NBR 9050.'
-        },
-        {
-          pergunta: '5. Condição da sinalização complementar, limpeza e câmeras',
-          valor: `Sinalização: ${this.currentVistoria.respostas.sinalizacao || 'Sim'} | Limpeza: ${this.currentVistoria.respostas.limpeza || 5}/5 | Câmeras: ${this.currentVistoria.respostas.cameras ?? 4}`,
-          justificativa: this.currentVistoria.respostas.justificativaSinalizacao || null,
-          tipo: 'multipla_escolha',
-          sugestao_ia: null
-        },
-        ...(this.currentVistoria.respostas.observacoes ? [{
-          pergunta: '6. Observações adicionais consolidadas',
+        };
+      });
+
+      const nextNum = itensRespostas.length + 1;
+      itensRespostas.push({
+        pergunta: `${nextNum}. Condição da sinalização complementar, limpeza e câmeras`,
+        valor: `Sinalização: ${this.currentVistoria.respostas.sinalizacao || 'Sim'} | Limpeza: ${this.currentVistoria.respostas.limpeza || 5}/5 | Câmeras: ${this.currentVistoria.respostas.cameras ?? 4}`,
+        justificativa: this.currentVistoria.respostas.justificativaSinalizacao || null,
+        tipo: 'multipla_escolha',
+        sugestao_ia: null
+      });
+
+      if (this.currentVistoria.respostas.observacoes) {
+        itensRespostas.push({
+          pergunta: `${nextNum + 1}. Observações adicionais consolidadas`,
           valor: this.currentVistoria.respostas.observacoes,
           tipo: 'texto',
           sugestao_ia: null
-        }] : [])
-      ]);
+        });
+      }
 
-      // 4. Finalizar e gerar PDF oficial com carimbo via PDFKit
-      const finalRes = await api.finalizarRelatorio(relId, {
-        fotos: [{
-          caminho_arquivo: this.currentVistoria.caminhoArquivoFoto || '',
-          imagemBase64: this.currentVistoria.fotoCamera || this.currentVistoria.fotoBase64 || '',
-          hash_integridade: this.currentVistoria.hashSha256,
-          confianca: this.currentVistoria.confiancaIA,
-          motivo: this.currentVistoria.motivoIA,
-          avaliacao_gemini: 'APROVADO'
-        }]
-      });
+      await api.salvarRespostas(relId, itensRespostas);
+
+      // 4. Finalizar e gerar PDF oficial com carimbo via PDFKit (só envia foto aqui se o passo 2 falhou)
+      const payloadFinal = fotoAnexadaComSucesso
+        ? {}
+        : {
+            fotos: [{
+              caminho_arquivo: this.currentVistoria.caminhoArquivoFoto || '',
+              imagemBase64: this.currentVistoria.fotoCamera || this.currentVistoria.fotoBase64 || '',
+              hash_integridade: this.currentVistoria.hashSha256,
+              confianca: this.currentVistoria.confiancaIA,
+              motivo: this.currentVistoria.motivoIA,
+              avaliacao_gemini: this.currentVistoria.confiancaIA >= 0.75 ? 'APROVADO' : 'VALIDACAO_MANUAL'
+            }]
+          };
+      const finalRes = await api.finalizarRelatorio(relId, payloadFinal);
       if (finalRes && finalRes.codigo) {
         this.currentVistoria.codigoUnico = finalRes.codigo;
         this.currentVistoria.codigoHexDoc = finalRes.codigo;
@@ -828,17 +850,27 @@ class AppState {
     this.currentVistoria.statusObra = status;
     this.currentVistoria.justificativaFiscal = justificativa;
 
-    // Atualiza também a lista de obras
-    const obra = this.obras.find(o => o.id === this.currentVistoria.obraId);
+    const targetRelId = this.currentVistoria.relatorioId || this.relatorios[0]?.id || 'rel-seed-001';
+    const relLocal = this.relatorios.find(r => r.id === targetRelId);
+    if (relLocal) {
+      relLocal.statusRaw = status === 'REGULAR' ? 'APROVADO' : 'PENDENTE_AJUSTE';
+      relLocal.status = status === 'REGULAR' ? 'Homologado' : 'Pendente de Ajuste';
+      relLocal.justificativaFiscal = justificativa;
+      relLocal.obraStatus = status;
+    }
+
+    // Atualiza também a lista de obras correspondente
+    const targetObraId = relLocal?.obraId || this.currentVistoria.obraId;
+    const obra = this.obras.find(o => o.id === targetObraId);
     if (obra) {
       obra.status = status;
     }
 
-    // Comunica com a API backend
+    // Comunica com a API backend (que também recompila o PDF oficial com o parecer fiscal)
     try {
-      const targetRelId = this.currentVistoria.relatorioId || this.relatorios[0]?.id || 'rel-seed-001';
       if (targetRelId) {
         await api.atualizarStatusFiscal(targetRelId, status, justificativa);
+        await this.carregarDadosIniciais();
       }
     } catch (err) {
       console.warn('[State] Parecer do fiscal registrado localmente:', err.message);
@@ -972,6 +1004,9 @@ class AppState {
 
   async logout() {
     this.user = null;
+    this.selectedObra = null;
+    this.searchQuery = '';
+    this.resetarVistoriaAtual();
     localStorage.removeItem('bbvision_user');
     await api.logout();
     this.navigate('login');

@@ -16,28 +16,28 @@ export function renderBottomNav() {
       <nav class="bottom-nav-bar fiscal-theme" id="bottomNav">
         <button class="nav-item-btn ${current === 'inicio' ? 'active' : ''}" data-nav="inicio" id="navItemInicio">
           <div class="nav-icon-container">
-            ${Icons.iconeControle(22)}
+            ${Icons.iconeControle(20)}
           </div>
           <span class="nav-item-label">Controle</span>
         </button>
 
         <button class="nav-item-btn ${current === 'fiscal-auditoria' ? 'active' : ''}" data-nav="fiscal-auditoria" id="navItemAuditoria">
           <div class="nav-icon-container">
-            ${Icons.iconeAuditoria(22)}
+            ${Icons.iconeAuditoria(20)}
           </div>
           <span class="nav-item-label">Auditoria</span>
         </button>
 
         <button class="nav-item-btn ${current === 'obras' ? 'active' : ''}" data-nav="obras" id="navItemObras">
           <div class="nav-icon-container">
-            ${Icons.iconeObras(22)}
+            ${Icons.navObras(current === 'obras')}
           </div>
           <span class="nav-item-label">Obras BB</span>
         </button>
 
         <button class="nav-item-btn ${current === 'perfil' ? 'active' : ''}" data-nav="perfil" id="navItemPerfil">
           <div class="nav-icon-container">
-            ${Icons.perfilBb(22)}
+            ${Icons.navPerfil(current === 'perfil')}
           </div>
           <span class="nav-item-label">Perfil BB</span>
         </button>
@@ -50,28 +50,28 @@ export function renderBottomNav() {
     <nav class="bottom-nav-bar" id="bottomNav">
       <button class="nav-item-btn ${current === 'inicio' ? 'active' : ''}" data-nav="inicio" id="navItemInicio">
         <div class="nav-icon-container">
-          ${Icons.iconeInicio(22)}
+          ${Icons.navHome(current === 'inicio')}
         </div>
         <span class="nav-item-label">Início</span>
       </button>
 
       <button class="nav-item-btn ${current === 'obras' ? 'active' : ''}" data-nav="obras" id="navItemObras">
         <div class="nav-icon-container">
-          ${Icons.iconeObras(22)}
+          ${Icons.navObras(current === 'obras')}
         </div>
         <span class="nav-item-label">Obras</span>
       </button>
 
       <button class="nav-item-btn ${current === 'relatorios' ? 'active' : ''}" data-nav="relatorios" id="navItemRelatorios">
         <div class="nav-icon-container">
-          ${Icons.iconeRelatorio(22)}
+          ${Icons.navRelatorios(current === 'relatorios')}
         </div>
         <span class="nav-item-label">Relatórios</span>
       </button>
 
       <button class="nav-item-btn ${current === 'perfil' ? 'active' : ''}" data-nav="perfil" id="navItemPerfil">
         <div class="nav-icon-container">
-          ${Icons.perfilObras(22)}
+          ${Icons.navPerfil(current === 'perfil')}
         </div>
         <span class="nav-item-label">Perfil</span>
       </button>

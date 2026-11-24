@@ -15,7 +15,14 @@ let supabase = null;
 let isConfigured = false;
 let hasServiceRole = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (supabaseUrl && supabaseKey) {
+const isPlaceholder = (val) =>
+  !val ||
+  typeof val !== 'string' ||
+  val.includes('seu-projeto-aqui') ||
+  val.includes('sua-chave-') ||
+  val.trim() === '';
+
+if (!isPlaceholder(supabaseUrl) && !isPlaceholder(supabaseKey)) {
   try {
     supabase = createClient(supabaseUrl, supabaseKey, {
       auth: {

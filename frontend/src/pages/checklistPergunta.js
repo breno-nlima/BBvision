@@ -20,7 +20,7 @@ const PERGUNTAS_CHECKLIST = [
     numero: 1,
     tipo: 'multipla_escolha',
     tipoLabel: 'Múltipla Escolha',
-    tipoIcon: '🔘',
+    tipoIcon: '',
     titulo: '1. Fachada da agência está legível e conforme padrão BB?',
     subtitulo: 'Verifique a visibilidade da marca Banco do Brasil, totem institucional e desobstrução visual frontal.',
     chaveResposta: 'fachadaLegivel',
@@ -54,7 +54,7 @@ const PERGUNTAS_CHECKLIST = [
     numero: 2,
     tipo: 'caixa',
     tipoLabel: 'Caixas de Seleção',
-    tipoIcon: '☑️',
+    tipoIcon: '',
     titulo: '2. Quais itens de segurança, proteção coletiva (EPC) e sinalização estão ativos no local?',
     subtitulo: 'Marque todas as caixas aplicáveis verificadas in loco nesta vistoria técnica:',
     chaveResposta: 'segurancaEpc',
@@ -92,7 +92,7 @@ const PERGUNTAS_CHECKLIST = [
     numero: 3,
     tipo: 'texto',
     tipoLabel: 'Campo de Texto Descritivo',
-    tipoIcon: '📝',
+    tipoIcon: '',
     titulo: '3. Relato técnico sobre alvenaria, acabamentos e anomalias estruturais:',
     subtitulo: 'Descreva o alinhamento, prumo, eventuais fissuras ou conformidade de execução da obra:',
     chaveResposta: 'relatoEstrutural',
@@ -111,7 +111,7 @@ const PERGUNTAS_CHECKLIST = [
     numero: 4,
     tipo: 'multipla_escolha',
     tipoLabel: 'Múltipla Escolha',
-    tipoIcon: '🔘',
+    tipoIcon: '',
     titulo: '4. Condição da calçada externa e acessibilidade da entrada principal:',
     subtitulo: 'Avaliação de piso tátil, guia rebaixada e rampas de acesso da agência (NBR 9050):',
     chaveResposta: 'acessibilidade',
@@ -236,8 +236,8 @@ export function renderChecklistPergunta() {
 
       <!-- Campo de Justificativa Qualitativa quando selecionado "Com Ressalva" / "Atenção" ou "Crítico" / "Não Conforme" -->
       <div class="justificativa-qualitativa-box ${precisaJustificar ? '' : 'hidden'}" id="boxJustificativaQualitativa">
-        <label class="justificativa-qualitativa-label" for="txtJustificativaPergunta" style="display:inline-flex; align-items:center; gap:6px;">
-          ${Icons.warningAlert(16)} Justificativa técnica obrigatória (Descreva o motivo da ressalva ou condição crítica):
+        <label class="justificativa-qualitativa-label" for="txtJustificativaPergunta">
+          Justificativa técnica obrigatória (Descreva o motivo da ressalva ou condição crítica):
         </label>
         <textarea
           id="txtJustificativaPergunta"
@@ -320,13 +320,13 @@ export function renderChecklistPergunta() {
 
         <!-- Banner de confirmação de onde o parecer da IA foi salvo -->
         <div class="ia-saved-feedback-banner hidden" id="iaSavedFeedbackBanner">
-          <span>✅ <strong>Parecer gerado pela IA e inserido no campo de texto acima!</strong> Você pode revisar ou editar o texto antes de avançar.</span>
+          <span><strong>Parecer gerado pela IA e inserido no campo de texto acima.</strong> Você pode revisar ou editar o texto antes de avançar.</span>
         </div>
 
         <!-- Chips de Preenchimento Rápido de Engenharia -->
         <div class="quick-chips-section">
           <div class="quick-chips-title">
-            <span style="display:inline-flex; align-items:center; gap:5px;">${Icons.boltFlash(15)} Sugestões rápidas de engenharia (toque para adicionar):</span>
+            Sugestões rápidas de engenharia (toque para adicionar):
           </div>
           <div class="quick-chips-cloud">
             ${chipsRapidos.map(chip => `
@@ -340,7 +340,7 @@ export function renderChecklistPergunta() {
         <!-- Assistente de Parecer com IA BBVision -->
         <div class="ia-generate-block">
           <button type="button" class="btn-ia-gemini-checklist" id="btnIaGerarRelato">
-            ${Icons.aiSparkle(18)}
+            ${Icons.aiSparkle(16)}
             <span>Assistente de Parecer com IA (Preenche o campo acima)</span>
           </button>
           <span class="ia-disclaimer-pill">
@@ -399,15 +399,9 @@ export function renderChecklistPergunta() {
             ${listaPerguntas.map((q, idx) => {
               const isActive = idx === currentIndex;
               const isDone = idx < currentIndex;
-              const typeSvg = q.tipo === 'caixa'
-                ? Icons.questionCheckbox(14)
-                : q.tipo === 'texto'
-                ? Icons.questionText(14)
-                : Icons.questionRadio(14);
               return `
                 <button type="button" class="step-tab-pill ${isActive ? 'active' : ''} ${isDone ? 'completed' : ''}" data-step="${idx}">
-                  <span class="step-tab-icon" style="display:inline-flex; align-items:center;">${isDone ? Icons.checkVerified(14) : typeSvg}</span>
-                  <span>Q${q.numero || (idx + 1)}</span>
+                  <span>${isDone ? '✓ ' : ''}Q${q.numero || (idx + 1)}</span>
                 </button>
               `;
             }).join('')}
@@ -418,21 +412,10 @@ export function renderChecklistPergunta() {
         <div class="pergunta-card-container">
           <div class="pergunta-card-top-row">
             <div class="codigo-chip-badge" id="btnCopiarCodigoChip" title="Toque para copiar código">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-              </svg>
               <span>${vistoria.codigoUnico}</span>
             </div>
 
-            <div class="pergunta-type-pill" style="display:inline-flex; align-items:center; gap:5px;">
-              <span style="display:inline-flex; align-items:center;">${
-                currentQ.tipo === 'caixa'
-                  ? Icons.questionCheckbox(15)
-                  : currentQ.tipo === 'texto'
-                  ? Icons.questionText(15)
-                  : Icons.questionRadio(15)
-              }</span>
+            <div class="pergunta-type-pill">
               <span>${currentQ.tipoLabel || 'Pergunta Técnica'}</span>
             </div>
           </div>

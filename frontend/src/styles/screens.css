@@ -3604,7 +3604,15 @@
 }
 
 .callout-icon {
-  font-size: 26px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #FEF9C3;
+  color: var(--bb-blue-navy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .callout-text {
