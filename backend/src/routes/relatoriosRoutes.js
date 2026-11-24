@@ -1,6 +1,5 @@
 /**
  * BBVision - Rotas de Relatórios, Finalização Inviolável e Auditoria Fiscal
- * Implementa controle RBAC estrito para pareceres e download de PDF
  */
 
 const express = require('express');
@@ -9,26 +8,26 @@ const relatoriosController = require('../controllers/relatoriosController');
 const { optionalAuth, requireAuth, requireRole } = require('../middlewares/authMiddleware');
 const { upload } = require('../middlewares/uploadMiddleware');
 
-// Criação e listagem de relatórios
+// Criação, listagem e painel fiscal
 router.post('/', requireAuth, relatoriosController.criar);
-router.get('/', optionalAuth, relatoriosController.listar);
+router.get('/', requireAuth, relatoriosController.listar);
 router.get('/painel/resumo', requireAuth, requireRole(['fiscal', 'engenheiro', 'admin']), relatoriosController.obterPainelAuditoria);
 
-// Sincronização offline em lote ou individual (HU05) - Antes do parâmetro :id
+// Sincronização offline (HU05) - antes do parâmetro :id
 router.post('/sincronizar-offline', requireAuth, relatoriosController.sincronizarOffline);
 
-// Detalhamento de relatório por ID
-router.get('/:id', optionalAuth, relatoriosController.obterPorId);
+// Detalhamento de relatório
+router.get('/:id', requireAuth, relatoriosController.obterPorId);
 
 // Checklist e evidências fotográficas
 router.put('/:id/respostas', requireAuth, relatoriosController.salvarRespostas);
 router.post('/:id/fotos', requireAuth, upload.single('foto'), relatoriosController.anexarFoto);
 
-// Finalização oficial inviolável e download/stream do PDF
+// Finalização oficial inviolável e PDF (documentos finalizados são públicos por Fé Pública)
 router.post('/:id/finalizar', requireAuth, relatoriosController.finalizar);
-router.get('/:id/pdf', relatoriosController.downloadPdf);
+router.get('/:id/pdf', optionalAuth, relatoriosController.downloadPdf);
 
-// Auditoria do Fiscal / Engenheiro Mariana (Acesso restrito ao perfil fiscal/engenheiro do Banco do Brasil)
+// Auditoria e Parecer Fiscal (RBAC restrito a fiscais/engenheiros/admin)
 router.patch('/:id/status', requireAuth, requireRole(['fiscal', 'engenheiro', 'admin']), relatoriosController.atualizarStatusFiscal);
 
 module.exports = router;

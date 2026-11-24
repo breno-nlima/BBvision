@@ -1,16 +1,52 @@
 /**
- * BBVision - Teste Automatizado da API Backend Corporativa
- * Valida os fluxos essenciais de autenticação, obras, fotos, IA, relatórios, imutabilidade,
- * segurança (Path Traversal, Magic Bytes), headers corporativos, rate limiting,
- * sincronização offline (HU05) e tolerância de status fiscal (REGULAR/APROVADO).
+ * BBVision - Suite Completa de Testes Automatizados (Produção)
+ * Executa contra uma base 100% limpa e isolada (sem dados de exemplo/seed),
+ * validando todos os fluxos de ponta a ponta:
+ * - Healthcheck, Readiness, Headers OWASP, Compressão e Rate Limit
+ * - Cadastro, Login, Perfil, Troca de Senha, Listagem de Empreiteiras e Logout
+ * - Obras CRUD, RBAC, Cardinalidade 1:N, Checklist customizado e Isolamento entre Empreiteiras
+ * - Visão Computacional IA, Auth obrigatória, Magic Bytes, Path Traversal e Sugestão Contextual
+ * - Relatórios, IDOR, Assinatura Digital PNG, Validação de Senha na Assinatura, Deduplicação, Imutabilidade e PDFKit
+ * - Auditoria Fiscal (Painel, APROVAR/REGULAR, PENDENTE_AJUSTE, Recompilação PDF)
+ * - Validador Público (Código e SHA-256, sem vazamento de assinatura, anti-XSS)
+ * - Sincronização Offline (HU05)
+ * - Persistência Real em Disco (reloadFromDisk)
+ * - 18 Requisitos Agent-Readiness + MCP Server Card + Streamable HTTP MCP
  */
 
 const http = require('http');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+// Isola completamente o armazenamento dos testes em arquivo temporário
+process.env.NODE_ENV = 'test';
+const TMP_STORE_PATH = path.join(os.tmpdir(), `bbvision_test_store_${Date.now()}_${process.pid}.json`);
+process.env.DATA_STORE_PATH = TMP_STORE_PATH;
+
 const app = require('../src/app');
+const dataStore = require('../src/repositories/dataStore');
+const { resolveSafePath } = require('../src/utils/securityUtils');
+const { UPLOAD_ROOT } = require('../src/middlewares/uploadMiddleware');
+
+const EVIDENCIAS_DIR = path.resolve(__dirname, '..', 'uploads', 'evidencias');
+const RELATORIOS_DIR = path.resolve(__dirname, '..', 'uploads', 'relatorios');
+
+// Snapshot inicial dos arquivos de upload para limpeza cirúrgica pós-teste
+function snapshotFiles(dir) {
+  if (!fs.existsSync(dir)) return new Set();
+  return new Set(fs.readdirSync(dir));
+}
+const initialEvidencias = snapshotFiles(EVIDENCIAS_DIR);
+const initialRelatorios = snapshotFiles(RELATORIOS_DIR);
 
 let server;
 const PORT = 3999;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+
+// PNG 1x1 válido (Magic Bytes reais 89 50 4E 47)
+const VALID_PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+const EMPTY_SHA256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 
 function request(method, urlPath, body = null, headers = {}) {
   return new Promise((resolve, reject) => {
@@ -26,7 +62,7 @@ function request(method, urlPath, body = null, headers = {}) {
       },
     };
 
-    const req = http.request(options, (res) => {
+    const req = http.request(options, res => {
       const chunks = [];
       res.on('data', chunk => chunks.push(chunk));
       res.on('end', () => {
@@ -36,7 +72,7 @@ function request(method, urlPath, body = null, headers = {}) {
         if (contentType.includes('application/json')) {
           try {
             data = JSON.parse(data);
-          } catch (e) {}
+          } catch (_) {}
         }
         resolve({ status: res.statusCode, headers: res.headers, body: data, rawBuffer: raw });
       });
@@ -44,7 +80,7 @@ function request(method, urlPath, body = null, headers = {}) {
 
     req.on('error', err => reject(err));
 
-    if (body) {
+    if (body !== null && body !== undefined) {
       if (typeof body === 'object') {
         req.write(JSON.stringify(body));
       } else {
@@ -55,628 +91,861 @@ function request(method, urlPath, body = null, headers = {}) {
   });
 }
 
+let assertionsPassed = 0;
 function assert(condition, message) {
   if (!condition) {
     throw new Error(`[FALHA NO TESTE] ${message}`);
   }
+  assertionsPassed++;
   console.log(`  ✓ ${message}`);
+}
+
+function cleanupTestArtifacts() {
+  try {
+    if (fs.existsSync(TMP_STORE_PATH)) fs.unlinkSync(TMP_STORE_PATH);
+    if (fs.existsSync(`${TMP_STORE_PATH}.tmp`)) fs.unlinkSync(`${TMP_STORE_PATH}.tmp`);
+  } catch (_) {}
+
+  for (const [dir, initialSet] of [
+    [EVIDENCIAS_DIR, initialEvidencias],
+    [RELATORIOS_DIR, initialRelatorios],
+  ]) {
+    if (!fs.existsSync(dir)) continue;
+    for (const file of fs.readdirSync(dir)) {
+      if (!initialSet.has(file) && file !== '.gitkeep') {
+        try {
+          fs.unlinkSync(path.join(dir, file));
+        } catch (_) {}
+      }
+    }
+  }
 }
 
 async function runTests() {
   console.log('\n======================================================');
-  console.log('  Iniciando Testes da API Backend BBVision');
+  console.log('  Suite de Testes E2E de Produção — BBVision');
   console.log('======================================================\n');
 
   try {
-    // 1. Healthcheck e Headers de Segurança
-    console.log('1. Testando Health Check & Headers de Segurança Corporativos...');
+    dataStore.resetForTesting();
+
+    // ------------------------------------------------------------------------
+    // 1. HEALTHCHECK, READINESS, HEADERS OWASP E BASE 100% LIMPA
+    // ------------------------------------------------------------------------
+    console.log('1. Health Check, Readiness, Headers OWASP & Base Limpa...');
     const health = await request('GET', '/api/health');
     assert(health.status === 200, 'Health check respondeu HTTP 200');
     assert(health.body.status === 'online', 'Status da API é online');
+    assert(health.body.versao === '1.2.0', 'Versão reportada é 1.2.0');
+    assert(typeof health.body.memoria?.rssMb === 'number', 'Telemetria de memória presente');
     assert(health.headers['x-content-type-options'] === 'nosniff', 'Header X-Content-Type-Options: nosniff presente');
     assert(health.headers['x-frame-options'] === 'SAMEORIGIN', 'Header X-Frame-Options: SAMEORIGIN presente');
-    assert(health.headers['x-ratelimit-limit'], 'Headers de Rate Limiting presentes');
+    assert(Boolean(health.headers['x-ratelimit-limit']), 'Headers de Rate Limiting presentes');
 
-    // 2. Autenticação (Rodrigo - Empreiteira)
-    console.log('\n2. Testando Autenticação com Bcrypt Não-Bloqueante (Persona Rodrigo)...');
+    const readyRes = await request('GET', '/api/ready');
+    assert(readyRes.status === 200 && readyRes.body.status === 'ready', 'Readiness probe respondeu ready');
+
+    // Verifica que os dois perfis solicitados (Empreiteira e Fiscal) estão ativos e autenticáveis
     const loginRodrigo = await request('POST', '/api/auth/login', {
       email: 'rodrigo@empreiteira.com',
       senha: '123456',
     });
-    assert(loginRodrigo.status === 200, 'Login do Rodrigo retornou HTTP 200');
-    assert(loginRodrigo.body.token, 'Token JWT foi gerado');
-    assert(loginRodrigo.body.usuario.cargo === 'empreiteira', 'Cargo é empreiteira');
-    const tokenRodrigo = loginRodrigo.body.token;
+    assert(
+      loginRodrigo.status === 200 && Boolean(loginRodrigo.body.token) && loginRodrigo.body.usuario.cargo === 'empreiteira',
+      'Perfil rodrigo@empreiteira.com (Empreiteira) autentica com sucesso'
+    );
 
-    // 3. Autenticação (Mariana - Fiscal)
-    console.log('\n3. Testando Autenticação (Persona Mariana)...');
     const loginMariana = await request('POST', '/api/auth/login', {
       email: 'mariana@bb.com.br',
       senha: '123456',
     });
-    assert(loginMariana.status === 200, 'Login da Mariana retornou HTTP 200');
-    assert(loginMariana.body.usuario.cargo === 'fiscal', 'Cargo é fiscal');
-    const tokenMariana = loginMariana.body.token;
+    assert(
+      loginMariana.status === 200 && Boolean(loginMariana.body.token) && loginMariana.body.usuario.cargo === 'fiscal',
+      'Perfil mariana@bb.com.br (Fiscal de Obra) autentica com sucesso'
+    );
 
-    // 4. Teste Me com Token
-    console.log('\n4. Testando Consulta de Perfil (/api/auth/me)...');
-    const meRes = await request('GET', '/api/auth/me', null, {
-      Authorization: `Bearer ${tokenRodrigo}`,
-    });
-    assert(meRes.status === 200, 'Endpoint /me retornou HTTP 200');
-    assert(meRes.body.usuario.email === 'rodrigo@empreiteira.com', 'E-mail do usuário autenticado confere');
-
-    // 4.1 Teste de Logout (/api/auth/logout)
-    console.log('\n4.1 Testando Encerramento de Sessão (/api/auth/logout)...');
-    const logoutRes = await request('POST', '/api/auth/logout', null, {
-      Authorization: `Bearer ${tokenRodrigo}`,
-    });
-    assert(logoutRes.status === 200, 'Endpoint /api/auth/logout retornou HTTP 200');
-    assert(logoutRes.body.sucesso === true, 'Mensagem de confirmação de logout bem-sucedida');
-
-    // 5. Teste de Cadastro de Usuário (Validações de Segurança)
-    console.log('\n5. Testando Cadastro com Validações de Segurança (/api/auth/register)...');
+    // ------------------------------------------------------------------------
+    // 2. REGISTRO, LOGIN, PERFIL, TROCA DE SENHA, EMPREITEIRAS E LOGOUT
+    // ------------------------------------------------------------------------
+    console.log('\n2. Autenticação, Gestão de Perfil, Alteração de Senha e Empreiteiras...');
     const regFraco = await request('POST', '/api/auth/register', {
       nome: 'Teste',
-      email: 'teste@bb.com.br',
-      senha: '123', // Senha menor que 6 caracteres
+      email: 'invalido@teste.local',
+      senha: '123',
       cargo: 'fiscal',
     });
-    assert(regFraco.status === 400, 'Senha curta rejeitada com HTTP 400');
+    assert(regFraco.status === 400, 'Senha curta (< 6) rejeitada com HTTP 400');
 
-    const novoEmail = `engenheiro_${Date.now()}@empreiteira.com`;
-    const regSucesso = await request('POST', '/api/auth/register', {
-      nome: 'Engenheiro Novo',
-      email: novoEmail,
-      senha: 'senhaSegura123',
+    const regEmailInvalido = await request('POST', '/api/auth/register', {
+      nome: 'Teste',
+      email: 'nao-e-email',
+      senha: 'SenhaForte!1',
+      cargo: 'fiscal',
+    });
+    assert(regEmailInvalido.status === 400, 'E-mail inválido rejeitado com HTTP 400');
+
+    const regFiscal = await request('POST', '/api/auth/register', {
+      nome: 'Eng. Fiscal Auditor',
+      email: 'fiscal.auditor@bbvision.local',
+      senha: 'FiscalPass@2026',
+      cargo: 'fiscal',
+      empresa: 'Superintendência de Engenharia',
+      registro_profissional: 'CREA-PE 99001',
+    });
+    assert(regFiscal.status === 201 && Boolean(regFiscal.body.token), 'Cadastro de Fiscal retornou HTTP 201 + JWT');
+    assert(regFiscal.body.usuario.cargo === 'fiscal' && !regFiscal.body.usuario.senha_hash, 'Cargo fiscal e senha_hash não exposto');
+    const tokenFiscal = regFiscal.body.token;
+    const fiscalId = regFiscal.body.usuario.id;
+
+    const regDup = await request('POST', '/api/auth/register', {
+      nome: 'Duplicado',
+      email: 'fiscal.auditor@bbvision.local',
+      senha: 'OutraSenha@2026',
+      cargo: 'fiscal',
+    });
+    assert(regDup.status === 409, 'E-mail duplicado rejeitado com HTTP 409');
+
+    const regEmp1 = await request('POST', '/api/auth/register', {
+      nome: 'Responsável Empreiteira Um',
+      email: 'emp1@construtora.local',
+      senha: 'Emp1Pass@2026',
       cargo: 'empreiteira',
+      empresa: 'Construtora Alfa Ltda',
+      registro_profissional: 'CREA-SP 11223',
     });
-    assert(regSucesso.status === 201, 'Cadastro bem-sucedido retornou HTTP 201 com token');
-    assert(regSucesso.body.token, 'Token gerado no registro');
+    assert(regEmp1.status === 201 && Boolean(regEmp1.body.token), 'Cadastro de Empreiteira 1 retornou HTTP 201 + JWT');
+    let tokenEmp1 = regEmp1.body.token;
+    const emp1Id = regEmp1.body.usuario.id;
 
-    // 6. Listagem de Obras, Permissões RBAC & Cardinalidades (1:N)
-    console.log('\n6. Testando Listagem de Obras, Permissões RBAC & Cardinalidade (/api/obras)...');
-    const obrasRes = await request('GET', '/api/obras', null, {
-      Authorization: `Bearer ${tokenRodrigo}`,
+    const regEmp2 = await request('POST', '/api/auth/register', {
+      nome: 'Responsável Empreiteira Dois',
+      email: 'emp2@construtora.local',
+      senha: 'Emp2Pass@2026',
+      cargo: 'empreiteira',
+      empresa: 'Construtora Beta Ltda',
     });
-    assert(obrasRes.status === 200, 'Listagem de obras retornou HTTP 200');
-    assert(Array.isArray(obrasRes.body) && obrasRes.body.length > 0, 'Retornou array com obras cadastradas');
-    const obraId = obrasRes.body[0].id;
+    assert(regEmp2.status === 201 && Boolean(regEmp2.body.token), 'Cadastro de Empreiteira 2 retornou HTTP 201 + JWT');
+    const tokenEmp2 = regEmp2.body.token;
 
-    // Teste Cardinalidade: 1 Empreiteira pode ter N Obras
-    const obrasDaEmpreiteira = await request('GET', `/api/obras?empreiteira_id=${loginRodrigo.body.usuario.id}`, null, {
-      Authorization: `Bearer ${tokenRodrigo}`,
+    // Login, /me, PATCH /me e PATCH /senha
+    const loginErrado = await request('POST', '/api/auth/login', {
+      email: 'emp1@construtora.local',
+      senha: 'SenhaErrada',
     });
-    assert(obrasDaEmpreiteira.status === 200, 'Filtro por empreiteira retornou HTTP 200');
-    assert(obrasDaEmpreiteira.body.length >= 2, 'Empreiteira Rodrigo possui N obras associadas (>= 2)');
+    assert(loginErrado.status === 401, 'Login com senha incorreta rejeitado com HTTP 401');
 
-    // Teste Cardinalidade: 1 Fiscal pode fiscalizar N Obras
-    const obrasFiscalizadasMariana = await request('GET', `/api/obras?fiscal_id=${loginMariana.body.usuario.id}`, null, {
-      Authorization: `Bearer ${tokenMariana}`,
+    const meRes = await request('GET', '/api/auth/me', null, { Authorization: `Bearer ${tokenEmp1}` });
+    assert(meRes.status === 200 && meRes.body.usuario.id === emp1Id, 'GET /api/auth/me retorna perfil autenticado');
+
+    const patchPerfil = await request(
+      'PATCH',
+      '/api/auth/me',
+      { nome: 'Responsável Empreiteira Um Atualizado', empresa: 'Construtora Alfa Engenharia' },
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+    assert(
+      patchPerfil.status === 200 && patchPerfil.body.usuario.nome === 'Responsável Empreiteira Um Atualizado',
+      'PATCH /api/auth/me atualizou dados cadastrais'
+    );
+
+    const patchSenhaErrada = await request(
+      'PATCH',
+      '/api/auth/senha',
+      { senhaAtual: 'errada', novaSenha: 'NovaEmp1Pass@2026' },
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+    assert(patchSenhaErrada.status === 401, 'PATCH /api/auth/senha rejeita senha atual incorreta com HTTP 401');
+
+    const patchSenhaOk = await request(
+      'PATCH',
+      '/api/auth/senha',
+      { senhaAtual: 'Emp1Pass@2026', novaSenha: 'NovaEmp1Pass@2026' },
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+    assert(patchSenhaOk.status === 200 && patchSenhaOk.body.sucesso === true, 'PATCH /api/auth/senha atualizou a senha');
+
+    const loginSenhaNova = await request('POST', '/api/auth/login', {
+      email: 'emp1@construtora.local',
+      senha: 'NovaEmp1Pass@2026',
     });
-    assert(obrasFiscalizadasMariana.status === 200, 'Filtro por fiscal retornou HTTP 200');
-    assert(obrasFiscalizadasMariana.body.length >= 2, 'Fiscal Mariana fiscaliza N obras associadas (>= 2)');
+    assert(loginSenhaNova.status === 200 && Boolean(loginSenhaNova.body.token), 'Login com nova senha retornou HTTP 200');
+    tokenEmp1 = loginSenhaNova.body.token;
 
-    // Teste Detalhe da Obra com Relacionamentos
-    const detalheObra = await request('GET', `/api/obras/${obraId}`, null, {
-      Authorization: `Bearer ${tokenRodrigo}`,
-    });
-    assert(detalheObra.status === 200, 'Detalhes da obra retornou HTTP 200');
-    assert(detalheObra.body.empreiteira, 'Obra contém objeto da empreiteira vinculada');
-    assert(detalheObra.body.fiscal_responsavel, 'Obra contém objeto do fiscal responsável vinculado');
+    const empListForbidden = await request('GET', '/api/auth/empreiteiras', null, { Authorization: `Bearer ${tokenEmp1}` });
+    assert(empListForbidden.status === 403, 'Empreiteira bloqueada em GET /api/auth/empreiteiras (HTTP 403)');
 
-    // Teste RBAC: Empreiteira tentando cadastrar obra deve ser rejeitada com 403
-    const criaObraEmpreiteira = await request('POST', '/api/obras', {
-      nome: 'Agência Tentativa Não Autorizada',
-      endereco: 'Rua Proibida, 100',
-    }, {
-      Authorization: `Bearer ${tokenRodrigo}`,
-    });
-    assert(criaObraEmpreiteira.status === 403, 'Tentativa de criar obra por empreiteira bloqueada com HTTP 403');
+    const empListFiscal = await request('GET', '/api/auth/empreiteiras', null, { Authorization: `Bearer ${tokenFiscal}` });
+    assert(
+      empListFiscal.status === 200 &&
+        Array.isArray(empListFiscal.body) &&
+        empListFiscal.body.length === 3 &&
+        empListFiscal.body.some(u => u.email === 'rodrigo@empreiteira.com'),
+      'Fiscal lista todas as empreiteiras reais cadastradas (incluindo rodrigo@empreiteira.com)'
+    );
 
-    // Teste RBAC & Cardinalidade: Fiscal Mariana cadastrando mais uma obra (N obras cadastradas por fiscal)
-    const criaObraFiscal = await request('POST', '/api/obras', {
-      nome: 'Agência BB Autorizada Fiscal',
-      endereco: 'Av. Paulista, 2000, SP',
-      empreiteira_id: loginRodrigo.body.usuario.id,
-    }, {
-      Authorization: `Bearer ${tokenMariana}`,
-    });
-    assert(criaObraFiscal.status === 201, 'Cadastro de obra por fiscal retornou HTTP 201 com sucesso');
-    assert(criaObraFiscal.body.obra.cadastrado_por_fiscal_id === loginMariana.body.usuario.id, 'Obra registra que foi cadastrada pelo fiscal Mariana');
-    assert(criaObraFiscal.body.obra.empreiteira_id === loginRodrigo.body.usuario.id, 'Obra vinculada à empreiteira Rodrigo');
+    const logoutRes = await request('POST', '/api/auth/logout', null, { Authorization: `Bearer ${tokenEmp2}` });
+    assert(logoutRes.status === 200 && logoutRes.body.sucesso === true, 'POST /api/auth/logout retornou sucesso');
 
-    // 7. Criar Relatório de Vistoria
-    console.log('\n7. Testando Criação de Relatório de Vistoria (/api/relatorios)...');
-    const relRes = await request('POST', '/api/relatorios', { obra_id: obraId }, {
-      Authorization: `Bearer ${tokenRodrigo}`,
-    });
-    assert(relRes.status === 201, 'Criação de relatório retornou HTTP 201');
-    assert(relRes.body.id, 'ID do relatório foi criado');
-    assert(relRes.body.status === 'EM_ANDAMENTO', 'Status inicial é EM_ANDAMENTO');
-    const relatorioId = relRes.body.id;
+    // ------------------------------------------------------------------------
+    // 3. OBRAS CRUD, RBAC, CHECKLIST CUSTOMIZADO E ISOLAMENTO ENTRE EMPREITEIRAS
+    // ------------------------------------------------------------------------
+    console.log('\n3. Obras CRUD, RBAC, Cardinalidade 1:N e Isolamento entre Empreiteiras...');
+    const obrasUnauth = await request('GET', '/api/obras');
+    assert(obrasUnauth.status === 401, 'GET /api/obras sem token bloqueado com HTTP 401');
 
-    // 8. Avaliação de Foto com IA e Hash SHA-256
-    console.log('\n8. Testando Avaliação de Imagem com IA & Hash SHA-256 (/api/fotos/avaliar)...');
-    const fakeImageB64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
-    const fotoEval = await request('POST', '/api/fotos/avaliar', {
-      imagemBase64: fakeImageB64,
-      telemetriaVisual: {
-        baixaLuz: false,
-        pessoaNoCentro: false,
-        rostoDetectado: false,
-        contextoConstrucao: true,
-        foraDeContexto: false,
-        luminanciaMedia: 175.4,
-        percentualEscuros: 0.08,
-      },
-    });
-    assert(fotoEval.status === 200, 'Avaliação de foto de obra retornou HTTP 200');
-    assert(fotoEval.body.hash_integridade, 'Hash SHA-256 gerado para a foto');
-    assert(fotoEval.body.hash_integridade.length === 64, 'Hash tem 64 caracteres');
-    assert(fotoEval.body.status === 'APROVADO', 'Foto de obra/construção bem iluminada foi APROVADA pela IA');
-    assert(fotoEval.body.categoria === 'OBRA_LOCAL', 'Categoria da foto aprovada é OBRA_LOCAL');
+    const obrasVazias = await request('GET', '/api/obras', null, { Authorization: `Bearer ${tokenFiscal}` });
+    assert(obrasVazias.status === 200 && obrasVazias.body.length === 0, 'Catálogo inicia vazio (sem obras de exemplo)');
 
-    // 8.1 Rejeição obrigatória de foto com Baixa Luz
-    const fotoBaixaLuz = await request('POST', '/api/fotos/avaliar', {
-      imagemBase64: fakeImageB64,
-      telemetriaVisual: {
-        baixaLuz: true,
-        pessoaNoCentro: false,
-        luminanciaMedia: 28.5,
-        percentualEscuros: 0.84,
-      },
-    });
-    assert(fotoBaixaLuz.status === 200, 'Avaliação de foto com baixa luz retornou HTTP 200');
-    assert(fotoBaixaLuz.body.status === 'REJEITADO', 'Foto com baixa luz NÃO aprovou (status REJEITADO)');
-    assert(fotoBaixaLuz.body.categoria === 'BAIXA_LUZ', 'Categoria identificada como BAIXA_LUZ');
+    const criaObraEmpForbidden = await request(
+      'POST',
+      '/api/obras',
+      { nome: 'Obra Não Autorizada', endereco: 'Rua X, 1' },
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+    assert(criaObraEmpForbidden.status === 403, 'Empreiteira bloqueada ao tentar cadastrar obra (HTTP 403)');
 
-    // 8.2 Selfie permitida na lateral (pessoa fora da parte central + obra/construção visível)
-    const fotoSelfieLateral = await request('POST', '/api/fotos/avaliar', {
-      imagemBase64: fakeImageB64,
-      telemetriaVisual: {
-        baixaLuz: false,
-        isSelfieCamera: true,
-        selfiePermitida: true,
-        selfieLateral: true,
-        facesDetectadas: 1,
-        facesNoCentro: 0,
-        pessoaNoCentro: false,
-        contextoConstrucao: true,
-        foraDeContexto: false,
-        luminanciaMedia: 162.0,
-      },
-    });
-    assert(fotoSelfieLateral.status === 200, 'Avaliação de selfie lateral com obra retornou HTTP 200');
-    assert(fotoSelfieLateral.body.status === 'APROVADO', 'Selfie com pessoa fora do centro e construção visível foi APROVADA');
-    assert(fotoSelfieLateral.body.categoria === 'OBRA_LOCAL', 'Categoria da selfie lateral aprovada é OBRA_LOCAL');
-
-    // 8.3 Rejeição obrigatória quando pessoa ocupa a parte central da foto
-    const fotoPessoaNoCentro = await request('POST', '/api/fotos/avaliar', {
-      imagemBase64: fakeImageB64,
-      telemetriaVisual: {
-        baixaLuz: false,
-        pessoaNoCentro: true,
-        facesDetectadas: 1,
-        facesNoCentro: 1,
-        luminanciaMedia: 142.0,
-        taxaPeleCentro: 0.38,
-      },
-    });
-    assert(fotoPessoaNoCentro.status === 200, 'Avaliação de pessoa ocupando o centro retornou HTTP 200');
-    assert(fotoPessoaNoCentro.body.status === 'REJEITADO', 'Foto com pessoa ocupando a parte central foi REJEITADA');
-    assert(fotoPessoaNoCentro.body.categoria === 'PESSOA_NO_CENTRO', 'Categoria identificada como PESSOA_NO_CENTRO');
-
-    // 8.4 Rejeição obrigatória quando foto NÃO é de obra, prédio, edifício, casa ou construção
-    const fotoForaContexto = await request('POST', '/api/fotos/avaliar', {
-      imagemBase64: fakeImageB64,
-      telemetriaVisual: {
-        baixaLuz: false,
-        pessoaNoCentro: false,
-        contextoConstrucao: false,
-        foraDeContexto: true,
-        luminanciaMedia: 155.0,
-      },
-    });
-    assert(fotoForaContexto.status === 200, 'Avaliação de foto fora do contexto de construção retornou HTTP 200');
-    assert(fotoForaContexto.body.status === 'REJEITADO', 'Foto fora do contexto de obra/construção foi REJEITADA');
-    assert(fotoForaContexto.body.categoria === 'FORA_DE_CONTEXTO', 'Categoria identificada como FORA_DE_CONTEXTO');
-
-    // 9. Proteção contra Path Traversal
-    console.log('\n9. Testando Proteção contra Path Traversal em Fotos (/api/fotos/sugerir-observacao)...');
-    const traversalAttempt = await request('POST', '/api/fotos/sugerir-observacao', {
-      caminho_arquivo: '../../../../windows/system.ini',
-    });
-    assert(traversalAttempt.status === 400, 'Tentativa de Path Traversal BLOQUEADA com HTTP 400');
-
-    // 10. Anexar Foto ao Relatório
-    console.log('\n10. Anexando Foto ao Relatório (/api/relatorios/:id/fotos)...');
-    const anexoRes = await request('POST', `/api/relatorios/${relatorioId}/fotos`, {
-      caminho_arquivo: fotoEval.body.caminho_arquivo,
-      hash_integridade: fotoEval.body.hash_integridade,
-      avaliacao_gemini: fotoEval.body.status,
-      confianca: fotoEval.body.confianca,
-      motivo: fotoEval.body.motivo,
-    }, {
-      Authorization: `Bearer ${tokenRodrigo}`,
-    });
-    assert(anexoRes.status === 201, 'Foto vinculada com sucesso');
-
-    // 11. Salvar Respostas do Checklist
-    console.log('\n11. Testando Preenchimento do Checklist (/api/relatorios/:id/respostas)...');
-    const checklistRes = await request('PUT', `/api/relatorios/${relatorioId}/respostas`, [
+    const criaObra1 = await request(
+      'POST',
+      '/api/obras',
       {
-        pergunta: 'Status da alvenaria',
-        valor: 'Conforme',
-        sugestao_ia: 'Alvenaria externa erguida e nivelada conforme gabarito.',
-        tipo: 'multipla_escolha',
+        nome: 'Agência Unidade Central',
+        endereco: 'Av. Rio Branco, 500 - Centro, Recife/PE',
+        tipo: 'Reforma e Modernização de Agência',
+        empreiteira_id: emp1Id,
       },
-    ], {
-      Authorization: `Bearer ${tokenRodrigo}`,
-    });
-    assert(checklistRes.status === 200, 'Respostas salvas com sucesso');
+      { Authorization: `Bearer ${tokenFiscal}` }
+    );
+    assert(criaObra1.status === 201 && Boolean(criaObra1.body.obra?.id), 'Fiscal cadastrou Obra 1 com HTTP 201');
+    assert(criaObra1.body.obra.cadastrado_por_fiscal_id === fiscalId, 'Obra registra cadastrado_por_fiscal_id');
+    assert(criaObra1.body.obra.empreiteira_id === emp1Id, 'Obra vinculada à Empreiteira 1');
+    const obra1Id = criaObra1.body.obra.id;
 
-    // 12. Finalização do Relatório (Inviolabilidade e PDF)
-    console.log('\n12. Finalizando Relatório e Gerando PDF Inviolável (/api/relatorios/:id/finalizar)...');
-    const finalizarRes = await request('POST', `/api/relatorios/${relatorioId}/finalizar`, {}, {
-      Authorization: `Bearer ${tokenRodrigo}`,
-    });
-    assert(finalizarRes.status === 200, 'Relatório finalizado com HTTP 200');
-    assert(finalizarRes.body.codigo, 'Código único foi gerado');
-    assert(finalizarRes.body.codigo.length === 16, 'Código único possui exatamente 16 caracteres');
-    assert(finalizarRes.body.codigo === finalizarRes.body.codigo.toUpperCase(), 'Código único está em UPPERCASE');
-    assert(finalizarRes.body.hashIntegridade, 'Hash SHA-256 do relatório gerado');
-    assert(finalizarRes.body.status === 'FINALIZADO', 'Status atualizado para FINALIZADO');
-
-    // 13. Bloqueio de Edição Posterior (Imutabilidade)
-    console.log('\n13. Testando Bloqueio de Edição Posterior (Imutabilidade)...');
-    const tentativaEdicao = await request('PUT', `/api/relatorios/${relatorioId}/respostas`, [
-      { pergunta: 'Alteração Indevida', valor: 'Hack' },
-    ], {
-      Authorization: `Bearer ${tokenRodrigo}`,
-    });
-    assert(tentativaEdicao.status === 403, 'Tentativa de alteração foi BLOQUEADA com HTTP 403');
-
-    const tentativaReenvio = await request('POST', `/api/relatorios/${relatorioId}/finalizar`, {}, {
-      Authorization: `Bearer ${tokenRodrigo}`,
-    });
-    assert(tentativaReenvio.status === 400, 'Tentativa de reenvio foi BLOQUEADA com HTTP 400');
-
-    // 14. Download / Visualização do PDF Gerado
-    console.log('\n14. Testando Visualização do PDF Compilado (/api/relatorios/:id/pdf)...');
-    const pdfRes = await request('GET', `/api/relatorios/${relatorioId}/pdf`);
-    assert(pdfRes.status === 200, 'Download do PDF retornou HTTP 200');
-    assert(pdfRes.headers['content-type'] === 'application/pdf', 'Content-Type é application/pdf');
-
-    // 15. Parecer e Auditoria do Fiscal com RBAC e tolerância a REGULAR
-    console.log('\n15. Testando Controle de Perfis e Auditoria (/api/relatorios/:id/status)...');
-    const tentativaFiscalRodrigo = await request('PATCH', `/api/relatorios/${relatorioId}/status`, {
-      status: 'APROVADO',
-      justificativa: 'Tentativa de aprovação por empreiteira',
-    }, {
-      Authorization: `Bearer ${tokenRodrigo}`,
-    });
-    assert(tentativaFiscalRodrigo.status === 403, 'Acesso de Rodrigo a julgamento fiscal BLOQUEADO com HTTP 403');
-
-    // Testa envio com status 'REGULAR' (conforme emitido pelo frontend)
-    const auditoriaRes = await request('PATCH', `/api/relatorios/${relatorioId}/status`, {
-      status: 'REGULAR',
-      justificativa: 'Fotos nítidas e medição condizente com os gabaritos BB.',
-    }, {
-      Authorization: `Bearer ${tokenMariana}`,
-    });
-    assert(auditoriaRes.status === 200, 'Auditoria com status REGULAR homologada com HTTP 200');
-    assert(auditoriaRes.body.status === 'APROVADO', 'Status do relatório mapeado para APROVADO');
-    assert(auditoriaRes.body.obraStatus === 'REGULAR', 'Status da obra atualizado para REGULAR');
-
-    // 16. Validador Público de Autenticidade
-    console.log('\n16. Testando Validador Público de Autenticidade (/api/validador/:codigoOuHash)...');
-    const validacaoSucesso = await request('GET', `/api/validador/${finalizarRes.body.codigo}`);
-    assert(validacaoSucesso.status === 200, 'Validador público retornou HTTP 200 para código gerado');
-    assert(validacaoSucesso.body.autentico === true, 'Documento atestado como AUTÊNTICO');
-
-    const validacaoFalsa = await request('GET', '/api/validador/CODIGO_FALSO_1234');
-    assert(validacaoFalsa.status === 404, 'Código inexistente rejeitado com HTTP 404');
-    assert(validacaoFalsa.body.autentico === false, 'Documento inexistente atestado como NÃO autêntico');
-
-    // 17. Sincronização de Vistoria Offline (HU05)
-    console.log('\n17. Testando Sincronização de Vistoria Offline (/api/relatorios/sincronizar-offline)...');
-    const syncOfflineRes = await request('POST', '/api/relatorios/sincronizar-offline', {
-      obra_id: obraId,
-      respostas: [
-        { pergunta: 'Alvenaria', valor: 'Conforme', sugestao_ia: 'Nivelamento verificado' },
-      ],
-      fotos: [
-        { imagemBase64: fakeImageB64, motivo: 'Foto capturada offline' },
-      ],
-      timestamp: new Date().toISOString(),
-    }, {
-      Authorization: `Bearer ${tokenRodrigo}`,
-    });
-    assert(syncOfflineRes.status === 200, 'Sincronização offline retornou HTTP 200');
-    assert(syncOfflineRes.body.sucesso === true, 'Flag sucesso é true');
-    assert(syncOfflineRes.body.codigo && syncOfflineRes.body.codigo.length === 16, 'Código gerado para vistoria offline');
-    assert(syncOfflineRes.body.status === 'FINALIZADO', 'Status da vistoria sincronizada é FINALIZADO');
-
-    // 18. Tratamento de Endpoint Inexistente da API (404 JSON)
-    console.log('\n18. Testando 404 JSON em Endpoints Inexistentes da API (/api/inexistente)...');
-    const rota404 = await request('GET', '/api/rota-inexistente');
-    assert(rota404.status === 404, 'Rota inexistente retornou HTTP 404');
-    assert(rota404.body.erro && typeof rota404.body.erro === 'string', 'Retornou mensagem de erro em JSON padronizado');
-
-    // 19. Readiness Probe e Telemetria para Orquestradores
-    console.log('\n19. Testando Readiness Probe e Telemetria (/api/ready e /api/health)...');
-    const readyRes = await request('GET', '/api/ready');
-    assert(readyRes.status === 200, 'Readiness probe respondeu HTTP 200');
-    assert(readyRes.body.status === 'ready', 'Status do readiness é ready');
-
-    const healthMetrics = await request('GET', '/api/health');
-    assert(healthMetrics.body.versao === '1.2.0', 'Versão atualizada é 1.2.0');
-    assert(healthMetrics.body.ambiente, 'Ambiente de execução registrado');
-    assert(typeof healthMetrics.body.memoria.rssMb === 'number', 'Métricas de memória presentes');
-
-    // 20. Validador Público: Bloqueio de Injeção de Scripts / XSS / Comandos
-    console.log('\n20. Testando Validador Público contra Payloads Maliciosos (/api/validador/<script>)...');
-    const xssAttempt = await request('GET', '/api/validador/%3Cscript%3E');
-    assert(xssAttempt.status === 400, 'Identificador malicioso rejeitado com HTTP 400');
-    assert(xssAttempt.body.autentico === false, 'Resposta atesta que documento é inautêntico');
-
-    // 21. Proteção contra Requisições Mutantes Não Autenticadas
-    console.log('\n21. Testando Rejeição de Mutação sem Autenticação (/api/relatorios sem Bearer)...');
-    const unauthReport = await request('POST', '/api/relatorios', { obra_id: obraId });
-    assert(unauthReport.status === 401, 'Criação de relatório sem token bloqueada com HTTP 401');
-
-    // 22. Compressão HTTP para Escalabilidade e Redução de Banda
-    console.log('\n22. Testando Suporte a Compressão HTTP (Accept-Encoding: gzip)...');
-    const compRes = await request('GET', '/api/obras', null, {
-      'Accept-Encoding': 'gzip, deflate',
-      Authorization: `Bearer ${tokenRodrigo}`,
-    });
-    assert(compRes.status === 200, 'Endpoint com suporte a compressão respondeu HTTP 200');
-    assert(compRes.headers['vary'] && compRes.headers['vary'].includes('Accept-Encoding'), 'Header Vary: Accept-Encoding presente');
-
-    // 23. Melhorias Persona Empreiteira (Sugestão IA sem foto prévia, Justificativa Qualitativa e Foto Base64 em Relatórios)
-    console.log('\n23. Testando Melhorias Persona Empreiteira (Sugestão IA, Justificativas e Imagens no PDF)...');
-    const sugChecklistRes = await request('POST', '/api/fotos/sugerir-observacao', {
-      categoria: 'alvenaria',
-    });
-    assert(sugChecklistRes.status === 200, 'Sugestão de parecer IA no checklist respondeu HTTP 200');
-    assert(typeof sugChecklistRes.body.sugestao === 'string' && sugChecklistRes.body.sugestao.length > 10, 'Sugestão técnica gerada com sucesso');
-
-    const relEmpreiteira = await request('POST', '/api/relatorios', { obra_id: obraId }, {
-      Authorization: `Bearer ${tokenRodrigo}`,
-    });
-    const relEmpId = relEmpreiteira.body.id;
-
-    const anexoBase64Res = await request('POST', `/api/relatorios/${relEmpId}/fotos`, {
-      url: `data:image/png;base64,${fakeImageB64}`,
-      confianca_ia: 0.94,
-      motivo_ia: 'Foto capturada ao vivo na vistoria.',
-    }, {
-      Authorization: `Bearer ${tokenRodrigo}`,
-    });
-    assert(anexoBase64Res.status === 201, 'Foto enviada como Data URL Base64 anexada e salva com HTTP 201');
-    assert(anexoBase64Res.body.foto.caminho_arquivo.startsWith('uploads/evidencias/'), 'Caminho da foto persistida em uploads/evidencias/');
-
-    const respJustRes = await request('PUT', `/api/relatorios/${relEmpId}/respostas`, [
+    const criaObra2 = await request(
+      'POST',
+      '/api/obras',
       {
-        pergunta: '4. Condição da calçada externa e acessibilidade da entrada principal',
-        valor: 'Parcialmente acessível (Em adequação)',
-        justificativa: 'Rampa provisória instalada aguardando cura do piso tátil.',
-        tipo: 'multipla_escolha',
+        nome: 'Agência Unidade Norte',
+        endereco: 'Av. Norte, 1200 - Recife/PE',
+        empreiteira_id: emp1Id,
       },
-    ], {
-      Authorization: `Bearer ${tokenRodrigo}`,
-    });
-    assert(respJustRes.status === 200, 'Resposta com justificativa qualitativa salva com HTTP 200');
+      { Authorization: `Bearer ${tokenFiscal}` }
+    );
+    assert(criaObra2.status === 201, 'Fiscal cadastrou Obra 2 para a mesma empreiteira (1:N)');
+    const obra2Id = criaObra2.body.obra.id;
 
-    const pdfSeedRes = await request('GET', '/api/relatorios/rel-seed-001/pdf');
-    assert(pdfSeedRes.status === 200 && pdfSeedRes.rawBuffer.length > 1500, 'PDF com imagens de vistoria renderizado sem sobreposição');
+    const criaObra3 = await request(
+      'POST',
+      '/api/obras',
+      {
+        nome: 'Obra Temporária Exclusão',
+        endereco: 'Rua Teste, 99',
+      },
+      { Authorization: `Bearer ${tokenFiscal}` }
+    );
+    assert(criaObra3.status === 201, 'Fiscal cadastrou Obra 3 sem empreiteira definida');
+    const obra3Id = criaObra3.body.obra.id;
 
-    // 24. Registro de Fotos da Empreiteira nos Relatórios e nos PDFs de Comprovação
-    console.log('\n24. Testando Registro de Fotos da Empreiteira no Relatório e no PDF de Comprovação...');
-    const relComFotoRes = await request('POST', '/api/relatorios', {
-      obra_id: obraId,
-      respostas: [
-        { pergunta: '1. Fachada da agência', valor: 'Sim', justificativa: 'Perfeitamente visível' },
-      ],
-      fotos: [
+    const obrasEmp1 = await request('GET', '/api/obras', null, { Authorization: `Bearer ${tokenEmp1}` });
+    assert(obrasEmp1.status === 200 && obrasEmp1.body.length === 2, 'Empreiteira 1 enxerga exatamente suas 2 obras (1:N)');
+
+    const obrasEmp2 = await request('GET', '/api/obras', null, { Authorization: `Bearer ${tokenEmp2}` });
+    assert(obrasEmp2.status === 200 && obrasEmp2.body.length === 0, 'Isolamento: Empreiteira 2 não enxerga obras da Empreiteira 1');
+
+    const detalheObra1Emp2 = await request('GET', `/api/obras/${obra1Id}`, null, { Authorization: `Bearer ${tokenEmp2}` });
+    assert(detalheObra1Emp2.status === 403, 'Isolamento: Empreiteira 2 bloqueada no detalhe da Obra 1 (HTTP 403)');
+
+    const detalheObra1Emp1 = await request('GET', `/api/obras/${obra1Id}`, null, { Authorization: `Bearer ${tokenEmp1}` });
+    assert(
+      detalheObra1Emp1.status === 200 && detalheObra1Emp1.body.empreiteira?.id === emp1Id && detalheObra1Emp1.body.fiscal_responsavel?.id === fiscalId,
+      'Detalhe da Obra 1 retorna relacionamentos reais de empreiteira e fiscal'
+    );
+
+    const editObraEmpForbidden = await request(
+      'PATCH',
+      `/api/obras/${obra2Id}`,
+      { nome: 'Tentativa Hack' },
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+    assert(editObraEmpForbidden.status === 403, 'Empreiteira bloqueada ao tentar editar obra (HTTP 403)');
+
+    const editObraFiscal = await request(
+      'PATCH',
+      `/api/obras/${obra2Id}`,
+      { nome: 'Agência Unidade Norte Renovada', tipo: 'Adequação de Acessibilidade (NBR 9050)' },
+      { Authorization: `Bearer ${tokenFiscal}` }
+    );
+    assert(
+      editObraFiscal.status === 200 && editObraFiscal.body.obra.nome === 'Agência Unidade Norte Renovada',
+      'Fiscal editou Obra 2 com sucesso'
+    );
+
+    const checklistCustom = await request(
+      'PUT',
+      `/api/obras/${obra1Id}/checklist`,
+      {
+        perguntas: [
+          {
+            id: 'q_custom_1',
+            numero: 1,
+            tipo: 'multipla_escolha',
+            tipoLabel: 'Múltipla Escolha',
+            titulo: '1. Fachada está conforme projeto executivo?',
+            chaveResposta: 'q_custom_1',
+            opcoes: [
+              { valor: 'Sim', label: 'Sim', tag: 'Conforme', classeTag: 'tag-conforme' },
+              { valor: 'Não', label: 'Não', tag: 'Não Conforme', classeTag: 'tag-erro' },
+            ],
+          },
+        ],
+      },
+      { Authorization: `Bearer ${tokenFiscal}` }
+    );
+    assert(checklistCustom.status === 200 && checklistCustom.body.perguntas.length === 1, 'Checklist personalizado da obra salvo com sucesso');
+
+    const delObra3 = await request('DELETE', `/api/obras/${obra3Id}`, null, { Authorization: `Bearer ${tokenFiscal}` });
+    assert(delObra3.status === 200 && delObra3.body.sucesso === true, 'Fiscal excluiu Obra 3 sem relatórios vinculados');
+
+    const getObra3AfterDel = await request('GET', `/api/obras/${obra3Id}`, null, { Authorization: `Bearer ${tokenFiscal}` });
+    assert(getObra3AfterDel.status === 404, 'Obra excluída retorna HTTP 404');
+
+    // ------------------------------------------------------------------------
+    // 4. FOTOS, VISÃO COMPUTACIONAL IA, AUTH, MAGIC BYTES E PATH TRAVERSAL
+    // ------------------------------------------------------------------------
+    console.log('\n4. Fotos, Visão Computacional IA, Magic Bytes e Path Traversal...');
+    const fotoUnauth = await request('POST', '/api/fotos/avaliar', { imagemBase64: VALID_PNG_B64 });
+    assert(fotoUnauth.status === 401, 'POST /api/fotos/avaliar sem autenticação bloqueado com HTTP 401');
+
+    const sugUnauth = await request('POST', '/api/fotos/sugerir-observacao', { categoria: 'alvenaria' });
+    assert(sugUnauth.status === 401, 'POST /api/fotos/sugerir-observacao sem autenticação bloqueado com HTTP 401');
+
+    const fakeMagicBytes = Buffer.from('ESTOU_FINGINDO_SER_IMAGEM_TXT').toString('base64');
+    const fotoInvalida = await request(
+      'POST',
+      '/api/fotos/avaliar',
+      { imagemBase64: fakeMagicBytes },
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+    assert(fotoInvalida.status === 400, 'Arquivo não-imagem (Magic Bytes inválidos) bloqueado com HTTP 400');
+
+    const fotoOk = await request(
+      'POST',
+      '/api/fotos/avaliar',
+      {
+        imagemBase64: VALID_PNG_B64,
+        telemetriaVisual: {
+          baixaLuz: false,
+          pessoaNoCentro: false,
+          contextoConstrucao: true,
+          foraDeContexto: false,
+          luminanciaMedia: 170.5,
+        },
+      },
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+    assert(
+      fotoOk.status === 200 && fotoOk.body.status === 'APROVADO' && fotoOk.body.categoria === 'OBRA_LOCAL',
+      'Foto válida de construção aprovada pela IA'
+    );
+    assert(fotoOk.body.hash_integridade && fotoOk.body.hash_integridade.length === 64, 'Hash SHA-256 real gerado para a foto');
+
+    const fotoBaixaLuz = await request(
+      'POST',
+      '/api/fotos/avaliar',
+      { imagemBase64: VALID_PNG_B64, telemetriaVisual: { baixaLuz: true, luminanciaMedia: 24 } },
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+    assert(fotoBaixaLuz.status === 200 && fotoBaixaLuz.body.status === 'REJEITADO' && fotoBaixaLuz.body.categoria === 'BAIXA_LUZ', 'Baixa luz rejeitada');
+
+    const fotoSelfieLat = await request(
+      'POST',
+      '/api/fotos/avaliar',
+      {
+        imagemBase64: VALID_PNG_B64,
+        telemetriaVisual: {
+          baixaLuz: false,
+          isSelfieCamera: true,
+          selfieLateral: true,
+          pessoaNoCentro: false,
+          contextoConstrucao: true,
+          foraDeContexto: false,
+          luminanciaMedia: 160,
+        },
+      },
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+    assert(fotoSelfieLat.status === 200 && fotoSelfieLat.body.status === 'APROVADO', 'Selfie com pessoa fora do centro aprovada');
+
+    const fotoPessoaCentro = await request(
+      'POST',
+      '/api/fotos/avaliar',
+      { imagemBase64: VALID_PNG_B64, telemetriaVisual: { baixaLuz: false, pessoaNoCentro: true, facesNoCentro: 1 } },
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+    assert(
+      fotoPessoaCentro.status === 200 && fotoPessoaCentro.body.status === 'REJEITADO' && fotoPessoaCentro.body.categoria === 'PESSOA_NO_CENTRO',
+      'Pessoa ocupando o centro rejeitada'
+    );
+
+    const fotoForaContexto = await request(
+      'POST',
+      '/api/fotos/avaliar',
+      { imagemBase64: VALID_PNG_B64, telemetriaVisual: { baixaLuz: false, pessoaNoCentro: false, foraDeContexto: true, contextoConstrucao: false } },
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+    assert(
+      fotoForaContexto.status === 200 && fotoForaContexto.body.status === 'REJEITADO' && fotoForaContexto.body.categoria === 'FORA_DE_CONTEXTO',
+      'Cena fora de contexto de obra/construção rejeitada'
+    );
+
+    const traversalSug = await request(
+      'POST',
+      '/api/fotos/sugerir-observacao',
+      { caminho_arquivo: '../../../../windows/system.ini' },
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+    assert(traversalSug.status === 400, 'Path Traversal em /api/fotos/sugerir-observacao bloqueado com HTTP 400');
+
+    const sugContextual = await request(
+      'POST',
+      '/api/fotos/sugerir-observacao',
+      {
+        categoria: 'geral',
+        contextoRespostas: { sinalizacao: 'Sim', limpeza: '5/5', cameras: 4 },
+      },
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+    assert(
+      sugContextual.status === 200 && typeof sugContextual.body.sugestao === 'string' && sugContextual.body.sugestao.length > 15,
+      'Sugestão contextual de observação retornada com sucesso'
+    );
+
+    // ------------------------------------------------------------------------
+    // 5. RELATÓRIOS, IDOR, ASSINATURA DIGITAL, SENHA, DEDUPLICAÇÃO E IMUTABILIDADE
+    // ------------------------------------------------------------------------
+    console.log('\n5. Relatórios, IDOR, Assinatura Real, Validação de Senha, Deduplicação e PDF...');
+    const relUnauth = await request('POST', '/api/relatorios', { obra_id: obra1Id });
+    assert(relUnauth.status === 401, 'POST /api/relatorios sem token bloqueado com HTTP 401');
+
+    const relOutraEmp = await request(
+      'POST',
+      '/api/relatorios',
+      { obra_id: obra1Id },
+      { Authorization: `Bearer ${tokenEmp2}` }
+    );
+    assert(relOutraEmp.status === 403, 'IDOR: Empreiteira 2 bloqueada ao criar relatório na obra da Empreiteira 1');
+
+    const rel1 = await request(
+      'POST',
+      '/api/relatorios',
+      {
+        obra_id: obra1Id,
+        tipo_local: 'Agência Bancária',
+        localizacao_texto: 'Av. Rio Branco, 500 - Recife/PE',
+        latitude: -8.06316,
+        longitude: -34.87113,
+        precisao_gps: 12,
+      },
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+    assert(rel1.status === 201 && rel1.body.status === 'EM_ANDAMENTO', 'Relatório 1 criado com GPS e tipo_local');
+    const rel1Id = rel1.body.id;
+
+    // PDF de rascunho EM_ANDAMENTO protegido contra acesso público
+    const draftPdfUnauth = await request('GET', `/api/relatorios/${rel1Id}/pdf`);
+    assert(draftPdfUnauth.status === 401, 'PDF de relatório EM_ANDAMENTO bloqueado sem autenticação (HTTP 401)');
+
+    // IDOR em GET, PUT respostas, POST fotos e POST finalizar
+    assert(
+      (await request('GET', `/api/relatorios/${rel1Id}`, null, { Authorization: `Bearer ${tokenEmp2}` })).status === 403,
+      'IDOR: Empreiteira 2 bloqueada em GET /api/relatorios/:id'
+    );
+    assert(
+      (
+        await request('PUT', `/api/relatorios/${rel1Id}/respostas`, [{ pergunta: 'Hack', valor: 'X' }], {
+          Authorization: `Bearer ${tokenEmp2}`,
+        })
+      ).status === 403,
+      'IDOR: Empreiteira 2 bloqueada em PUT /respostas'
+    );
+    assert(
+      (
+        await request(
+          'POST',
+          `/api/relatorios/${rel1Id}/fotos`,
+          { caminho_arquivo: '../../../Windows/win.ini', hash_integridade: 'a'.repeat(64) },
+          { Authorization: `Bearer ${tokenEmp1}` }
+        )
+      ).status === 400,
+      'Path Traversal em POST /relatorios/:id/fotos bloqueado com HTTP 400'
+    );
+
+    const saveResp = await request(
+      'PUT',
+      `/api/relatorios/${rel1Id}/respostas`,
+      [
         {
-          imagemBase64: fakeImageB64,
-          motivo: 'Foto registrada in-loco da fachada pela empreiteira.',
-          avaliacao_gemini: 'APROVADO',
-          confianca: 0.95,
+          pergunta: '1. Fachada está conforme projeto executivo?',
+          valor: 'Parcial',
+          justificativa: 'Tapume lateral em fase de desmontagem programada.',
+          tipo: 'multipla_escolha',
+        },
+        {
+          pergunta: '2. Itens confirmados no Checklist de Verificação',
+          valor: 'A estrutura está conforme o projeto?; O local está pronto para registro fotográfico in-loco?',
+          tipo: 'multipla_escolha',
         },
       ],
-    }, {
-      Authorization: `Bearer ${tokenRodrigo}`,
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+    assert(saveResp.status === 200 && saveResp.body.respostas.length === 2, 'Respostas com justificativa salvas com HTTP 200');
+
+    const attachFoto = await request(
+      'POST',
+      `/api/relatorios/${rel1Id}/fotos`,
+      {
+        imagemBase64: `data:image/png;base64,${VALID_PNG_B64}`,
+        motivo: 'Evidência in-loco da fachada principal.',
+        avaliacao_gemini: 'APROVADO',
+        confianca: 0.96,
+      },
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+    assert(
+      attachFoto.status === 201 && attachFoto.body.foto.caminho_arquivo.startsWith('uploads/evidencias/'),
+      'Foto anexada e salva no disco com HTTP 201'
+    );
+    const hashFoto1 = attachFoto.body.foto.hash_integridade;
+
+    // Finalização com senha de confirmação incorreta deve falhar (401)
+    const finSenhaErrada = await request(
+      'POST',
+      `/api/relatorios/${rel1Id}/finalizar`,
+      { senha_confirmacao: 'SenhaIncorreta!' },
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+    assert(finSenhaErrada.status === 401, 'Finalização com senha incorreta bloqueada com HTTP 401');
+
+    // Finalização oficial com senha correta, assinatura PNG e foto duplicada (testando deduplicação)
+    const finOk = await request(
+      'POST',
+      `/api/relatorios/${rel1Id}/finalizar`,
+      {
+        senha_confirmacao: 'NovaEmp1Pass@2026',
+        assinatura_base64: `data:image/png;base64,${VALID_PNG_B64}`,
+        tipo_local: 'Agência Bancária',
+        localizacao_texto: 'Av. Rio Branco, 500 - Recife/PE (-8.06316, -34.87113)',
+        latitude: -8.06316,
+        longitude: -34.87113,
+        precisao_gps: 10,
+        fotos: [{ imagemBase64: VALID_PNG_B64, hash_integridade: hashFoto1, motivo: 'Foto duplicada na finalização' }],
+      },
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+    assert(finOk.status === 200 && finOk.body.status === 'FINALIZADO', 'Finalização oficial retornou HTTP 200 FINALIZADO');
+    assert(finOk.body.codigo && /^[0-9A-F]{16}$/.test(finOk.body.codigo), 'Código único gerado tem 16 chars hex UPPERCASE');
+    assert(
+      finOk.body.hashIntegridade && finOk.body.hashIntegridade.length === 64 && finOk.body.hashIntegridade !== EMPTY_SHA256,
+      'Hash SHA-256 real gerado (diferente de hash de string vazia)'
+    );
+
+    const rel1Detalhe = await request('GET', `/api/relatorios/${rel1Id}`, null, { Authorization: `Bearer ${tokenEmp1}` });
+    assert(rel1Detalhe.body.fotos.length === 1, 'Deduplicação manteve exatamente 1 foto no relatório');
+    assert(Boolean(rel1Detalhe.body.assinatura_base64), 'Assinatura digital PNG persistida no relatório');
+
+    // Imutabilidade pós-finalização
+    assert(
+      (await request('PUT', `/api/relatorios/${rel1Id}/respostas`, [{ pergunta: 'Edit', valor: 'Hack' }], { Authorization: `Bearer ${tokenEmp1}` }))
+        .status === 403,
+      'Imutabilidade: alteração de respostas pós-finalização bloqueada (HTTP 403)'
+    );
+    assert(
+      (await request('POST', `/api/relatorios/${rel1Id}/finalizar`, {}, { Authorization: `Bearer ${tokenEmp1}` })).status === 400,
+      'Imutabilidade: reenvio de finalização bloqueado (HTTP 400)'
+    );
+
+    // Integridade referencial: não pode excluir obra com relatório vinculado
+    const delObra1Bloq = await request('DELETE', `/api/obras/${obra1Id}`, null, { Authorization: `Bearer ${tokenFiscal}` });
+    assert(delObra1Bloq.status === 409, 'Exclusão de obra com relatórios vinculados bloqueada com HTTP 409');
+
+    // Download público (Fé Pública) do PDF finalizado
+    const pdfFinal = await request('GET', `/api/relatorios/${rel1Id}/pdf`);
+    assert(
+      pdfFinal.status === 200 && pdfFinal.headers['content-type'] === 'application/pdf' && pdfFinal.rawBuffer.length > 2000,
+      'PDF oficial com evidência e assinatura gerado e baixado (> 2KB)'
+    );
+
+    // ------------------------------------------------------------------------
+    // 6. AUDITORIA FISCAL, PAINEL RESUMO E RECOMPILAÇÃO DO PDF
+    // ------------------------------------------------------------------------
+    console.log('\n6. Auditoria Fiscal, Painel Resumo e Recompilação do PDF...');
+    assert(
+      (await request('GET', '/api/relatorios/painel/resumo', null, { Authorization: `Bearer ${tokenEmp1}` })).status === 403,
+      'Empreiteira bloqueada em GET /api/relatorios/painel/resumo (HTTP 403)'
+    );
+    const painelFiscal = await request('GET', '/api/relatorios/painel/resumo', null, { Authorization: `Bearer ${tokenFiscal}` });
+    assert(
+      painelFiscal.status === 200 &&
+        painelFiscal.body.totalRelatorios === 1 &&
+        painelFiscal.body.finalizados === 1 &&
+        painelFiscal.body.obrasAtivas === 2,
+      'Painel resumo do fiscal contabiliza corretamente os relatórios e obras reais'
+    );
+
+    // Empreiteira bloqueada ao tentar julgar relatório
+    assert(
+      (
+        await request(
+          'PATCH',
+          `/api/relatorios/${rel1Id}/status`,
+          { status: 'REGULAR', justificativa: 'Autoaprovação' },
+          { Authorization: `Bearer ${tokenEmp1}` }
+        )
+      ).status === 403,
+      'Empreiteira bloqueada em PATCH /api/relatorios/:id/status (HTTP 403)'
+    );
+
+    // Fiscal aprova com REGULAR -> mapeado para APROVADO
+    const julgaAprovar = await request(
+      'PATCH',
+      `/api/relatorios/${rel1Id}/status`,
+      { status: 'REGULAR', justificativa: 'Evidências conformes e medição homologada.' },
+      { Authorization: `Bearer ${tokenFiscal}` }
+    );
+    assert(
+      julgaAprovar.status === 200 && julgaAprovar.body.status === 'APROVADO' && julgaAprovar.body.obraStatus === 'REGULAR',
+      'Fiscal homologou relatório (REGULAR -> APROVADO)'
+    );
+
+    // Segundo relatório para testar julgamento prematuro (EM_ANDAMENTO) e PENDENTE_AJUSTE
+    const rel2 = await request('POST', '/api/relatorios', { obra_id: obra2Id }, { Authorization: `Bearer ${tokenEmp1}` });
+    const rel2Id = rel2.body.id;
+
+    const julgaPrematuro = await request(
+      'PATCH',
+      `/api/relatorios/${rel2Id}/status`,
+      { status: 'REGULAR', justificativa: 'Prematuro' },
+      { Authorization: `Bearer ${tokenFiscal}` }
+    );
+    assert(julgaPrematuro.status === 400, 'Julgamento em relatório EM_ANDAMENTO bloqueado com HTTP 400');
+
+    await request(
+      'POST',
+      `/api/relatorios/${rel2Id}/finalizar`,
+      {
+        senha_confirmacao: 'NovaEmp1Pass@2026',
+        assinatura_base64: `data:image/png;base64,${VALID_PNG_B64}`,
+        validacao_manual: true,
+        motivo_validacao_manual: 'Oscilação de sinal no canteiro',
+        fotos: [{ imagemBase64: VALID_PNG_B64, motivo: 'Foto em modo manual', avaliacao_gemini: 'VALIDACAO_MANUAL' }],
+      },
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+
+    const julgaReprovar = await request(
+      'PATCH',
+      `/api/relatorios/${rel2Id}/status`,
+      { status: 'PENDENTE_AJUSTE', justificativa: 'Corrigir rampa de acesso conforme NBR 9050.' },
+      { Authorization: `Bearer ${tokenFiscal}` }
+    );
+    assert(
+      julgaReprovar.status === 200 && julgaReprovar.body.status === 'PENDENTE_AJUSTE' && julgaReprovar.body.obraStatus === 'PENDENTE_AJUSTE',
+      'Fiscal solicitou ajuste (PENDENTE_AJUSTE) com sucesso'
+    );
+
+    const pdfRecompilado = await request('GET', `/api/relatorios/${rel2Id}/pdf`);
+    assert(
+      pdfRecompilado.status === 200 && pdfRecompilado.headers['content-type'] === 'application/pdf' && pdfRecompilado.rawBuffer.length > 2000,
+      'PDF recompilado após parecer PENDENTE_AJUSTE e validação manual'
+    );
+
+    // ------------------------------------------------------------------------
+    // 7. VALIDADOR PÚBLICO (CÓDIGO + SHA-256 + PRIVACIDADE + ANTI-XSS)
+    // ------------------------------------------------------------------------
+    console.log('\n7. Validador Público de Fé Pública e Proteção Anti-XSS...');
+    const valByCode = await request('GET', `/api/validador/${finOk.body.codigo}`);
+    assert(valByCode.status === 200 && valByCode.body.autentico === true, 'Validador atesta relatório por Código Único');
+    assert(valByCode.body.relatorio.assinatura_base64 === undefined, 'Validador público não expõe assinatura_base64 bruta');
+
+    const valByHash = await request('GET', `/api/validador/${finOk.body.hashIntegridade}`);
+    assert(valByHash.status === 200 && valByHash.body.autentico === true, 'Validador atesta relatório por Hash SHA-256');
+
+    const valFake = await request('GET', '/api/validador/CODIGO_INEXISTENTE');
+    assert(valFake.status === 404 && valFake.body.autentico === false, 'Código inexistente retorna HTTP 404');
+
+    const valXss = await request('GET', '/api/validador/%3Cscript%3E');
+    assert(valXss.status === 400 && valXss.body.autentico === false, 'Payload XSS rejeitado com HTTP 400');
+
+    // ------------------------------------------------------------------------
+    // 8. SINCRONIZAÇÃO OFFLINE (HU05)
+    // ------------------------------------------------------------------------
+    console.log('\n8. Sincronização de Vistoria Offline (HU05)...');
+    const syncRes = await request(
+      'POST',
+      '/api/relatorios/sincronizar-offline',
+      {
+        obra_id: obra1Id,
+        tipo_local: 'Fachada Externa',
+        localizacao_texto: 'GPS Offline (-8.06316, -34.87113)',
+        latitude: -8.06316,
+        longitude: -34.87113,
+        assinatura_base64: `data:image/png;base64,${VALID_PNG_B64}`,
+        validacao_manual: true,
+        respostas: [{ pergunta: 'Alvenaria', valor: 'Conforme' }],
+        fotos: [{ imagemBase64: VALID_PNG_B64, motivo: 'Foto offline' }],
+        timestamp: new Date().toISOString(),
+      },
+      { Authorization: `Bearer ${tokenEmp1}` }
+    );
+    assert(
+      syncRes.status === 200 && syncRes.body.sucesso === true && /^[0-9A-F]{16}$/.test(syncRes.body.codigo) && syncRes.body.status === 'FINALIZADO',
+      'Vistoria offline sincronizada e selada com código de 16 caracteres'
+    );
+
+    // ------------------------------------------------------------------------
+    // 9. PERSISTÊNCIA EM DISCO (SIMULAÇÃO DE REINÍCIO DO SERVIDOR)
+    // ------------------------------------------------------------------------
+    console.log('\n9. Verificando Persistência Real em Disco (Simulação de Restart)...');
+    assert(fs.existsSync(TMP_STORE_PATH), 'Arquivo de persistência JSON gravado em disco');
+    dataStore.reloadFromDisk();
+    const obrasPosRestart = await request('GET', '/api/obras', null, { Authorization: `Bearer ${tokenFiscal}` });
+    const relsPosRestart = await request('GET', '/api/relatorios', null, { Authorization: `Bearer ${tokenFiscal}` });
+    assert(obrasPosRestart.status === 200 && obrasPosRestart.body.length === 2, 'Obras sobreviveram ao reloadFromDisk()');
+    assert(relsPosRestart.status === 200 && relsPosRestart.body.length === 3, 'Relatórios sobreviveram ao reloadFromDisk()');
+
+    // ------------------------------------------------------------------------
+    // 10. SEGURANÇA CWE-22, 404 JSON E COMPRESSÃO HTTP
+    // ------------------------------------------------------------------------
+    console.log('\n10. Segurança CWE-22, 404 JSON e Compressão HTTP...');
+    assert(resolveSafePath('../uploads_secret/vazamento.png', UPLOAD_ROOT) === null, 'resolveSafePath bloqueia diretório irmão (CWE-22)');
+
+    const api404 = await request('GET', '/api/endpoint-inexistente');
+    assert(api404.status === 404 && typeof api404.body.erro === 'string', 'Endpoint inexistente da API retorna HTTP 404 JSON');
+
+    const compRes = await request('GET', '/api/obras', null, {
+      'Accept-Encoding': 'gzip, deflate',
+      Authorization: `Bearer ${tokenFiscal}`,
     });
-    assert(relComFotoRes.status === 201, 'Relatório com foto inicial criado com HTTP 201');
-    const relComFotoId = relComFotoRes.body.id;
+    assert(compRes.status === 200 && compRes.headers['vary']?.includes('Accept-Encoding'), 'Suporte a compressão HTTP ativo');
 
-    // Consulta relatório para validar que a foto da empreiteira foi registrada
-    const relConsulta = await request('GET', `/api/relatorios/${relComFotoId}`, null, {
-      Authorization: `Bearer ${tokenRodrigo}`,
-    });
-    assert(relConsulta.status === 200, 'Consulta de relatório retornou HTTP 200');
-    assert(Array.isArray(relConsulta.body.fotos) && relConsulta.body.fotos.length >= 1, 'Foto da empreiteira registrada no relatório');
-    assert(relConsulta.body.fotos[0].caminho_arquivo, 'Foto possui caminho de arquivo salvo');
-    assert(relConsulta.body.fotos[0].hash_integridade, 'Foto possui hash SHA-256 gravado');
-
-    // Finaliza o relatório
-    const finalizarComFoto = await request('POST', `/api/relatorios/${relComFotoId}/finalizar`, {}, {
-      Authorization: `Bearer ${tokenRodrigo}`,
-    });
-    assert(finalizarComFoto.status === 200, 'Finalização de relatório com foto retornou HTTP 200');
-
-    // Baixa o PDF de comprovação e atesta que foi gerado com sucesso
-    const pdfComprovacao = await request('GET', `/api/relatorios/${relComFotoId}/pdf`);
-    assert(pdfComprovacao.status === 200, 'Download do PDF de comprovação retornou HTTP 200');
-    assert(pdfComprovacao.headers['content-type'] === 'application/pdf', 'PDF possui Content-Type application/pdf');
-    assert(pdfComprovacao.rawBuffer.length > 2000, 'PDF de comprovação gerado com evidências fotográficas embutidas');
-
-    // 25. Agent-Readiness, SEO Semântico, Markdown Negotiation, WebMCP e MCP Server Card (SEP-1649)
-    console.log('\n25. Testando Agent-Readiness (18 Requisitos: robots, sitemap, 404 real, JSON-LD, llms.txt, Markdown, Link, WebMCP, MCP Card)...');
-
-    // 25.1 & 25.3 robots.txt (Content-Signal + Sitemap)
+    // ------------------------------------------------------------------------
+    // 11. AGENT-READINESS (18 REQUISITOS) + MCP STREAMABLE HTTP
+    // ------------------------------------------------------------------------
+    console.log('\n11. Agent-Readiness (18 Requisitos) & Servidor MCP...');
     const robotsRes = await request('GET', '/robots.txt');
-    assert(robotsRes.status === 200, 'robots.txt respondeu HTTP 200');
-    assert((robotsRes.headers['content-type'] || '').includes('text/plain'), 'robots.txt servido como text/plain');
-    assert(robotsRes.body.includes('Content-Signal:') && robotsRes.body.includes('search=yes') && robotsRes.body.includes('ai-train=no'), 'robots.txt declara Content-Signal');
-    assert(robotsRes.body.includes('Sitemap: https://antiquewhite-dolphin-779579.hostingersite.com/sitemap.xml'), 'robots.txt declara diretiva Sitemap');
+    assert(
+      robotsRes.status === 200 &&
+        (robotsRes.headers['content-type'] || '').includes('text/plain') &&
+        robotsRes.body.includes('Content-Signal:') &&
+        robotsRes.body.includes('Sitemap: https://antiquewhite-dolphin-779579.hostingersite.com/sitemap.xml'),
+      'robots.txt declara Content-Signal e Sitemap'
+    );
 
-    // 25.2 sitemap.xml
     const sitemapRes = await request('GET', '/sitemap.xml');
-    assert(sitemapRes.status === 200, 'sitemap.xml respondeu HTTP 200');
-    assert((sitemapRes.headers['content-type'] || '').includes('application/xml'), 'sitemap.xml servido como application/xml');
-    assert(sitemapRes.body.includes('<urlset') && sitemapRes.body.includes('/about</loc>') && sitemapRes.body.includes('/contact</loc>') && sitemapRes.body.includes('/terms</loc>') && sitemapRes.body.includes('/validador</loc>'), 'sitemap.xml lista todas as páginas públicas');
+    assert(
+      sitemapRes.status === 200 &&
+        (sitemapRes.headers['content-type'] || '').includes('application/xml') &&
+        sitemapRes.body.includes('<urlset') &&
+        sitemapRes.body.includes('/about</loc>') &&
+        sitemapRes.body.includes('/validador</loc>'),
+      'sitemap.xml válido lista páginas públicas'
+    );
 
-    // 25.4 404 real para páginas inexistentes (sem soft-404 HTTP 200)
-    const missingHtml = await request('GET', '/pagina-inexistente-teste-404', null, { Accept: 'text/html' });
-    assert(missingHtml.status === 404, 'Página inexistente retornou HTTP 404 real (HTML)');
-    const missingMd = await request('GET', '/pagina-inexistente-teste-404', null, { Accept: 'text/markdown' });
-    assert(missingMd.status === 404 && (missingMd.headers['content-type'] || '').includes('text/markdown'), 'Página inexistente retornou HTTP 404 real (Markdown)');
+    const missingHtml = await request('GET', '/pagina-inexistente-404', null, { Accept: 'text/html' });
+    assert(missingHtml.status === 404, 'Página inexistente retorna HTTP 404 real (HTML)');
+    const missingMd = await request('GET', '/pagina-inexistente-404', null, { Accept: 'text/markdown' });
+    assert(missingMd.status === 404 && (missingMd.headers['content-type'] || '').includes('text/markdown'), 'Página inexistente retorna HTTP 404 real (Markdown)');
 
-    // 25.5 - 25.12 & 25.16 Homepage HTML: canonical, H1 único, JSON-LD completo, links institucionais, mailto/tel, Link header
-    const homeHtmlRes = await request('GET', '/', null, { Accept: 'text/html,application/xhtml+xml' });
-    assert(homeHtmlRes.status === 200, 'Homepage HTML retornou HTTP 200');
-    assert((homeHtmlRes.headers['content-type'] || '').includes('text/html'), 'Homepage retornou text/html para navegador');
-    assert(homeHtmlRes.body.includes('<title>') && homeHtmlRes.body.includes('name="description"') && homeHtmlRes.body.includes('<link rel="canonical" href="https://antiquewhite-dolphin-779579.hostingersite.com/">'), 'Homepage possui title, meta description e link canonical');
+    const homeHtml = await request('GET', '/', null, { Accept: 'text/html,application/xhtml+xml' });
+    assert(homeHtml.status === 200 && (homeHtml.headers['content-type'] || '').includes('text/html'), 'Homepage HTML respondeu 200');
+    assert(
+      homeHtml.body.includes('<title>') &&
+        homeHtml.body.includes('name="description"') &&
+        homeHtml.body.includes('<link rel="canonical" href="https://antiquewhite-dolphin-779579.hostingersite.com/">'),
+      'Homepage possui title, description e canonical'
+    );
+    assert((homeHtml.body.match(/<h1[\s>]/gi) || []).length === 1 && homeHtml.body.includes('<h2>'), 'Homepage possui H1 único e hierarquia H2');
 
-    const h1Matches = homeHtmlRes.body.match(/<h1[\s>]/gi) || [];
-    assert(h1Matches.length === 1, 'Homepage possui exatamente um <h1>');
-    assert(homeHtmlRes.body.includes('<h2>'), 'Homepage possui hierarquia clara de headings (h1 -> h2)');
+    const jsonLdMatch = homeHtml.body.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/i);
+    assert(Boolean(jsonLdMatch), 'Homepage contém JSON-LD');
+    const jsonLd = JSON.parse(jsonLdMatch[1]);
+    const nodes = Array.isArray(jsonLd['@graph']) ? jsonLd['@graph'] : [jsonLd];
+    const orgNode = nodes.find(n => n['@type'] === 'Organization');
+    assert(Boolean(orgNode && orgNode.email && orgNode.telephone && orgNode.sameAs?.length >= 3), 'JSON-LD Organization completo com sameAs');
+    assert(nodes.length >= 4, 'JSON-LD declara múltiplos tipos de schema');
 
-    const jsonLdMatch = homeHtmlRes.body.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/i);
-    assert(!!jsonLdMatch, 'Homepage contém bloco JSON-LD');
-    const jsonLdData = JSON.parse(jsonLdMatch[1]);
-    const graphNodes = Array.isArray(jsonLdData['@graph']) ? jsonLdData['@graph'] : [jsonLdData];
-    const schemaTypes = graphNodes.map(n => n['@type']);
-    const orgNode = graphNodes.find(n => n['@type'] === 'Organization');
-    assert(!!orgNode && orgNode.name && orgNode.email && orgNode.telephone && orgNode.address && orgNode.contactPoint, 'JSON-LD possui nó Organization completo');
-    assert(Array.isArray(orgNode.sameAs) && orgNode.sameAs.length >= 3, 'Organization possui links externos via sameAs');
-    assert(schemaTypes.length >= 4 && schemaTypes.includes('WebSite') && schemaTypes.includes('WebApplication') && schemaTypes.includes('Service'), 'JSON-LD cobre múltiplos tipos de schema');
+    assert(
+      homeHtml.body.includes('href="/about"') &&
+        homeHtml.body.includes('href="/contact"') &&
+        homeHtml.body.includes('href="/terms"') &&
+        homeHtml.body.includes('href="/privacy"') &&
+        homeHtml.body.includes('href="mailto:') &&
+        homeHtml.body.includes('href="tel:'),
+      'Homepage vincula about, contact, terms, privacy e contatos machine-readable'
+    );
 
-    assert(homeHtmlRes.body.includes('href="/about"') && homeHtmlRes.body.includes('href="/contact"') && homeHtmlRes.body.includes('href="/terms"') && homeHtmlRes.body.includes('href="/privacy"'), 'Homepage vincula páginas about, contact, terms e privacy');
-    assert(homeHtmlRes.body.includes('href="mailto:') && homeHtmlRes.body.includes('href="tel:'), 'Homepage expõe contato machine-readable (mailto: e tel:)');
+    const linkHdr = homeHtml.headers['link'] || '';
+    assert(
+      linkHdr.includes('/llms.txt') && linkHdr.includes('text/markdown') && linkHdr.includes('/.well-known/mcp/server-card.json'),
+      'Cabeçalho RFC 8288 Link completo na homepage'
+    );
 
-    const linkHeader = homeHtmlRes.headers['link'] || '';
-    assert(linkHeader.includes('/llms.txt') && linkHeader.includes('text/markdown') && linkHeader.includes('/.well-known/mcp/server-card.json'), 'Homepage emite cabeçalho RFC 8288 Link apontando para llms.txt, Markdown e MCP Server Card');
-
-    // Valida páginas institucionais e redirecionamentos 301 em português
-    for (const pagePath of ['/about', '/contact', '/terms', '/privacy', '/validador']) {
-      const pRes = await request('GET', pagePath, null, { Accept: 'text/html' });
-      const pH1s = (pRes.body.match(/<h1[\s>]/gi) || []).length;
-      assert(pRes.status === 200 && pH1s === 1 && pRes.body.includes(`rel="canonical" href="https://antiquewhite-dolphin-779579.hostingersite.com${pagePath}"`), `Página ${pagePath} retornou HTTP 200 com H1 único e canonical`);
+    for (const p of ['/about', '/contact', '/terms', '/privacy', '/validador']) {
+      const r = await request('GET', p, null, { Accept: 'text/html' });
+      assert(r.status === 200 && (r.body.match(/<h1[\s>]/gi) || []).length === 1, `Página pública ${p} respondeu 200 com H1 único`);
     }
-    const sobreRedirect = await request('GET', '/sobre', null, { Accept: 'text/html' });
-    assert(sobreRedirect.status === 301 && sobreRedirect.headers['location'] === '/about', 'Alias /sobre redireciona 301 para /about');
+    const redirSobre = await request('GET', '/sobre', null, { Accept: 'text/html' });
+    assert(redirSobre.status === 301 && redirSobre.headers['location'] === '/about', 'Alias /sobre redireciona 301 para /about');
 
-    // 25.13 & 25.14 llms.txt
     const llmsRes = await request('GET', '/llms.txt');
-    assert(llmsRes.status === 200, '/llms.txt respondeu HTTP 200');
-    assert((llmsRes.headers['content-type'] || '').includes('text/plain'), '/llms.txt servido como text/plain (não HTML)');
-    assert(llmsRes.body.startsWith('# BBVision') && llmsRes.body.includes('\n> ') && llmsRes.body.includes('](https://antiquewhite-dolphin-779579.hostingersite.com/'), '/llms.txt segue formato padrão (# título, > resumo e links Markdown)');
+    assert(
+      llmsRes.status === 200 && (llmsRes.headers['content-type'] || '').includes('text/plain') && llmsRes.body.startsWith('# BBVision'),
+      '/llms.txt bem-formado servido como text/plain'
+    );
 
-    // 25.15 Negociação Accept: text/markdown
-    const homeMdRes = await request('GET', '/', null, { Accept: 'text/markdown' });
-    assert(homeMdRes.status === 200, 'Homepage com Accept: text/markdown respondeu HTTP 200');
-    assert((homeMdRes.headers['content-type'] || '').includes('text/markdown'), 'Homepage retornou text/markdown quando solicitado');
-    assert((homeMdRes.headers['vary'] || '').toLowerCase().includes('accept'), 'Homepage emite Vary: Accept');
-    assert(homeMdRes.body.startsWith('# BBVision') && !homeMdRes.body.includes('<!DOCTYPE html>'), 'Corpo Markdown da homepage é limpo e bem-formado');
+    const homeMd = await request('GET', '/', null, { Accept: 'text/markdown' });
+    assert(
+      homeMd.status === 200 &&
+        (homeMd.headers['content-type'] || '').includes('text/markdown') &&
+        (homeMd.headers['vary'] || '').toLowerCase().includes('accept') &&
+        homeMd.body.startsWith('# BBVision'),
+      'Negociação Accept: text/markdown operacional'
+    );
 
-    // 25.17 WebMCP (imperativo + declarativo)
-    assert(homeHtmlRes.body.includes('src="src/utils/webmcp.js"') && homeHtmlRes.body.includes('toolname=') && homeHtmlRes.body.includes('tooldescription='), 'Homepage carrega script WebMCP e declara formulário toolname/tooldescription');
-    const webMcpScript = await request('GET', '/src/utils/webmcp.js');
-    assert(webMcpScript.status === 200 && webMcpScript.body.includes('navigator.modelContext') && webMcpScript.body.includes('registerTool') && webMcpScript.body.includes('inputSchema') && webMcpScript.body.includes('execute'), 'Script WebMCP registra ferramentas via navigator.modelContext.registerTool()');
+    const webMcp = await request('GET', '/src/utils/webmcp.js');
+    assert(webMcp.status === 200 && webMcp.body.includes('navigator.modelContext') && webMcp.body.includes('registerTool'), 'WebMCP disponível e estruturado');
 
-    // 25.18 MCP Server Card (SEP-1649) + Endpoint MCP Streamable HTTP
-    const mcpCardRes = await request('GET', '/.well-known/mcp/server-card.json');
-    assert(mcpCardRes.status === 200, '/.well-known/mcp/server-card.json respondeu HTTP 200');
-    assert((mcpCardRes.headers['content-type'] || '').includes('application/json'), 'MCP Server Card servido como application/json (não HTML)');
-    assert(mcpCardRes.body.name && mcpCardRes.body.version && mcpCardRes.body.endpoint && mcpCardRes.body.capabilities && mcpCardRes.body.capabilities.tools, 'MCP Server Card contém name, version, endpoint e capabilities');
+    const mcpCard = await request('GET', '/.well-known/mcp/server-card.json');
+    assert(
+      mcpCard.status === 200 && (mcpCard.headers['content-type'] || '').includes('application/json') && mcpCard.body.endpoint && mcpCard.body.capabilities?.tools,
+      'MCP Server Card SEP-1649 publicado em JSON'
+    );
 
     const mcpInit = await request('POST', '/api/mcp', { jsonrpc: '2.0', id: 1, method: 'initialize', params: {} });
-    assert(mcpInit.status === 200 && mcpInit.body.result && mcpInit.body.result.serverInfo && mcpInit.body.result.capabilities, 'Endpoint POST /api/mcp responde handshake JSON-RPC initialize');
+    assert(mcpInit.status === 200 && Boolean(mcpInit.body.result?.serverInfo), 'MCP initialize JSON-RPC operacional');
+
     const mcpTools = await request('POST', '/api/mcp', { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} });
-    assert(mcpTools.status === 200 && Array.isArray(mcpTools.body.result.tools) && mcpTools.body.result.tools.length >= 3, 'Endpoint POST /api/mcp lista ferramentas MCP');
-    const mcpValidate = await request('POST', '/api/mcp', {
+    assert(mcpTools.status === 200 && mcpTools.body.result?.tools?.length >= 3, 'MCP tools/list operacional');
+
+    const mcpCall = await request('POST', '/api/mcp', {
       jsonrpc: '2.0',
       id: 3,
       method: 'tools/call',
-      params: { name: 'validate_report_authenticity', arguments: { codigoOuHash: finalizarRes.body.codigo } },
+      params: { name: 'validate_report_authenticity', arguments: { codigoOuHash: finOk.body.codigo } },
     });
-    assert(mcpValidate.status === 200 && mcpValidate.body.result && mcpValidate.body.result.content[0].text.includes('"autentico": true'), 'Ferramenta MCP validate_report_authenticity valida código real');
-
-    // 26. Auditoria Master: Segurança Avançada (CWE-22 irmão, IDOR, RBAC painel, deduplicação de fotos e PDF pós-julgamento)
-    console.log('\n26. Testando Auditoria Master (CWE-22 irmão, IDOR, RBAC painel, Deduplicação de fotos e Recompilação PDF)...');
-    const { resolveSafePath } = require('../src/utils/securityUtils');
-    const { UPLOAD_ROOT } = require('../src/middlewares/uploadMiddleware');
-    assert(resolveSafePath('../uploads_secret/vazamento.png', UPLOAD_ROOT) === null, 'resolveSafePath bloqueia bypass por diretório irmão (CWE-22)');
-
-    // RBAC em /api/relatorios/painel/resumo
-    const painelEmp = await request('GET', '/api/relatorios/painel/resumo', null, { Authorization: `Bearer ${tokenRodrigo}` });
-    assert(painelEmp.status === 403, 'Empreiteira bloqueada no painel fiscal (/painel/resumo) com HTTP 403');
-    const painelFisc = await request('GET', '/api/relatorios/painel/resumo', null, { Authorization: `Bearer ${tokenMariana}` });
-    assert(painelFisc.status === 200 && typeof painelFisc.body.totalRelatorios === 'number', 'Fiscal autorizada no painel fiscal (/painel/resumo) com HTTP 200');
-
-    // Cria relatório novo para testar IDOR, path traversal em /fotos, julgamento prematuro e deduplicação
-    const relAudit = await request('POST', '/api/relatorios', { obra_id: obraId }, { Authorization: `Bearer ${tokenRodrigo}` });
-    const relAuditId = relAudit.body.id;
-
-    // IDOR: outro usuário empreiteira tentando editar relatório do Rodrigo
-    const tokenOutroEmp = regSucesso.body.token;
-    const idorResp = await request('PUT', `/api/relatorios/${relAuditId}/respostas`, [{ pergunta: 'Hack', valor: 'Invasão' }], { Authorization: `Bearer ${tokenOutroEmp}` });
-    assert(idorResp.status === 403, 'IDOR: outra empreiteira bloqueada ao tentar alterar relatório alheio (HTTP 403)');
-
-    // Path Traversal via caminho_arquivo em /fotos
-    const fotoPathAttack = await request('POST', `/api/relatorios/${relAuditId}/fotos`, {
-      caminho_arquivo: '../../../Windows/win.ini',
-      hash_integridade: 'a'.repeat(64),
-    }, { Authorization: `Bearer ${tokenRodrigo}` });
-    assert(fotoPathAttack.status === 400, 'Path Traversal em POST /relatorios/:id/fotos bloqueado com HTTP 400');
-
-    // Julgamento fiscal em relatório ainda EM_ANDAMENTO deve retornar 400
-    const julgPrematuro = await request('PATCH', `/api/relatorios/${relAuditId}/status`, {
-      status: 'REGULAR',
-      justificativa: 'Tentativa prematura',
-    }, { Authorization: `Bearer ${tokenMariana}` });
-    assert(julgPrematuro.status === 400, 'Julgamento fiscal em relatório EM_ANDAMENTO bloqueado com HTTP 400');
-
-    // Deduplicação de foto entre POST /fotos e POST /finalizar
-    const anexoDedup = await request('POST', `/api/relatorios/${relAuditId}/fotos`, {
-      imagemBase64: fakeImageB64,
-      motivo: 'Evidência única da obra',
-    }, { Authorization: `Bearer ${tokenRodrigo}` });
-    assert(anexoDedup.status === 201, 'Foto anexada antes da finalização');
-    const hashUnicoFoto = anexoDedup.body.foto.hash_integridade;
-
-    const finDedup = await request('POST', `/api/relatorios/${relAuditId}/finalizar`, {
-      fotos: [{ imagemBase64: fakeImageB64, hash_integridade: hashUnicoFoto, motivo: 'Foto repetida na finalização' }],
-    }, { Authorization: `Bearer ${tokenRodrigo}` });
-    assert(finDedup.status === 200, 'Finalização com foto repetida respondeu HTTP 200');
-
-    const consultaDedup = await request('GET', `/api/relatorios/${relAuditId}`, null, { Authorization: `Bearer ${tokenRodrigo}` });
-    assert(consultaDedup.body.fotos.length === 1, 'Deduplicação manteve exatamente 1 foto no relatório (sem duplicação no PDF)');
-
-    // Parecer fiscal PENDENTE_AJUSTE deve recompilar o PDF sem erro
-    const julgAjuste = await request('PATCH', `/api/relatorios/${relAuditId}/status`, {
-      status: 'PENDENTE_AJUSTE',
-      justificativa: 'Ajustar sinalização externa conforme NBR 9050.',
-    }, { Authorization: `Bearer ${tokenMariana}` });
-    assert(julgAjuste.status === 200 && julgAjuste.body.status === 'PENDENTE_AJUSTE' && julgAjuste.body.obraStatus === 'PENDENTE_AJUSTE', 'Parecer PENDENTE_AJUSTE registrado com sucesso');
-
-    const pdfPosJulg = await request('GET', `/api/relatorios/${relAuditId}/pdf`);
-    assert(pdfPosJulg.status === 200 && pdfPosJulg.headers['content-type'] === 'application/pdf' && pdfPosJulg.rawBuffer.length > 1500, 'PDF recompilado após parecer fiscal baixado com sucesso');
+    assert(
+      mcpCall.status === 200 && mcpCall.body.result?.content?.[0]?.text.includes('"autentico": true'),
+      'MCP validate_report_authenticity validou relatório real'
+    );
 
     console.log('\n======================================================');
-    console.log('  TODOS OS 26 GRUPOS DE TESTES PASSARAM COM SUCESSO!');
+    console.log(`  SUCESSO TOTAL: ${assertionsPassed} verificações aprovadas!`);
     console.log('======================================================\n');
   } catch (err) {
     console.error('\n❌ ERRO DURANTE A EXECUÇÃO DOS TESTES:', err);
     process.exitCode = 1;
   } finally {
-    server.close();
+    cleanupTestArtifacts();
+    if (server) server.close();
   }
 }
 

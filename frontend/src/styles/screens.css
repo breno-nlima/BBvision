@@ -2129,7 +2129,7 @@
   transform: translateY(-1px);
 }
 
-/* Botão IA Gemini para Parecer */
+/* Botão Assistente de IA para Parecer */
 .ia-generate-block {
   margin-top: 4px;
   display: flex;
@@ -2940,7 +2940,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   10. Tela da Fiscal Mariana / Análise de Registros da Obra (Print 11.43.201)
+   10. Tela de Auditoria do Fiscal / Análise de Registros da Obra
    -------------------------------------------------------------------------- */
 .fiscal-topbar {
   display: flex;
@@ -3232,7 +3232,7 @@
   margin-top: 6px;
 }
 
-/* Card de Destaque para Fiscal Mariana no Início */
+/* Card de Destaque para Fiscal de Obra no Início */
 .fiscal-highlight-card {
   margin: 14px 18px 4px 18px;
   background: linear-gradient(135deg, #002D62 0%, #004694 100%);
@@ -3366,7 +3366,7 @@
   animation: fadeIn 0.2s ease-in;
 }
 
-/* Botão de Sugestão com Gemini no Checklist Dinâmico */
+/* Botão de Sugestão com IA no Checklist Complementar */
 .btn-ia-suggest-action {
   background: #EFF6FF;
   border: 1px solid #BFDBFE;
@@ -3408,7 +3408,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   Estilos dos 2 Tipos de Acesso (Personas Rodrigo vs Mariana)
+   Estilos dos 2 Tipos de Acesso (Empreiteira vs Fiscal de Obra)
    -------------------------------------------------------------------------- */
 
 /* Seletor de Persona na Tela de Login */
@@ -3484,7 +3484,7 @@
   margin-bottom: 4px;
 }
 
-/* Dashboard do Fiscal BB (Mariana) */
+/* Dashboard do Fiscal de Obra */
 .hero-fiscal-card {
   margin: 14px 18px;
   background: linear-gradient(135deg, #001B3D 0%, #002D62 60%, #004694 100%);

@@ -1,7 +1,7 @@
 {
   "name": "BBVision - Fiscalização Remota de Obras",
   "short_name": "BBVision",
-  "description": "Sistema de Monitoramento e Fiscalização Remota de Obras do Banco do Brasil com IA Google Gemini e Inviolabilidade Criptográfica",
+  "description": "Sistema de Monitoramento e Fiscalização Remota de Obras do Banco do Brasil com IA e Inviolabilidade Criptográfica SHA-256",
   "start_url": "./",
   "display": "standalone",
   "orientation": "portrait-primary",

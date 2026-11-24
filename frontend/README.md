@@ -1,66 +1,46 @@
-# BBVision - Frontend SPA (Vanilla JavaScript, HTML5 & CSS3)
+# BBVision — Frontend SPA (Vanilla JavaScript, HTML5 & CSS3)
 
-Interface web móvel e responsiva para a solução de fiscalização remota de obras do **Banco do Brasil**, desenvolvida sem frameworks externos (Single-Page Application em Vanilla JavaScript) para máxima performance, fidelidade visual e controle do fluxo de canteiro de obras.
-
-[![Ambiente de Produção](https://img.shields.io/badge/Produção-Hostinger-green)](https://antiquewhite-dolphin-779579.hostingersite.com/)
-[![Design System](https://img.shields.io/badge/Design%20System-Banco%20do%20Brasil-003399)](https://antiquewhite-dolphin-779579.hostingersite.com/)
+Interface web responsiva e mobile-first para a plataforma de fiscalização remota de obras do **Banco do Brasil**, construída sem frameworks externos para máximo desempenho em campo.
 
 ---
 
-## 🎨 Design System e Identidade Visual
+## Garantias de Campo & Inviolabilidade
 
-- **Cores Oficiais:** Azul BB (`#003399`), Amarelo BB (`#FCF000` / `#F8D200`), tons neutros e modo de alto contraste para canteiro de obras.
-- **Tipografia:** *Plus Jakarta Sans* via Google Fonts.
-- **Componentes:**
-  - Barra de navegação corporativa com identificação do usuário e cargo.
-  - Cards de obra com indicador de status e selos visuais.
-  - Visualizador de imagem protegida com overlay de metadados invioláveis.
-  - Toast notifications customizadas para feedback imediato.
-  - Validador público com verificação em tempo real.
+1. **Bloqueio de Galeria:** Captura fotográfica exclusivamente ao vivo via `navigator.mediaDevices.getUserMedia` com liberação automática de câmera e GPS ao trocar de tela.
+2. **Validação por IA e Fallback Seguro:** Análise de iluminação, contexto de obra/construção e enquadramento central com SLA de até 15s e acionamento transparente de Validação Manual Assistida (com hash SHA-256 local) em caso de indisponibilidade ou modo offline.
+3. **Assinatura Digital & Fé Pública:** Canvas obrigatório de assinatura, confirmação de senha validada no servidor e consulta pública de autenticidade via Código Único ou Hash SHA-256.
+4. **Resiliência Offline (HU05):** Fila local persistente em `localStorage` com sincronização automática quando a conectividade é restabelecida.
 
 ---
 
-## 🔒 Princípios de Inviolabilidade em Campo
-
-1. **Bloqueio de Galeria:**
-   O componente de câmera (`src/components/camera.js`) utiliza a API nativa `navigator.mediaDevices.getUserMedia`, não permitindo envio de fotos antigas ou manipuladas da galeria.
-2. **Criptografia no Cliente (Web Crypto API):**
-   Geração de hash SHA-256 e código único de 16 caracteres hexadecimais no momento do disparo.
-3. **Resiliência Offline (HU05):**
-   Fila local em `localStorage` com sincronização automática quando a conectividade for restabelecida no canteiro.
-
----
-
-## 📁 Estrutura de Pastas
+## Estrutura de Pastas
 
 ```text
 frontend/
-├── index.html                  # Container SPA principal e importação de estilos
-├── server.js                   # Servidor de fallback integrado ao backend
-├── src/
-│   ├── app.js                  # Orquestrador central e roteamento das páginas
-│   ├── assets/                 # Logo oficial BBVision, ícones SVG e ilustrações
-│   ├── components/             # Componentes modulares reutilizáveis (Toast, Câmera, BottomNav)
-│   ├── pages/                  # Telas segregadas por fluxo de Persona
-│   │   ├── login.js            # Login com contas rápidas e cadastro
-│   │   ├── inicio.js           # Visão geral e atalhos de vistoria
-│   │   ├── obras.js            # Listagem de obras em andamento
-│   │   ├── obraDetalhe.js      # Detalhes, plantas e histórico
-│   │   ├── tipoLocal.js        # Seleção de tipo de ambiente da agência
-│   │   ├── cameraIa.js         # Captura e validação por IA Gemini
-│   │   ├── imagemProtegida.js  # Visualização com metadados invioláveis
-│   │   ├── checklist*.js       # Checklists normativos e perguntas dinâmicas
-│   │   ├── assinaturaResponsavel.js # Assinatura digital técnica
-│   │   ├── relatorioBloqueado.js    # Resumo final e bloqueio pós-conclusão
-│   │   ├── fiscalAuditoria.js  # Painel de julgamento e homologação do BB
-│   │   └── validadorPublico.js # Consulta pública de Fé Pública
-│   ├── services/
-│   │   ├── api.js              # Cliente de chamadas RESTful same-origin
-│   │   ├── offlineSync.js      # Gerenciamento da fila local offline (HU05)
-│   │   └── state.js            # Armazenamento e reatividade do estado da aplicação
-│   └── styles/
-│       ├── variables.css       # Tokens de cor, fontes e espaçamento
-│       ├── base.css            # Reset e tipografia global
-│       ├── components.css      # Estilização de botões, inputs, cards e badges
-│       └── screens.css         # Layout das telas corporativas e mobile
+├── index.html                      # Container SPA, JSON-LD, SEO e WebMCP
+├── server.js                       # Entrypoint unificado
+└── src/
+    ├── app.js                      # Roteador SPA, guards de sessão/obra e cleanup de hardware
+    ├── assets/                     # Logotipo e ícones SVG
+    ├── components/                 # Header, BottomNav, Modais corporativos e Toast
+    ├── pages/
+    │   ├── login.js                # Autenticação e criação de conta
+    │   ├── inicio.js               # Painel inicial por perfil (Empreiteira / Fiscal)
+    │   ├── obras.js                # Catálogo e gestão de obras
+    │   ├── obraDetalhe.js          # Detalhes da obra, edição, exclusão e checklist
+    │   ├── tipoLocal.js            # Seleção do tipo de ambiente
+    │   ├── checklistPergunta.js    # Checklist passo a passo com Assistente de IA
+    │   ├── checklistDinamico.js    # Checklist complementar e consolidação com IA
+    │   ├── checklistVerificacao.js # Verificação final pré-captura
+    │   ├── cameraIa.js             # Câmera ao vivo, GPS, carimbo temporal e validação IA
+    │   ├── imagemProtegida.js      # Confirmação de metadados e hash SHA-256
+    │   ├── assinaturaResponsavel.js # Assinatura em canvas e confirmação de senha
+    │   ├── relatorioBloqueado.js   # Confirmação de selo inviolável e PDF oficial
+    │   ├── fiscalAuditoria.js      # Auditoria fiscal com seletor de relatórios e parecer
+    │   ├── relatorios.js           # Busca, filtros e visualização de relatórios
+    │   ├── perfil.js               # Edição de perfil, troca de senha e logout
+    │   └── validadorPublico.js     # Consulta pública de Fé Pública (SHA-256 / Código)
+    ├── services/                   # API client, State management e Fila Offline
+    ├── styles/                     # Design System corporativo
+    └── utils/                      # Anti-XSS, Web Crypto SHA-256, clipboard e WebMCP
 ```

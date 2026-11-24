@@ -1,11 +1,11 @@
 /**
- * BBVision - Controller de Fotos e Inteligência Artificial (Google Gemini)
- * Implementa Seções 4, 8.4 e 9 do Documento de Entrega TakeOff
- * Governança com SLA <= 15s, limiar de 75%, inviolabilidade e mitigação de Path Traversal
+ * BBVision - Controller de Fotos e Visão Computacional com IA
+ * Governança: SLA <= 15s, limiar >= 75%, validação estrita de Magic Bytes e mitigação de Path Traversal.
  */
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const geminiService = require('../services/geminiService');
 const { generateSha256 } = require('../utils/cryptoUtils');
 const { resolveSafePath, validateImageMagicBytes, sanitizeString } = require('../utils/securityUtils');
@@ -14,9 +14,6 @@ const { EVIDENCIAS_DIR, UPLOAD_ROOT } = require('../middlewares/uploadMiddleware
 const fotosController = {
   /**
    * POST /api/fotos/avaliar
-   * Body: multipart/form-data (campo 'foto') OU JSON { imagemBase64, mimeType }
-   * SLA: <= 15s | Limiar: >= 75%
-   * Retorno (200): { status, confianca, motivo, hash_integridade, caminho_arquivo, duracaoMs, validacao_manual, modelo }
    */
   async avaliar(req, res, next) {
     try {
@@ -24,12 +21,19 @@ const fotosController = {
       let mimeType = 'image/jpeg';
       let relativePath = '';
 
-      // 1. Obtenção do Buffer e Caminho da Imagem
       if (req.file) {
         imageBuffer = await fs.promises.readFile(req.file.path);
-        mimeType = req.file.mimetype;
+        const magicCheck = validateImageMagicBytes(imageBuffer);
+        if (!magicCheck.valid) {
+          try { await fs.promises.unlink(req.file.path); } catch (_) {}
+          return res.status(400).json({
+            status: 400,
+            erro: 'O arquivo enviado não possui assinatura binária válida de imagem (JPEG, PNG ou WEBP).',
+          });
+        }
+        mimeType = magicCheck.mimeType;
         relativePath = path.join('uploads', 'evidencias', path.basename(req.file.path)).replace(/\\/g, '/');
-      } else if (req.body.imagemBase64) {
+      } else if (req.body && req.body.imagemBase64) {
         let base64Data = req.body.imagemBase64;
         if (typeof base64Data !== 'string' || base64Data.trim() === '') {
           return res.status(400).json({
@@ -38,7 +42,6 @@ const fotosController = {
           });
         }
 
-        // Limite defensivo de payload base64 (máximo 25MB)
         if (base64Data.length > 25 * 1024 * 1024) {
           return res.status(400).json({
             status: 400,
@@ -55,21 +58,24 @@ const fotosController = {
 
         try {
           imageBuffer = Buffer.from(base64Data, 'base64');
-        } catch (e) {
+        } catch (_) {
           return res.status(400).json({
             status: 400,
             erro: 'Falha ao decodificar dados binários da imagem Base64.',
           });
         }
 
-        // Validação de integridade do formato de imagem (Magic Bytes)
         const magicCheck = validateImageMagicBytes(imageBuffer);
-        if (magicCheck.valid) {
-          mimeType = magicCheck.mimeType;
+        if (!magicCheck.valid) {
+          return res.status(400).json({
+            status: 400,
+            erro: 'A imagem enviada não possui assinatura binária válida (JPEG, PNG ou WEBP).',
+          });
         }
 
+        mimeType = magicCheck.mimeType;
         const ext = mimeType === 'image/png' ? '.png' : mimeType === 'image/webp' ? '.webp' : '.jpg';
-        const fileName = `evidencia_b64_${Date.now()}_${Math.round(Math.random() * 1e6)}${ext}`;
+        const fileName = `evidencia_${Date.now()}_${crypto.randomBytes(4).toString('hex')}${ext}`;
         const filePath = path.join(EVIDENCIAS_DIR, fileName);
 
         await fs.promises.writeFile(filePath, imageBuffer);
@@ -81,29 +87,17 @@ const fotosController = {
         });
       }
 
-      // Validação defensiva de Magic Bytes
-      const magicValidation = validateImageMagicBytes(imageBuffer);
-      if (!magicValidation.valid && imageBuffer.length > 500) {
-        return res.status(400).json({
-          status: 400,
-          erro: 'O arquivo enviado não possui assinatura binária válida de imagem (JPEG, PNG ou WEBP).',
-        });
-      }
-
-      // 2. Geração do Hash SHA-256 Imediato (Inviolabilidade da Evidência)
       const hashIntegridade = generateSha256(imageBuffer);
 
-      // 2.1 Extrai telemetria visual de visão computacional (iluminação, detecção de rosto/selfie e contexto)
       let telemetriaVisual = req.body.telemetriaVisual || null;
       if (typeof telemetriaVisual === 'string') {
         try {
           telemetriaVisual = JSON.parse(telemetriaVisual);
-        } catch (e) {
+        } catch (_) {
           telemetriaVisual = null;
         }
       }
 
-      // 3. Avaliação Multimodal com Google Gemini (com SLA estrito de 15s)
       const resultadoIA = await geminiService.avaliarQualidadeFoto(imageBuffer, mimeType, telemetriaVisual);
 
       return res.status(200).json({
@@ -119,7 +113,6 @@ const fotosController = {
       });
     } catch (err) {
       console.error('[Fotos Controller Erro Inesperado]:', err);
-      // Fallback gracioso em contingência
       return res.status(200).json({
         status: 'VALIDACAO_MANUAL',
         confianca: 0.50,
@@ -131,25 +124,36 @@ const fotosController = {
 
   /**
    * POST /api/fotos/sugerir-observacao
-   * Prompt P3: "Com base nesta imagem, escreva uma observação curta para o relatório."
    */
   async sugerirObservacao(req, res, next) {
     try {
       let imageBuffer = null;
       let mimeType = 'image/jpeg';
-      const categoria = sanitizeString(req.body.categoria || 'geral');
+      const categoria = sanitizeString((req.body && req.body.categoria) || 'geral').slice(0, 120);
+      const contextoRespostas = req.body && req.body.contextoRespostas
+        ? sanitizeString(String(req.body.contextoRespostas)).slice(0, 800)
+        : null;
 
       if (req.file) {
         imageBuffer = await fs.promises.readFile(req.file.path);
-        mimeType = req.file.mimetype;
-      } else if (req.body.imagemBase64) {
+        const magic = validateImageMagicBytes(imageBuffer);
+        if (!magic.valid) {
+          try { await fs.promises.unlink(req.file.path); } catch (_) {}
+          return res.status(400).json({ status: 400, erro: 'Arquivo de imagem inválido.' });
+        }
+        mimeType = magic.mimeType;
+      } else if (req.body && req.body.imagemBase64) {
         let base64Data = req.body.imagemBase64;
         if (base64Data.includes(',')) {
           base64Data = base64Data.split(',')[1];
         }
         imageBuffer = Buffer.from(base64Data, 'base64');
-      } else if (req.body.caminho_arquivo) {
-        // Proteção contra Path Traversal
+        const magic = validateImageMagicBytes(imageBuffer);
+        if (!magic.valid) {
+          return res.status(400).json({ status: 400, erro: 'Imagem Base64 inválida.' });
+        }
+        mimeType = magic.mimeType;
+      } else if (req.body && req.body.caminho_arquivo) {
         const safePath = resolveSafePath(req.body.caminho_arquivo, UPLOAD_ROOT);
         if (safePath && fs.existsSync(safePath)) {
           imageBuffer = await fs.promises.readFile(safePath);
@@ -161,14 +165,19 @@ const fotosController = {
         }
       }
 
-      if (!imageBuffer && !req.body.categoria) {
+      if (!imageBuffer && (!req.body || (!req.body.categoria && !contextoRespostas))) {
         return res.status(400).json({
           status: 400,
-          erro: 'Imagem ou categoria não informada para geração da sugestão de parecer.',
+          erro: 'Imagem, categoria ou contexto não informado para geração da sugestão de parecer.',
         });
       }
 
-      const sugestaoObj = await geminiService.sugerirObservacaoChecklist(imageBuffer, categoria, mimeType);
+      const sugestaoObj = await geminiService.sugerirObservacaoChecklist(
+        imageBuffer,
+        categoria,
+        mimeType,
+        contextoRespostas
+      );
       return res.status(200).json(sugestaoObj);
     } catch (err) {
       next(err);
@@ -177,7 +186,6 @@ const fotosController = {
 
   /**
    * POST /api/fotos/comparar-referencia
-   * Prompt P2: "Esta foto segue o padrão de referência? Diga o que está certo e o que ajustar."
    */
   async compararReferencia(req, res, next) {
     try {
@@ -186,17 +194,29 @@ const fotosController = {
 
       if (req.file) {
         imageBuffer = await fs.promises.readFile(req.file.path);
-        mimeType = req.file.mimetype;
-      } else if (req.body.imagemBase64) {
+        const magic = validateImageMagicBytes(imageBuffer);
+        if (!magic.valid) {
+          try { await fs.promises.unlink(req.file.path); } catch (_) {}
+          return res.status(400).json({ status: 400, erro: 'Arquivo de imagem inválido.' });
+        }
+        mimeType = magic.mimeType;
+      } else if (req.body && req.body.imagemBase64) {
         let base64Data = req.body.imagemBase64;
         if (base64Data.includes(',')) {
           base64Data = base64Data.split(',')[1];
         }
         imageBuffer = Buffer.from(base64Data, 'base64');
-      } else if (req.body.caminho_arquivo) {
+        const magic = validateImageMagicBytes(imageBuffer);
+        if (!magic.valid) {
+          return res.status(400).json({ status: 400, erro: 'Imagem Base64 inválida.' });
+        }
+        mimeType = magic.mimeType;
+      } else if (req.body && req.body.caminho_arquivo) {
         const safePath = resolveSafePath(req.body.caminho_arquivo, UPLOAD_ROOT);
         if (safePath && fs.existsSync(safePath)) {
           imageBuffer = await fs.promises.readFile(safePath);
+        } else {
+          return res.status(400).json({ status: 400, erro: 'Caminho de arquivo inválido ou não autorizado.' });
         }
       }
 

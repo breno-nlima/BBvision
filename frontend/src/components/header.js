@@ -1,16 +1,16 @@
 /**
- * BVision App Header Component
- * Cabeçalho unificado seguindo o design do sistema
+ * BBVision App Header Component
  */
 
 import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { modal } from './modal.js';
 import { toast } from './toast.js';
+import { escapeHtml } from '../utils/formatters.js';
 
 export function renderHeader(type = 'default') {
   const isObrasPage = state.currentPage === 'obras';
-  const userName = state.user?.nome || 'usuário';
+  const userName = escapeHtml(state.user?.nome || 'usuário');
 
   const brandContent = isObrasPage
     ? `
@@ -23,14 +23,14 @@ export function renderHeader(type = 'default') {
       <div class="header-brand-logo">
         ${Icons.logoBVision(30)}
       </div>
-      <h1 class="header-title">Olá, ${userName.toLowerCase()}!</h1>
+      <h1 class="header-title">Olá, ${userName}!</h1>
     `;
 
   const isFiscal = state.user?.cargo === 'fiscal';
   let actionButton = '';
   if (isFiscal) {
     if (isObrasPage) {
-      actionButton = `<button class="btn-pill-yellow" id="btnHeaderNovaObra" title="Cadastrar Nova Obra (Exclusivo Fiscal BB)">+ Nova Obra</button>`;
+      actionButton = `<button class="btn-pill-yellow" id="btnHeaderNovaObra" title="Cadastrar Nova Obra">+ Nova Obra</button>`;
     } else {
       actionButton = `<button class="btn-pill-navy" id="btnHeaderAction" title="Painel de Auditoria">Auditoria</button>`;
     }
@@ -71,13 +71,15 @@ export function bindHeaderEvents() {
 
   const btnNovaObra = document.getElementById('btnHeaderNovaObra');
   if (btnNovaObra) {
-    btnNovaObra.addEventListener('click', () => {
+    btnNovaObra.addEventListener('click', async () => {
+      const empreiteiras = await state.carregarEmpreiteiras();
       modal.openNovaObraModal({
         fiscalUser: state.user,
+        empreiteiras,
         onSave: async (dados) => {
           await state.criarNovaObra(dados);
-          toast.success('Obra Cadastrada', `A unidade "${dados.nome}" foi cadastrada com sucesso e vinculada à empreiteira.`);
-        }
+          toast.success('Obra Cadastrada', `A unidade "${dados.nome}" foi cadastrada com sucesso.`);
+        },
       });
     });
   }
@@ -90,7 +92,7 @@ export function bindHeaderEvents() {
         onConfirm: async () => {
           await state.logout();
           toast.info('Sessão Encerrada', 'Você saiu com sucesso do sistema BBVision.');
-        }
+        },
       });
     });
   }

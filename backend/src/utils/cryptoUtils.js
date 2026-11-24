@@ -9,7 +9,7 @@ const crypto = require('crypto');
 /**
  * Gera código único alfanumérico em uppercase de 16 caracteres hexadecimais
  * Requisito TakeOff Seção 8.6: crypto.randomBytes(8).toString('hex').toUpperCase()
- * @returns {string} 16 caracteres hexadecimais em maiúsculas (ex: "8F4A2C19E70B34DF")
+ * @returns {string} 16 caracteres hexadecimais em maiúsculas
  */
 function generateUniqueCode() {
   return crypto.randomBytes(8).toString('hex').toUpperCase();

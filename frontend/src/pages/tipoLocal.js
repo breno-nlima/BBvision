@@ -1,41 +1,20 @@
 /**
- * BVision - Tela de Seleção de Tipo de Local
- * Fiel ao print de referência: WhatsApp Image 2026-10-08 at 11.43.14.jpeg
- * Conforme Documento Oficial de Entrega TakeOff
+ * BBVision - Tela de Seleção de Tipo de Local
  */
 
 import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { toast } from '../components/toast.js';
+import { escapeHtml } from '../utils/formatters.js';
 
 export function renderTipoLocal() {
   const currentTipo = state.currentVistoria.tipoLocal || 'Agência Bancária';
 
   const locais = [
-    {
-      id: 'agencia',
-      titulo: 'Agência Bancária',
-      descricao: 'Fachada, interior, caixa forte',
-      isDefault: true
-    },
-    {
-      id: 'caixa',
-      titulo: 'Caixa Eletrônico',
-      descricao: 'Atendimento, câmeras, acesso',
-      isDefault: false
-    },
-    {
-      id: 'externa',
-      titulo: 'Área Externa',
-      descricao: 'Estacionamento, entorno, segurança',
-      isDefault: false
-    },
-    {
-      id: 'predio',
-      titulo: 'Prédio Administrativo',
-      descricao: 'Entrada, corredores, salas',
-      isDefault: false
-    }
+    { id: 'agencia', titulo: 'Agência Bancária', descricao: 'Fachada, interior, atendimento' },
+    { id: 'caixa', titulo: 'Caixa Eletrônico', descricao: 'Atendimento, câmeras, acesso' },
+    { id: 'externa', titulo: 'Área Externa', descricao: 'Estacionamento, entorno, segurança' },
+    { id: 'predio', titulo: 'Prédio Administrativo', descricao: 'Entrada, corredores, salas' },
   ];
 
   const cardsHtml = locais.map(loc => {
@@ -43,22 +22,15 @@ export function renderTipoLocal() {
     const cardClass = isSelected ? 'tipo-card-amarelo' : 'tipo-card-azul';
 
     let iconSvg = '';
-    if (loc.id === 'agencia') {
-      iconSvg = Icons.iconAgencia(30, 'currentColor');
-    } else if (loc.id === 'caixa') {
-      iconSvg = Icons.iconAtm(30, 'currentColor');
-    } else if (loc.id === 'externa') {
-      iconSvg = Icons.iconAreaExterna(30, 'currentColor');
-    } else {
-      iconSvg = Icons.iconPredioAdmin(30, 'currentColor');
-    }
+    if (loc.id === 'agencia') iconSvg = Icons.iconAgencia(30, 'currentColor');
+    else if (loc.id === 'caixa') iconSvg = Icons.iconAtm(30, 'currentColor');
+    else if (loc.id === 'externa') iconSvg = Icons.iconAreaExterna(30, 'currentColor');
+    else iconSvg = Icons.iconPredioAdmin(30, 'currentColor');
 
     return `
-      <div class="tipo-local-card ${cardClass} ${isSelected ? 'selected' : ''}" data-tipo="${loc.titulo}" data-desc="${loc.descricao}">
+      <div class="tipo-local-card ${cardClass} ${isSelected ? 'selected' : ''}" data-tipo="${escapeHtml(loc.titulo)}" data-desc="${escapeHtml(loc.descricao)}">
         <div class="tipo-card-header">
-          <div class="tipo-card-icon-area">
-            ${iconSvg}
-          </div>
+          <div class="tipo-card-icon-area">${iconSvg}</div>
           <div class="tipo-card-arrow">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="9 18 15 12 9 6"></polyline>
@@ -67,8 +39,8 @@ export function renderTipoLocal() {
         </div>
 
         <div class="tipo-card-body">
-          <h3 class="tipo-card-title">${loc.titulo}</h3>
-          <p class="tipo-card-desc">${loc.descricao}</p>
+          <h3 class="tipo-card-title">${escapeHtml(loc.titulo)}</h3>
+          <p class="tipo-card-desc">${escapeHtml(loc.descricao)}</p>
         </div>
       </div>
     `;
@@ -76,7 +48,6 @@ export function renderTipoLocal() {
 
   return `
     <div class="page-container fade-in" id="tipoLocalPage">
-      <!-- Top Bar com Voltar, Título e Menu Mais Opções -->
       <header class="tipo-local-topbar">
         <button class="btn-icon-simple" id="btnVoltarDetalheObra" title="Voltar">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -85,7 +56,7 @@ export function renderTipoLocal() {
           </svg>
         </button>
         <h1 class="tipo-local-header-title">Tipo de Local</h1>
-        <button class="btn-icon-simple" id="btnOpcoesTipo" title="Opções">
+        <button class="btn-icon-simple" id="btnOpcoesTipo" title="Ajuda">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
             <circle cx="5" cy="12" r="2"></circle>
             <circle cx="12" cy="12" r="2"></circle>
@@ -94,12 +65,10 @@ export function renderTipoLocal() {
         </button>
       </header>
 
-      <!-- Grid 2x2 dos Tipos de Local -->
       <div class="tipo-local-grid">
         ${cardsHtml}
       </div>
 
-      <!-- Botão Amarelo de Confirmação -->
       <div class="tipo-local-footer">
         <button class="btn-primary-bb-yellow" id="btnConfirmarTipo">
           Confirmar Tipo
@@ -110,21 +79,14 @@ export function renderTipoLocal() {
 }
 
 export function bindTipoLocalEvents() {
-  const btnVoltar = document.getElementById('btnVoltarDetalheObra');
-  if (btnVoltar) {
-    btnVoltar.addEventListener('click', () => {
-      state.navigate('obra-detalhe');
-    });
-  }
+  document.getElementById('btnVoltarDetalheObra')?.addEventListener('click', () => {
+    state.navigate('obra-detalhe');
+  });
 
-  const btnOpcoesTipo = document.getElementById('btnOpcoesTipo');
-  if (btnOpcoesTipo) {
-    btnOpcoesTipo.addEventListener('click', () => {
-      toast.info('Seleção de Local', 'Escolha o ambiente principal da vistoria para direcionar o checklist técnico da obra.');
-    });
-  }
+  document.getElementById('btnOpcoesTipo')?.addEventListener('click', () => {
+    toast.info('Seleção de Local', 'Escolha o ambiente principal da vistoria para direcionar o checklist técnico da obra.');
+  });
 
-  // Seleção interativa dos cards
   const cards = document.querySelectorAll('.tipo-local-card');
   cards.forEach(card => {
     card.addEventListener('click', () => {
@@ -141,12 +103,8 @@ export function bindTipoLocalEvents() {
     });
   });
 
-  const btnConfirmar = document.getElementById('btnConfirmarTipo');
-  if (btnConfirmar) {
-    btnConfirmar.addEventListener('click', () => {
-      // Avança para o Checklist antes da Câmera conforme nova ordem do fluxo
-      state.checklistQuestionIndex = 0;
-      state.navigate('checklist-pergunta');
-    });
-  }
+  document.getElementById('btnConfirmarTipo')?.addEventListener('click', () => {
+    state.checklistQuestionIndex = 0;
+    state.navigate('checklist-pergunta');
+  });
 }

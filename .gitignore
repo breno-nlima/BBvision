@@ -31,6 +31,8 @@ serviceAccountKey*.json
 *.db
 *.dump
 *.sql.gz
+backend/data/*.json
+backend/data/*.tmp
 
 # Logs
 npm-debug.log*

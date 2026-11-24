@@ -1,18 +1,27 @@
 /**
  * BBVision - Serviço de Fila Local e Sincronização Offline (HU05)
- * Conforme Seção 3.2 (HU05) e Casos de Borda Seção 5.1 do Documento de Entrega TakeOff:
- * "Ambiente offline (sem sinal de internet): Fotos e respostas são armazenadas na fila
- * local segura do dispositivo e sincronizadas automaticamente ao restabelecer a conexão."
+ * Armazena vistorias capturadas sem sinal de internet na fila local
+ * e sincroniza automaticamente ao restabelecer a conexão.
  */
 
 import { API_BASE_URL } from './api.js';
 
 const QUEUE_STORAGE_KEY = 'bbvision_offline_queue';
 
+const ITENS_VERIFICACAO_MAP = [
+  { key: 'check1', texto: 'A estrutura está conforme o projeto?' },
+  { key: 'check2', texto: 'Não há danos ou irregularidades visíveis?' },
+  { key: 'check3', texto: 'A sinalização de segurança está correta?' },
+  { key: 'check4', texto: 'A etapa da obra foi atualizada corretamente?' },
+  { key: 'check5', texto: 'O local está pronto para registro fotográfico in-loco?' },
+];
+
 class OfflineSyncService {
   constructor() {
     this.isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
     this.listeners = [];
+    this.syncListeners = [];
+    this.isSyncing = false;
     if (typeof window !== 'undefined') {
       this.initNetworkListeners();
     }
@@ -35,6 +44,13 @@ class OfflineSyncService {
     this.listeners.push(listener);
     return () => {
       this.listeners = this.listeners.filter(l => l !== listener);
+    };
+  }
+
+  onSynced(listener) {
+    this.syncListeners.push(listener);
+    return () => {
+      this.syncListeners = this.syncListeners.filter(l => l !== listener);
     };
   }
 
@@ -64,97 +80,138 @@ class OfflineSyncService {
     }
   }
 
-  /**
-   * Enfileira uma vistoria para sincronização posterior
-   */
   enfileirarVistoria(item) {
     const fila = this.obterFila();
     const registro = {
       idTemporario: `offline_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       timestamp: new Date().toISOString(),
       tipo: 'VISTORIA_FINALIZADA',
-      dados: item,
+      dados: JSON.parse(JSON.stringify(item)),
     };
     fila.push(registro);
     this.salvarFila(fila);
-    console.log(`[OfflineSync] Vistoria salva na fila offline. Total pendente: ${fila.length}`);
     return registro;
   }
 
-  /**
-   * Processa itens pendentes quando a conexão for restabelecida
-   */
   async sincronizarFila() {
+    if (this.isSyncing) return 0;
     const fila = this.obterFila();
-    if (fila.length === 0) return;
+    if (fila.length === 0) return 0;
 
-    console.log(`[OfflineSync] Conexão restabelecida. Sincronizando ${fila.length} itens pendentes...`);
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('bbvision_token') : null;
+    if (!token) return 0;
 
+    this.isSyncing = true;
+    let sincronizados = 0;
     const filaRestante = [];
-    for (const item of fila) {
-      try {
-        const dados = item.dados || {};
-        const respObj = dados.respostas || {};
-        const justMap = respObj.justificativas || {};
-        const perguntas = Array.isArray(dados.perguntasChecklist) ? dados.perguntasChecklist : [];
-        const respostasLista = perguntas.length > 0
-          ? perguntas.map((q, idx) => {
-              const chave = q.chaveResposta || q.id || `pergunta_${idx}`;
-              const rawVal = respObj[chave];
-              const valorStr = Array.isArray(rawVal) ? rawVal.join('; ') : String(rawVal || 'Não informado');
-              return {
-                pergunta: q.titulo || `Item ${idx + 1}`,
-                valor: valorStr,
-                justificativa: justMap[chave] || null,
-                tipo: q.tipo === 'multipla_escolha' ? 'multipla_escolha' : 'texto',
-              };
-            })
-          : [
-              { pergunta: '1. Fachada da agência', valor: respObj.fachadaLegivel || 'Conforme', justificativa: justMap.fachadaLegivel || null },
-              { pergunta: '2. Segurança e EPC', valor: Array.isArray(respObj.segurancaEpc) ? respObj.segurancaEpc.join('; ') : (respObj.segurancaEpc || 'Verificado') },
-              { pergunta: '3. Relato estrutural', valor: respObj.relatoEstrutural || respObj.observacoes || 'Registro sincronizado da fila offline.' },
-              { pergunta: '4. Acessibilidade', valor: respObj.acessibilidade || 'Conforme', justificativa: justMap.acessibilidade || null },
-            ];
 
-        const payload = {
-          obra_id: dados.obraId || dados.obra_id || 'obr-001',
-          codigo_unico: dados.codigoUnico || null,
-          timestamp: item.timestamp,
-          respostas: respostasLista,
-          fotos: (dados.fotoCamera || dados.fotoUrl) ? [{
-            imagemBase64: dados.fotoCamera || null,
-            caminho_arquivo: dados.fotoUrl && !dados.fotoCamera ? dados.fotoUrl : null,
-            avaliacao_gemini: 'VALIDACAO_MANUAL',
-            confianca: 0.75,
-            motivo: 'Registro capturado em modo offline (sincronizado automaticamente).'
-          }] : [],
-        };
+    try {
+      for (const item of fila) {
+        try {
+          const dados = item.dados || {};
+          const obraId = dados.obraId || dados.obra_id;
+          if (!obraId) continue;
 
-        // Envia para o endpoint oficial de sincronização offline com autenticação
-        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('bbvision_token') : null;
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
+          const respObj = dados.respostas || {};
+          const justMap = respObj.justificativas || {};
+          const perguntas = Array.isArray(dados.perguntasChecklist) ? dados.perguntasChecklist : [];
 
-        const response = await fetch(`${API_BASE_URL}/api/relatorios/sincronizar-offline`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(payload),
-        });
+          const respostasLista = perguntas.map((q, idx) => {
+            const chave = q.chaveResposta || q.id || `pergunta_${idx}`;
+            const rawVal = respObj[chave];
+            const valorStr = Array.isArray(rawVal)
+              ? (rawVal.length > 0 ? rawVal.join('; ') : 'Não informado')
+              : String(rawVal || 'Não informado');
+            return {
+              pergunta: q.titulo || `Item ${idx + 1}`,
+              valor: valorStr,
+              justificativa: justMap[chave] || null,
+              tipo: q.tipo === 'multipla_escolha' ? 'multipla_escolha' : 'texto',
+            };
+          });
 
-        if (response.ok) {
-          console.log(`[OfflineSync] Item ${item.idTemporario} sincronizado com sucesso.`);
-        } else {
+          // Checklist complementar (sinalização, limpeza, câmeras)
+          respostasLista.push({
+            pergunta: 'Condição da sinalização complementar, limpeza e câmeras',
+            valor: `Sinalização: ${respObj.sinalizacao || 'Não informado'} | Limpeza: ${respObj.limpeza || '-'}/5 | Câmeras: ${respObj.cameras ?? '-'}`,
+            justificativa: respObj.justificativaSinalizacao || null,
+            tipo: 'multipla_escolha',
+          });
+
+          // Checklist de verificação (etapa 2 de 3)
+          const checksMarcados = ITENS_VERIFICACAO_MAP
+            .filter(i => Boolean(respObj[i.key]))
+            .map(i => i.texto);
+          if (checksMarcados.length > 0) {
+            respostasLista.push({
+              pergunta: 'Itens confirmados no Checklist de Verificação',
+              valor: checksMarcados.join('; '),
+              tipo: 'multipla_escolha',
+            });
+          }
+
+          if (respObj.observacoes) {
+            respostasLista.push({
+              pergunta: 'Observações adicionais consolidadas',
+              valor: respObj.observacoes,
+              tipo: 'texto',
+            });
+          }
+
+          const payload = {
+            obra_id: obraId,
+            codigo_unico: dados.codigoUnico && /^[0-9A-F]{16}$/i.test(dados.codigoUnico) ? dados.codigoUnico : null,
+            timestamp: item.timestamp,
+            tipo_local: dados.tipoLocal || null,
+            localizacao_texto: dados.localizacaoFoto || null,
+            latitude: dados.coordenadas?.lat ?? null,
+            longitude: dados.coordenadas?.lng ?? null,
+            precisao_gps: dados.coordenadas?.precisao ?? null,
+            assinatura_base64: dados.assinatura || null,
+            respostas: respostasLista,
+            fotos: (dados.fotoCamera || dados.fotoBase64 || dados.caminhoArquivoFoto)
+              ? [{
+                  imagemBase64: dados.fotoCamera || dados.fotoBase64 || null,
+                  caminho_arquivo: dados.caminhoArquivoFoto || null,
+                  hash_integridade: dados.hashSha256 || null,
+                  avaliacao_gemini: 'VALIDACAO_MANUAL',
+                  confianca: dados.confiancaIA || 0.75,
+                  motivo: dados.motivoIA || 'Registro capturado em modo offline (sincronizado automaticamente).',
+                }]
+              : [],
+          };
+
+          const response = await fetch(`${API_BASE_URL}/api/relatorios/sincronizar-offline`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(payload),
+          });
+
+          if (response.ok) {
+            sincronizados++;
+          } else if (response.status >= 500 || response.status === 429) {
+            filaRestante.push(item);
+          }
+          // Se 400/403/404 permanente, descarta da fila para não ficar em loop infinito
+        } catch (err) {
+          console.warn(`[OfflineSync] Falha ao sincronizar item ${item.idTemporario}, mantendo na fila:`, err.message);
           filaRestante.push(item);
         }
-      } catch (err) {
-        console.warn(`[OfflineSync] Falha ao sincronizar item ${item.idTemporario}, mantendo na fila:`, err.message);
-        filaRestante.push(item);
       }
+
+      this.salvarFila(filaRestante);
+
+      if (sincronizados > 0) {
+        this.syncListeners.forEach(fn => fn({ sincronizados, pendentes: filaRestante.length }));
+      }
+    } finally {
+      this.isSyncing = false;
     }
 
-    this.salvarFila(filaRestante);
+    return sincronizados;
   }
 }
 

@@ -63,7 +63,7 @@ O BBVision é a plataforma de monitoramento, auditoria e fiscalização remota d
 
 - [Início e Portal BBVision](${base}/): Acesso ao portal corporativo de fiscalização remota de obras para Empreiteiras e Fiscais do Banco do Brasil.
 - [Validador Público de Fé Pública](${base}/validador): Consulta aberta para verificar a autenticidade e integridade criptográfica SHA-256 de laudos emitidos pelo BBVision.
-- [Sobre o BBVision](${base}/about): Visão geral da arquitetura, personas (Rodrigo — Empreiteira e Mariana — Fiscal BB), governança de IA e equipe TakeOff / Porto Digital.
+- [Sobre o BBVision](${base}/about): Visão geral da arquitetura, perfis de acesso (Empreiteira e Fiscal de Obras), governança de IA e equipe TakeOff / Porto Digital.
 - [Contato e Suporte Institucional](${base}/contact): E-mail oficial, telefone institucional, endereço no Porto Digital (Recife/PE) e canais de suporte técnico.
 - [Termos de Uso e Governança](${base}/terms): Regras de utilização, inviolabilidade documental, proibição de upload via galeria e responsabilidades legais.
 - [Política de Privacidade e LGPD](${base}/privacy): Tratamento de dados pessoais, evidências fotográficas, trilhas de auditoria e direitos dos titulares conforme a LGPD.
@@ -220,9 +220,9 @@ function getMarkdownPage(pageKey = 'home') {
 
 ${siteConfig.longDescription}
 
-## Fluxo Operacional e Personas
+## Fluxo Operacional e Perfis de Acesso
 
-### 1. Empreiteira em Campo (Persona Rodrigo)
+### 1. Empreiteira em Campo
 - Seleciona a obra atribuída e o tipo de local de vistoria.
 - Preenche checklist técnico dinâmico com sugestões editáveis de Inteligência Artificial.
 - Realiza captura fotográfica exclusivamente ao vivo pela câmera (upload via galeria bloqueado).
@@ -230,7 +230,7 @@ ${siteConfig.longDescription}
 - Assina digitalmente, bloqueia o relatório contra alterações posteriores e gera Código Único (16 hex) + Hash SHA-256 + PDF oficial enviado por e-mail.
 - Conta com modo offline de contingência com fila local e sincronização automática.
 
-### 2. Fiscal de Engenharia do Banco do Brasil (Persona Mariana)
+### 2. Fiscal de Engenharia / Obras
 - Cadastra novas obras e vincula empreiteiras responsáveis.
 - Audita relatórios consolidados em PDF com carimbo de autenticidade e evidências protegidas.
 - Emite parecer técnico homologando a obra como \`REGULAR\` ou reprovando como \`PENDENTE_AJUSTE\`.
@@ -595,10 +595,10 @@ function renderInstitutionalPage(pageKey) {
         </section>
 
         <section class="bb-static-card">
-          <h2>Personas e Fluxo de Operação</h2>
-          <h3>Empreiteira em Campo (Rodrigo)</h3>
+          <h2>Perfis de Acesso e Fluxo de Operação</h2>
+          <h3>Empreiteira em Campo</h3>
           <p>Seleciona a obra atribuída, preenche checklists dinâmicos com apoio de IA editável, captura evidências exclusivamente pela câmera ao vivo (sem upload da galeria), assina digitalmente e bloqueia o laudo com geração automática de Código Único, Hash SHA-256 e PDF.</p>
-          <h3>Fiscal de Engenharia do Banco do Brasil (Mariana)</h3>
+          <h3>Fiscal de Engenharia / Obras</h3>
           <p>Cadastra obras, vincula empreiteiras, audita relatórios consolidados em PDF com carimbo criptográfico de Fé Pública e homologa cada medição como <strong>REGULAR</strong> ou <strong>PENDENTE_AJUSTE</strong>.</p>
         </section>
 
@@ -811,7 +811,7 @@ function renderInstitutionalPage(pageKey) {
         <form id="staticValidatorForm" class="bb-static-validator-form" action="/validador" method="get" toolname="validate_report_authenticity" tooldescription="Valida a autenticidade e integridade criptográfica SHA-256 de um relatório de vistoria BBVision pelo Código Único ou Hash.">
           <label for="codigoOuHashInput">Código Único ou Hash SHA-256</label>
           <div class="bb-static-input-row">
-            <input type="text" id="codigoOuHashInput" name="codigo" placeholder="Ex.: 8F4A2C19E70B34DF" autocomplete="off" spellcheck="false" required>
+            <input type="text" id="codigoOuHashInput" name="codigo" placeholder="Código Único (16 hex) ou Hash SHA-256" autocomplete="off" spellcheck="false" required>
             <button type="submit" class="bb-static-btn-primary">Validar Documento</button>
           </div>
         </form>
@@ -852,6 +852,15 @@ function renderInstitutionalPage(pageKey) {
       const out = document.getElementById('staticValidatorResult');
       if (!form || !input || !out) return;
 
+      function esc(v) {
+        return String(v == null ? '' : v)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
       async function consultar(termo) {
         out.innerHTML = '<p>Consultando base oficial de Fé Pública...</p>';
         try {
@@ -861,14 +870,14 @@ function renderInstitutionalPage(pageKey) {
             const rel = data.relatorio || {};
             const obra = rel.obra || {};
             out.innerHTML = '<div class="bb-val-ok"><h3>Documento Autêntico e Íntegro</h3>' +
-              '<p><strong>Código Único:</strong> ' + (rel.codigo_unico || termo) + '</p>' +
-              '<p><strong>Hash SHA-256:</strong> <code>' + (rel.hash_integridade || '-') + '</code></p>' +
-              '<p><strong>Obra / Unidade:</strong> ' + (obra.nome || 'Unidade Banco do Brasil') + '</p>' +
-              '<p><strong>Status:</strong> ' + (rel.status || 'FINALIZADO') + '</p>' +
+              '<p><strong>Código Único:</strong> ' + esc(rel.codigo_unico || termo) + '</p>' +
+              '<p><strong>Hash SHA-256:</strong> <code>' + esc(rel.hash_integridade || '-') + '</code></p>' +
+              '<p><strong>Obra / Unidade:</strong> ' + esc(obra.nome || 'Unidade Cadastrada') + '</p>' +
+              '<p><strong>Status:</strong> ' + esc(rel.status || 'FINALIZADO') + '</p>' +
               (rel.id ? '<p><a class="bb-static-btn-secondary" href="/api/relatorios/' + encodeURIComponent(rel.id) + '/pdf" target="_blank" rel="noopener">Visualizar PDF Oficial</a></p>' : '') +
               '</div>';
           } else {
-            out.innerHTML = '<div class="bb-val-err"><h3>Documento Não Localizado</h3><p>' + (data.mensagem || 'Código não encontrado na base oficial.') + '</p></div>';
+            out.innerHTML = '<div class="bb-val-err"><h3>Documento Não Localizado</h3><p>' + esc(data.mensagem || 'Código não encontrado na base oficial.') + '</p></div>';
           }
         } catch (err) {
           out.innerHTML = '<div class="bb-val-err"><h3>Erro na Consulta</h3><p>Não foi possível contatar o servidor de validação.</p></div>';

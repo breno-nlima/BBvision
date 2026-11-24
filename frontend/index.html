@@ -45,7 +45,7 @@
           "url": "https://antiquewhite-dolphin-779579.hostingersite.com/src/assets/logo.png"
         },
         "description": "Sistema Inteligente de Fiscalização e Monitoramento Remoto de Obras do Banco do Brasil com IA, Fé Pública e Inviolabilidade Criptográfica SHA-256.",
-        "email": "bbvision-notificacoes@bancodobrasil.com.br",
+        "email": "contato@bbvision.com.br",
         "telephone": "+55-81-3419-8000",
         "address": {
           "@type": "PostalAddress",
@@ -59,7 +59,7 @@
           {
             "@type": "ContactPoint",
             "contactType": "technical support",
-            "email": "bbvision-notificacoes@bancodobrasil.com.br",
+            "email": "contato@bbvision.com.br",
             "telephone": "+55-81-3419-8000",
             "areaServed": "BR",
             "availableLanguage": ["pt-BR", "en"]
@@ -67,7 +67,7 @@
           {
             "@type": "ContactPoint",
             "contactType": "auditing and compliance",
-            "email": "mariana.fiscal@bb.com.br",
+            "email": "auditoria@bbvision.com.br",
             "telephone": "+55-81-3419-8000",
             "areaServed": "BR",
             "availableLanguage": ["pt-BR"]
@@ -237,7 +237,7 @@
             <form action="/validador" method="get" class="bb-static-validator-form" toolname="validate_report_authenticity" tooldescription="Valida a autenticidade e integridade criptográfica SHA-256 (Fé Pública) de um laudo de vistoria BBVision usando Código Único ou Hash.">
               <label for="ssrCodigoInput">Código Único ou Hash SHA-256</label>
               <div class="bb-static-input-row">
-                <input type="text" id="ssrCodigoInput" name="codigo" placeholder="Ex.: 8F4A2C19E70B34DF" required>
+                <input type="text" id="ssrCodigoInput" name="codigo" placeholder="Código Único (16 hex) ou Hash SHA-256" required>
                 <button type="submit" class="bb-static-btn-primary">Validar Laudo</button>
               </div>
             </form>
@@ -266,7 +266,7 @@
       </nav>
       <div class="bb-footer-contact">
         <span>Contato:</span>
-        <a href="mailto:bbvision-notificacoes@bancodobrasil.com.br">bbvision-notificacoes@bancodobrasil.com.br</a>
+        <a href="mailto:contato@bbvision.com.br">contato@bbvision.com.br</a>
         <span aria-hidden="true">•</span>
         <a href="tel:+558134198000">+55 (81) 3419-8000</a>
       </div>
@@ -285,6 +285,7 @@
     import { modal } from './src/components/modal.js';
     import { toast } from './src/components/toast.js';
     import { Icons } from './src/assets/icons.js';
+    import { escapeHtml } from './src/utils/formatters.js';
 
     function sincronizarNavbar(s) {
       const user = s.user;
@@ -296,25 +297,27 @@
       document.querySelectorAll('.bb-nav-link').forEach(btn => btn.classList.remove('active'));
       if (page === 'inicio') document.getElementById('navLinkInicio')?.classList.add('active');
       if (page === 'obras' || page === 'obra-detalhe') document.getElementById('navLinkObras')?.classList.add('active');
-      if (page === 'relatorios' || page === 'relatorio-bloqueado') document.getElementById('navLinkRelatorios')?.classList.add('active');
+      if (page === 'relatorios' || page === 'relatorio-bloqueado' || page === 'fiscal-auditoria') document.getElementById('navLinkRelatorios')?.classList.add('active');
       if (page === 'validador-publico') document.getElementById('navLinkValidador')?.classList.add('active');
 
       if (user) {
         if (navLinks) navLinks.style.display = 'flex';
         const isFiscal = user.cargo === 'fiscal';
-        const roleLabel = isFiscal ? 'Fiscal BB' : 'Empreiteira';
+        const roleLabel = isFiscal ? 'Fiscal de Obra' : 'Empreiteira';
         const avatarSvg = isFiscal ? Icons.perfilBb(32) : Icons.perfilObras(32);
+        const primeiroNome = escapeHtml((user.nome || 'Usuário').split(' ')[0]);
+        const nomeCompletoSafe = escapeHtml(user.nome || 'Usuário');
 
         userArea.innerHTML = `
           ${isFiscal ? `
-            <button class="bb-nav-link" id="btnNavNovaObra" style="background: rgba(254, 211, 4, 0.16); color: #FED304; border: 1px solid rgba(254, 211, 4, 0.42); border-radius: var(--radius-full); padding: 6px 13px; font-weight: 700; font-size: 12px;" title="Cadastrar Nova Obra (Exclusivo Fiscal BB)">
+            <button class="bb-nav-link" id="btnNavNovaObra" style="background: rgba(254, 211, 4, 0.16); color: #FED304; border: 1px solid rgba(254, 211, 4, 0.42); border-radius: var(--radius-full); padding: 6px 13px; font-weight: 700; font-size: 12px;" title="Cadastrar Nova Obra">
               + Nova Obra
             </button>
           ` : ''}
-          <div class="bb-user-profile-badge" id="btnNavUserProfile" title="Ver Perfil de ${user.nome}">
+          <div class="bb-user-profile-badge" id="btnNavUserProfile" title="Ver Perfil de ${nomeCompletoSafe}">
             <div class="bb-user-avatar-svg" style="display:flex; align-items:center;">${avatarSvg}</div>
             <div class="bb-user-info">
-              <span class="bb-user-name">${user.nome.split(' ')[0]}</span>
+              <span class="bb-user-name">${primeiroNome}</span>
               <span class="bb-user-role ${isFiscal ? 'fiscal' : 'empreiteira'}">${roleLabel}</span>
             </div>
           </div>
@@ -325,12 +328,14 @@
         `;
         userArea.style.display = 'flex';
 
-        document.getElementById('btnNavNovaObra')?.addEventListener('click', () => {
+        document.getElementById('btnNavNovaObra')?.addEventListener('click', async () => {
+          const empreiteiras = await state.carregarEmpreiteiras();
           modal.openNovaObraModal({
             fiscalUser: state.user,
+            empreiteiras,
             onSave: async (dados) => {
               await state.criarNovaObra(dados);
-              toast.success('Obra Cadastrada', `A unidade "${dados.nome}" foi cadastrada com sucesso e vinculada à empreiteira.`);
+              toast.success('Obra Cadastrada', `A unidade "${dados.nome}" foi cadastrada com sucesso.`);
             }
           });
         });

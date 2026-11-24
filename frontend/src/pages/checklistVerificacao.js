@@ -1,26 +1,27 @@
 /**
- * BVision - Tela de Checklist de Verificação (Etapa 2 de 3)
- * Fiel aos prints de referência: WhatsApp Image 2026-10-08 at 11.43.17 (1).jpeg e 11.43.19.jpeg
- * Conforme Requisitos E3, E4 e HU04 do Documento Oficial TakeOff
+ * BBVision - Tela de Checklist de Verificação (Etapa 2 de 3)
+ * Confirmação final de prontidão do local antes da captura fotográfica in-loco com IA.
  */
 
 import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { toast } from '../components/toast.js';
+import { escapeHtml } from '../utils/formatters.js';
 
 export function renderChecklistVerificacao() {
   const vistoria = state.currentVistoria;
-  const respostas = vistoria.respostas = vistoria.respostas || {};
-  const user = state.user || { nome: 'Responsável Técnico', email: 'responsavel@empresa.com.br' };
+  const respostas = (vistoria.respostas = vistoria.respostas || {});
+  const userEmail = state.user?.email || 'Não informado';
   const responsavelNome = state.user?.nome || vistoria.responsavel || 'Responsável Técnico';
-  const responsavelDoc = state.user?.registro_profissional || vistoria.matricula || 'CREA/CAU Cadastrado';
+  const responsavelDoc = state.user?.registro_profissional || vistoria.matricula || 'Registro não informado';
+  const codigoExibicao = vistoria.codigoUnico || 'Emitido na Assinatura Digital';
 
   const itensVerificacao = [
     { key: 'check1', num: 1, texto: 'A estrutura está conforme o projeto?' },
     { key: 'check2', num: 2, texto: 'Não há danos ou irregularidades visíveis?' },
     { key: 'check3', num: 3, texto: 'A sinalização de segurança está correta?' },
     { key: 'check4', num: 4, texto: 'A etapa da obra foi atualizada corretamente?' },
-    { key: 'check5', num: 5, texto: 'O local está pronto para registro fotográfico in-loco?' }
+    { key: 'check5', num: 5, texto: 'O local está pronto para registro fotográfico in-loco?' },
   ];
 
   const totalMarcados = itensVerificacao.filter(item => Boolean(respostas[item.key])).length;
@@ -28,7 +29,6 @@ export function renderChecklistVerificacao() {
 
   return `
     <div class="page-container fade-in" id="checklistVerificacaoPage">
-      <!-- Header Superior com Indicador de Etapa e Barra de Progresso Amarela -->
       <header class="verificacao-topbar">
         <div class="verificacao-header-row">
           <div class="verificacao-title-group">
@@ -47,18 +47,16 @@ export function renderChecklistVerificacao() {
         </div>
       </header>
 
-      <!-- Card do Código Único e Destino do E-mail -->
       <div class="verificacao-codigo-card">
-        <span class="card-mini-label">Código Único</span>
+        <span class="card-mini-label">Código Único de Fé Pública</span>
         <div class="codigo-pill-highlight">
-          ${vistoria.codigoUnico}
+          ${escapeHtml(codigoExibicao)}
         </div>
         <p class="codigo-email-notice">
-          Código vinculado a: ${user.email || 'responsavel@empresa.com.br'}
+          Protocolo vinculado a: ${escapeHtml(userEmail)}
         </p>
       </div>
 
-      <!-- Lista de Itens de Verificação Conforme o Gabarito Oficial (Inicia em branco) -->
       <div class="verificacao-checklist-card">
         <div class="checkbox-toolbar" style="margin-bottom: 10px;">
           <div class="toolbar-buttons-cluster">
@@ -71,12 +69,13 @@ export function renderChecklistVerificacao() {
         </div>
 
         <div class="checklist-items-list">
-          ${itensVerificacao.map(item => {
-            const isChecked = Boolean(respostas[item.key]);
-            return `
+          ${itensVerificacao
+            .map(item => {
+              const isChecked = Boolean(respostas[item.key]);
+              return `
               <div class="check-item-row" data-check="${item.key}" style="cursor: pointer;">
                 <div class="item-number-circle">${item.num}</div>
-                <p class="item-text">${item.texto}</p>
+                <p class="item-text">${escapeHtml(item.texto)}</p>
                 <div class="custom-checkbox-btn ${isChecked ? 'checked' : ''}" id="chk_${item.key}">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                     <polyline points="20 6 9 17 4 12"></polyline>
@@ -84,30 +83,24 @@ export function renderChecklistVerificacao() {
                 </div>
               </div>
             `;
-          }).join('')}
+            })
+            .join('')}
         </div>
       </div>
 
-      <!-- Card do Responsável Técnico / Empreiteira -->
       <div class="responsavel-info-card" style="display: flex; align-items: center;">
         <div class="resp-avatar-badge" style="margin-right: 12px; display: flex; align-items: center;">
           ${Icons.perfilObras(42)}
         </div>
         <div class="resp-text-group" style="flex: 1;">
           <span class="resp-card-title">Responsável Técnico</span>
-          <strong class="resp-nome">Nome: ${responsavelNome}</strong>
+          <strong class="resp-nome">Nome: ${escapeHtml(responsavelNome)}</strong>
           <span class="resp-matricula">
-            Registro/Doc: ${responsavelDoc}
+            Registro/Doc: ${escapeHtml(responsavelDoc)}
           </span>
-        </div>
-        <div class="resp-arrow">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="9 18 15 12 9 6"></polyline>
-          </svg>
         </div>
       </div>
 
-      <!-- Botão Amarelo de Continuação (Leva à Validação com Câmera & IA) -->
       <div class="verificacao-action-footer">
         <button class="btn-primary-bb-yellow" id="btnFinalizarChecklist" ${podeAvancar ? '' : 'disabled'}>
           Avançar para Câmera & IA →
@@ -118,7 +111,7 @@ export function renderChecklistVerificacao() {
 }
 
 export function bindChecklistVerificacaoEvents() {
-  const respostas = state.currentVistoria.respostas = state.currentVistoria.respostas || {};
+  const respostas = (state.currentVistoria.respostas = state.currentVistoria.respostas || {});
   const btnFinalizar = document.getElementById('btnFinalizarChecklist');
   const badgeCount = document.getElementById('badgeVerificacaoCount');
   const checkRows = document.querySelectorAll('.check-item-row');
@@ -134,12 +127,9 @@ export function bindChecklistVerificacaoEvents() {
     }
   }
 
-  const btnVoltar = document.getElementById('btnVoltarChecklistDinamico');
-  if (btnVoltar) {
-    btnVoltar.addEventListener('click', () => {
-      state.navigate('checklist-dinamico');
-    });
-  }
+  document.getElementById('btnVoltarChecklistDinamico')?.addEventListener('click', () => {
+    state.navigate('checklist-dinamico');
+  });
 
   checkRows.forEach(row => {
     row.addEventListener('click', () => {
@@ -153,29 +143,27 @@ export function bindChecklistVerificacaoEvents() {
     });
   });
 
-  const btnMarcarTodos = document.getElementById('btnMarcarTodosVerificacao');
-  if (btnMarcarTodos) {
-    btnMarcarTodos.addEventListener('click', () => {
-      keys.forEach(k => { respostas[k] = true; });
-      checkRows.forEach(row => {
-        const chkBtn = row.querySelector('.custom-checkbox-btn');
-        if (chkBtn) chkBtn.classList.add('checked');
-      });
-      atualizarEstadoVerificacao();
+  document.getElementById('btnMarcarTodosVerificacao')?.addEventListener('click', () => {
+    keys.forEach(k => {
+      respostas[k] = true;
     });
-  }
+    checkRows.forEach(row => {
+      const chkBtn = row.querySelector('.custom-checkbox-btn');
+      if (chkBtn) chkBtn.classList.add('checked');
+    });
+    atualizarEstadoVerificacao();
+  });
 
-  const btnLimpar = document.getElementById('btnLimparVerificacao');
-  if (btnLimpar) {
-    btnLimpar.addEventListener('click', () => {
-      keys.forEach(k => { respostas[k] = false; });
-      checkRows.forEach(row => {
-        const chkBtn = row.querySelector('.custom-checkbox-btn');
-        if (chkBtn) chkBtn.classList.remove('checked');
-      });
-      atualizarEstadoVerificacao();
+  document.getElementById('btnLimparVerificacao')?.addEventListener('click', () => {
+    keys.forEach(k => {
+      respostas[k] = false;
     });
-  }
+    checkRows.forEach(row => {
+      const chkBtn = row.querySelector('.custom-checkbox-btn');
+      if (chkBtn) chkBtn.classList.remove('checked');
+    });
+    atualizarEstadoVerificacao();
+  });
 
   if (btnFinalizar) {
     btnFinalizar.addEventListener('click', () => {

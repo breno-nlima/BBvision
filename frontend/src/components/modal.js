@@ -1,6 +1,5 @@
 /**
- * BBVision - Modal Corporativo & Visualizador de PDF Oficial
- * Permite exibição de documentos com Fé Pública e diálogos de parecer técnico
+ * BBVision - Modais Corporativos, Visualizador de PDF, Gestão de Obras e Checklist
  */
 
 import { Icons } from '../assets/icons.js';
@@ -15,7 +14,61 @@ class BBVisionModal {
   }
 
   /**
-   * Abre um visualizador de PDF oficial de alta fidelidade
+   * Diálogo de confirmação corporativo (substitui window.confirm)
+   */
+  openConfirmDialog({
+    title = 'Confirmar Ação',
+    message = 'Deseja continuar?',
+    confirmLabel = 'Confirmar',
+    cancelLabel = 'Cancelar',
+    danger = false,
+    onConfirm,
+  }) {
+    this.closeSubModal();
+
+    const subOverlay = document.createElement('div');
+    subOverlay.className = 'bb-modal-overlay fade-in';
+    subOverlay.style.zIndex = '10100';
+
+    subOverlay.innerHTML = `
+      <div class="bb-modal-dialog" style="max-width: 440px; width: 92%;">
+        <header class="bb-modal-header" style="background: #001B3D; border-bottom: 3px solid ${danger ? '#EF4444' : '#FED304'}; padding: 14px 18px;">
+          <div class="bb-modal-header-brand">
+            <h3 class="bb-modal-title" style="font-size: 15px; color: #FFFFFF;">${escapeHtml(title)}</h3>
+          </div>
+          <button class="bb-modal-close-btn" id="btnCloseConfirmSub" title="Fechar">✕</button>
+        </header>
+        <div style="padding: 20px; font-size: 13.5px; color: #334155; line-height: 1.55;">
+          ${escapeHtml(message)}
+        </div>
+        <footer class="bb-modal-footer" style="padding: 12px 18px; justify-content: flex-end; gap: 10px; background: #F8FAFC;">
+          <button type="button" class="btn-modal-cancel" id="btnCancelConfirmSub">${escapeHtml(cancelLabel)}</button>
+          <button type="button" class="btn-modal-confirm" id="btnOkConfirmSub" style="background: ${danger ? '#DC2626' : '#002D62'}; color: #FFFFFF; padding: 8px 18px; border-radius: 6px; font-weight: 700; cursor: pointer;">
+            ${escapeHtml(confirmLabel)}
+          </button>
+        </footer>
+      </div>
+    `;
+
+    document.body.appendChild(subOverlay);
+    this.secondaryModal = subOverlay;
+
+    const closeIt = () => this.closeSubModal();
+    subOverlay.querySelector('#btnCloseConfirmSub').addEventListener('click', closeIt);
+    subOverlay.querySelector('#btnCancelConfirmSub').addEventListener('click', closeIt);
+    subOverlay.addEventListener('click', (e) => {
+      if (e.target === subOverlay) closeIt();
+    });
+    subOverlay.querySelector('#btnOkConfirmSub').addEventListener('click', async () => {
+      closeIt();
+      if (typeof onConfirm === 'function') {
+        await onConfirm();
+      }
+    });
+  }
+
+  /**
+   * Visualizador de PDF oficial
    */
   openPdfViewer({ title = 'Relatório Oficial de Fiscalização', pdfUrl, codigo = '', hash = '' }) {
     this.close();
@@ -66,7 +119,7 @@ class BBVisionModal {
         </div>
 
         <footer class="bb-modal-footer">
-          <span class="bb-security-seal">Documento inviolável com carimbo temporal ICP-Brasil / Banco do Brasil S.A.</span>
+          <span class="bb-security-seal">Documento inviolável com carimbo temporal e integridade SHA-256.</span>
           <button class="btn-modal-close" id="btnDismissPdfModal">Fechar Visualizador</button>
         </footer>
       </div>
@@ -84,13 +137,13 @@ class BBVisionModal {
   }
 
   /**
-   * Abre o modal de Parecer Técnico para Fiscal Mariana
+   * Modal de Parecer Técnico para Fiscal de Obra
    */
   openParecerFiscal({ obraNome, initialDecision = 'APROVADO', onConfirm }) {
     this.close();
 
     const isReprovarInicial = initialDecision === 'REPROVADO';
-    const safeObraNome = escapeHtml(obraNome || 'Unidade BB');
+    const safeObraNome = escapeHtml(obraNome || 'Obra Cadastrada');
 
     const overlay = document.createElement('div');
     overlay.className = 'bb-modal-overlay fade-in';
@@ -103,7 +156,7 @@ class BBVisionModal {
             <span class="bb-stamp-icon" style="display:inline-flex; align-items:center; color:#FED304;">${Icons.gavelAuditoria(22, '#FED304')}</span>
             <div>
               <h3 class="bb-modal-title">Emitir Parecer Técnico de Auditoria</h3>
-              <span class="bb-modal-subtitle">${safeObraNome} — Fiscalização BB</span>
+              <span class="bb-modal-subtitle">${safeObraNome} — Fiscalização de Obra</span>
             </div>
           </div>
           <button class="bb-modal-close-btn" id="btnCloseParecerModal">✕</button>
@@ -112,7 +165,7 @@ class BBVisionModal {
         <div class="bb-parecer-content">
           <p class="parecer-desc">
             Selecione a decisão de homologação da vistoria. Caso aponte inconsistências, 
-            a obra entrará em status <strong>PENDENTE_AJUSTE</strong> e a empreiteira será notificada.
+            a obra entrará em status <strong>PENDENTE_AJUSTE</strong> para regularização pela empreiteira.
           </p>
 
           <div class="parecer-type-select">
@@ -120,7 +173,7 @@ class BBVisionModal {
               <input type="radio" name="decisaoFiscal" value="APROVADO" ${!isReprovarInicial ? 'checked' : ''} />
               <div class="opt-body">
                 <strong>Aprovar Vistoria (Obra REGULAR)</strong>
-                <span>Todos os itens do checklist e fotos atendem aos requisitos do Banco do Brasil.</span>
+                <span>Todos os itens do checklist e evidências fotográficas atendem aos requisitos técnicos.</span>
               </div>
             </label>
 
@@ -152,17 +205,12 @@ class BBVisionModal {
     const optAprovar = overlay.querySelector('#optAprovar');
     const optReprovar = overlay.querySelector('#optReprovar');
     const txtJustificativa = overlay.querySelector('#txtJustificativaFiscal');
-    const msgAprovarPadrao = 'Vistoria aprovada. Fachada e estruturas em total conformidade com os manuais de arquitetura do Banco do Brasil.';
-    const msgReprovarPadrao = 'Identificada inconformidade nos itens vistoriados. Necessário realizar ajustes técnicos e nova captura com luz natural uniforme.';
 
     optAprovar.addEventListener('click', () => {
       optAprovar.classList.add('selected');
       optReprovar.classList.remove('selected');
       const r = optAprovar.querySelector('input');
       if (r) r.checked = true;
-      if (!txtJustificativa.value || txtJustificativa.value === msgReprovarPadrao) {
-        txtJustificativa.value = msgAprovarPadrao;
-      }
     });
 
     optReprovar.addEventListener('click', () => {
@@ -170,12 +218,7 @@ class BBVisionModal {
       optAprovar.classList.remove('selected');
       const r = optReprovar.querySelector('input');
       if (r) r.checked = true;
-      if (!txtJustificativa.value || txtJustificativa.value === msgAprovarPadrao) {
-        txtJustificativa.value = msgReprovarPadrao;
-      }
     });
-
-    txtJustificativa.value = isReprovarInicial ? msgReprovarPadrao : msgAprovarPadrao;
 
     const closeHandler = () => this.close();
     overlay.querySelector('#btnCloseParecerModal').addEventListener('click', closeHandler);
@@ -184,6 +227,11 @@ class BBVisionModal {
     overlay.querySelector('#btnConfirmarParecer').addEventListener('click', () => {
       const selectedDecision = overlay.querySelector('input[name="decisaoFiscal"]:checked').value;
       const justificativa = txtJustificativa.value.trim();
+      if (selectedDecision === 'REPROVADO' && justificativa.length < 5) {
+        toast.warning('Justificativa Obrigatória', 'Descreva os ajustes técnicos necessários antes de reprovar a vistoria.');
+        txtJustificativa.focus();
+        return;
+      }
       this.close();
       if (typeof onConfirm === 'function') {
         onConfirm(selectedDecision, justificativa);
@@ -192,14 +240,14 @@ class BBVisionModal {
   }
 
   /**
-   * Abre diálogo profissional de confirmação de encerramento de sessão (Log-out)
+   * Diálogo de confirmação de encerramento de sessão
    */
   confirmLogout({ user, onConfirm }) {
     this.close();
 
     const userName = escapeHtml(user?.nome || 'Usuário Autenticado');
     const isFiscal = user?.cargo === 'fiscal';
-    const cargoLabel = isFiscal ? 'Fiscalização e Engenharia BB' : 'Empreiteira de Campo & Vistorias';
+    const cargoLabel = isFiscal ? 'Fiscalização e Engenharia' : 'Empreiteira de Campo & Vistorias';
     const avatarSvg = isFiscal ? Icons.perfilBb(44) : Icons.perfilObras(44);
 
     const overlay = document.createElement('div');
@@ -215,30 +263,28 @@ class BBVisionModal {
             </span>
             <div>
               <h3 class="bb-modal-title" style="color: #FFFFFF; font-size: 16px;">Encerrar Sessão do BBVision</h3>
-              <span class="bb-modal-subtitle" style="color: #94A3B8;">Desconexão segura de usuário corporativo</span>
+              <span class="bb-modal-subtitle" style="color: #94A3B8;">Desconexão segura de usuário</span>
             </div>
           </div>
           <button class="bb-modal-close-btn" id="btnCloseLogoutModal" title="Fechar">✕</button>
         </header>
 
         <div style="padding: 22px 20px; display: flex; flex-direction: column; gap: 16px;">
-          <!-- Card de identificação do usuário logado -->
           <div style="display: flex; align-items: center; gap: 14px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px 14px;">
             <div style="display:flex; align-items:center; flex-shrink:0;">${avatarSvg}</div>
             <div style="display: flex; flex-direction: column;">
               <strong style="color: #0F172A; font-size: 14px; font-weight: 700;">${userName}</strong>
               <span style="color: #002D62; font-size: 12px; font-weight: 600;">${cargoLabel}</span>
-              <span style="color: #64748B; font-size: 11px;">${escapeHtml(user?.email || 'usuario@bbvision.com.br')}</span>
+              <span style="color: #64748B; font-size: 11px;">${escapeHtml(user?.email || '')}</span>
             </div>
           </div>
 
           <p style="color: #334155; font-size: 13.5px; line-height: 1.55; margin: 0;">
-            Tem certeza de que deseja sair da sua conta? Para voltar a fiscalizar obras, capturar fotos com IA ou homologar laudos, será necessário informar suas credenciais de acesso novamente.
+            Tem certeza de que deseja sair da sua conta? Para retornar às suas obras, vistorias e relatórios, será necessário autenticar-se novamente.
           </p>
 
-          <!-- Aviso de segurança de dados em campo / contingência -->
           <div style="background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10B981; padding: 10px 14px; border-radius: 6px; font-size: 12px; color: #065F46; line-height: 1.45;">
-            <strong>Garantia de Integridade:</strong> Vistorias concluídas, relatórios bloqueados e dados salvos em contingência offline permanecem preservados com segurança neste dispositivo.
+            <strong>Garantia de Integridade:</strong> Vistorias concluídas e eventuais registros aguardando sincronização offline permanecem preservados.
           </div>
         </div>
 
@@ -272,9 +318,6 @@ class BBVisionModal {
     });
   }
 
-  /**
-   * Fecha o submodal secundário (usado pelo editor de perguntas)
-   */
   closeSubModal() {
     if (this.secondaryModal && this.secondaryModal.parentNode) {
       this.secondaryModal.parentNode.removeChild(this.secondaryModal);
@@ -283,39 +326,40 @@ class BBVisionModal {
   }
 
   /**
-   * Abre modal para criar ou editar uma pergunta técnica do checklist
+   * Modal para criar ou editar uma pergunta técnica do checklist
    */
   openEditarPerguntaModal({ pergunta = null, index = null, onSave }) {
     this.closeSubModal();
 
-    const isEdit = !!pergunta;
+    const isEdit = Boolean(pergunta);
     const initialTitulo = pergunta?.titulo || '';
     const initialSubtitulo = pergunta?.subtitulo || '';
     const initialTipo = pergunta?.tipo || 'multipla_escolha';
 
-    // Clona opções ou usa padrão para tipo
     let localOpcoes = [];
     if (pergunta && Array.isArray(pergunta.opcoes)) {
       localOpcoes = JSON.parse(JSON.stringify(pergunta.opcoes));
     } else if (initialTipo === 'multipla_escolha') {
       localOpcoes = [
-        { valor: 'Sim', label: 'Sim (Conforme)', detalhe: 'Atende integralmente aos manuais do Banco do Brasil', tag: 'Conforme', classeTag: 'tag-conforme' },
+        { valor: 'Sim', label: 'Sim (Conforme)', detalhe: 'Atende integralmente aos requisitos técnicos', tag: 'Conforme', classeTag: 'tag-conforme' },
         { valor: 'Parcial', label: 'Parcial (Ressalva)', detalhe: 'Atendimento parcial com acompanhamento técnico', tag: 'Atenção', classeTag: 'tag-atencao' },
-        { valor: 'Não', label: 'Não (Inconforme)', detalhe: 'Não atende aos requisitos mínimos do padrão BB', tag: 'Não Conforme', classeTag: 'tag-erro' }
+        { valor: 'Não', label: 'Não (Inconforme)', detalhe: 'Não atende aos requisitos mínimos', tag: 'Não Conforme', classeTag: 'tag-erro' },
       ];
     } else if (initialTipo === 'caixa') {
       localOpcoes = [
-        { valor: 'Isolamento perimetral e tapumes íntegros', label: 'Isolamento perimetral e tapumes íntegros', detalhe: 'Canteiro devidamente fechado sem brechas' },
+        { valor: 'Isolamento perimetral e tapumes íntegros', label: 'Isolamento perimetral e tapumes íntegros', detalhe: 'Canteiro fechado sem brechas' },
         { valor: 'Sinalização visual de perigo ativa', label: 'Sinalização visual de perigo ativa', detalhe: 'Placas e avisos de segurança montados' },
-        { valor: 'Uso obrigatório de EPIs completos', label: 'Uso obrigatório de EPIs completos', detalhe: 'Equipe utilizando capacetes e botas' }
+        { valor: 'Uso obrigatório de EPIs completos', label: 'Uso obrigatório de EPIs completos', detalhe: 'Equipe utilizando equipamentos obrigatórios' },
       ];
     }
 
-    let localChips = Array.isArray(pergunta?.chipsRapidos) ? [...pergunta.chipsRapidos] : [
-      'Alvenaria aprumada e nivelada',
-      'Ausência de trincas estruturais',
-      'Instalações embutidas conforme projeto BB'
-    ];
+    let localChips = Array.isArray(pergunta?.chipsRapidos)
+      ? [...pergunta.chipsRapidos]
+      : [
+          'Alvenaria aprumada e nivelada',
+          'Ausência de trincas estruturais',
+          'Instalações embutidas conforme projeto',
+        ];
 
     const subOverlay = document.createElement('div');
     subOverlay.className = 'bb-modal-overlay fade-in';
@@ -328,16 +372,15 @@ class BBVisionModal {
           <div class="bb-modal-header-brand">
             <div>
               <h3 class="bb-modal-title" style="font-size: 15px; color: #FFFFFF;">
-                ${isEdit ? `Editar Pergunta ${(index !== null ? '#' + (index + 1) : '')}` : 'Nova Pergunta Técnica do Checklist'}
+                ${isEdit ? `Editar Pergunta ${index !== null ? '#' + (index + 1) : ''}` : 'Nova Pergunta Técnica do Checklist'}
               </h3>
-              <span class="bb-modal-subtitle" style="color: #CBD5E1;">Configuração de item de vistoria técnica do Banco do Brasil</span>
+              <span class="bb-modal-subtitle" style="color: #CBD5E1;">Configuração de item de vistoria técnica</span>
             </div>
           </div>
           <button class="bb-modal-close-btn" id="btnCloseSubModal" title="Fechar">✕</button>
         </header>
 
         <form id="formEditarPergunta" style="display: flex; flex-direction: column; overflow-y: auto; max-height: calc(85vh - 120px); padding: 18px 20px; gap: 14px;">
-          <!-- Campo 1: Título / Enunciado -->
           <div class="form-group-field" style="display: flex; flex-direction: column; gap: 5px;">
             <label for="txtPerguntaTitulo" style="font-size: 12.5px; font-weight: 700; color: #002D62;">
               Enunciado da Pergunta <span style="color: #DC2626;">*</span>
@@ -346,30 +389,28 @@ class BBVisionModal {
               type="text" 
               id="txtPerguntaTitulo" 
               class="form-control-input" 
-              placeholder="Ex: A fachada da agência está legível e conforme padrão BB?" 
-              value="${initialTitulo.replace(/"/g, '&quot;')}"
+              placeholder="Digite o enunciado da pergunta de vistoria" 
+              value="${escapeHtml(initialTitulo)}"
               required 
               style="padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13.5px; outline: none;"
             />
           </div>
 
-          <!-- Campo 2: Orientações Técnicas / Subtítulo -->
           <div class="form-group-field" style="display: flex; flex-direction: column; gap: 5px;">
             <label for="txtPerguntaSubtitulo" style="font-size: 12.5px; font-weight: 700; color: #002D62;">
-              Orientações Técnicas ao Vistoriador (Subtítulo explicativo)
+              Orientações Técnicas ao Vistoriador
             </label>
             <textarea 
               id="txtPerguntaSubtitulo" 
               rows="2" 
-              placeholder="Ex: Verifique a visibilidade da marca, totem institucional e desobstrução visual frontal..." 
+              placeholder="Descreva critérios de avaliação para orientar o responsável em campo..." 
               style="padding: 9px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13px; outline: none; resize: vertical;"
-            >${initialSubtitulo}</textarea>
+            >${escapeHtml(initialSubtitulo)}</textarea>
           </div>
 
-          <!-- Campo 3: Tipo de Resposta -->
           <div class="form-group-field" style="display: flex; flex-direction: column; gap: 5px;">
             <label for="selPerguntaTipo" style="font-size: 12.5px; font-weight: 700; color: #002D62;">
-              Formato de Resposta no Canteiro de Obras <span style="color: #DC2626;">*</span>
+              Formato de Resposta no Canteiro <span style="color: #DC2626;">*</span>
             </label>
             <select 
               id="selPerguntaTipo" 
@@ -377,19 +418,12 @@ class BBVisionModal {
               style="padding: 9px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13px; background: #FFFFFF; outline: none;"
             >
               <option value="multipla_escolha" ${initialTipo === 'multipla_escolha' ? 'selected' : ''}>Múltipla Escolha (Opção única com avaliação de conformidade)</option>
-              <option value="caixa" ${initialTipo === 'caixa' ? 'selected' : ''}>Caixas de Seleção (Múltiplas opções cumulativas de checklist)</option>
+              <option value="caixa" ${initialTipo === 'caixa' ? 'selected' : ''}>Caixas de Seleção (Múltiplas opções cumulativas)</option>
               <option value="texto" ${initialTipo === 'texto' ? 'selected' : ''}>Campo de Texto Descritivo (Relato livre com chips sugestivos)</option>
             </select>
           </div>
 
-          <!-- Seção Dinâmica de Opções / Itens -->
-          <div id="secaoOpcoesPergunta" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px;">
-            <!-- Renderizado dinamicamente via JS -->
-          </div>
-
-          <div style="background: rgba(0, 45, 98, 0.04); border-left: 3px solid #002D62; padding: 8px 12px; border-radius: 4px; font-size: 11.5px; color: #475569;">
-            <strong>Diretriz BB:</strong> Esta pergunta será apresentada diretamente à empreiteira durante o checklist de vistoria in-loco da obra.
-          </div>
+          <div id="secaoOpcoesPergunta" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px;"></div>
 
           <footer class="bb-modal-footer" style="padding: 12px 0 0 0; background: transparent; border-top: 1px solid #E2E8F0; display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px;">
             <button type="button" class="btn-modal-cancel" id="btnCancelSubModal" style="padding: 8px 16px; font-size: 12.5px; font-weight: 600;">
@@ -440,7 +474,7 @@ class BBVisionModal {
                     type="text" 
                     class="txt-opcao-item" 
                     data-op-idx="${opIdx}" 
-                    value="${label.replace(/"/g, '&quot;')}" 
+                    value="${escapeHtml(label)}" 
                     placeholder="Texto da opção..." 
                     style="flex: 1; border: none; font-size: 12.5px; outline: none; background: transparent;"
                   />
@@ -472,7 +506,6 @@ class BBVisionModal {
           </div>
         `;
 
-        // Eventos das opções
         secaoOpcoes.querySelectorAll('.txt-opcao-item').forEach(inp => {
           inp.addEventListener('input', (e) => {
             const idx = parseInt(e.target.getAttribute('data-op-idx'), 10);
@@ -490,7 +523,12 @@ class BBVisionModal {
             const idx = parseInt(e.target.getAttribute('data-op-idx'), 10);
             if (typeof localOpcoes[idx] === 'object') {
               localOpcoes[idx].tag = e.target.value;
-              localOpcoes[idx].classeTag = e.target.value === 'Conforme' ? 'tag-conforme' : (e.target.value === 'Atenção' ? 'tag-atencao' : 'tag-erro');
+              localOpcoes[idx].classeTag =
+                e.target.value === 'Conforme'
+                  ? 'tag-conforme'
+                  : e.target.value === 'Atenção'
+                  ? 'tag-atencao'
+                  : 'tag-erro';
             }
           });
         });
@@ -499,7 +537,7 @@ class BBVisionModal {
           btn.addEventListener('click', () => {
             const idx = parseInt(btn.getAttribute('data-op-idx'), 10);
             if (localOpcoes.length <= 2) {
-              alert('A pergunta deve conter ao menos duas opções de resposta.');
+              toast.warning('Mínimo de Opções', 'A pergunta deve conter ao menos duas opções de resposta.');
               return;
             }
             localOpcoes.splice(idx, 1);
@@ -517,7 +555,7 @@ class BBVisionModal {
             label: val,
             detalhe: 'Item de verificação técnica',
             tag: 'Conforme',
-            classeTag: 'tag-conforme'
+            classeTag: 'tag-conforme',
           });
           txtNovaOp.value = '';
           renderOpcoesSection();
@@ -530,17 +568,15 @@ class BBVisionModal {
             handleAddOpcao();
           }
         });
-
       } else {
-        // Tipo Texto
         secaoOpcoes.innerHTML = `
           <label style="font-size: 12px; font-weight: 700; color: #002D62;">
-            Sugestões Técnicas Rápidas (Chips para preenchimento ágil no canteiro)
+            Sugestões Técnicas Rápidas (Chips para preenchimento ágil)
           </label>
           <div style="display: flex; flex-wrap: wrap; gap: 6px;" id="containerChipsTexto">
             ${localChips.map((chip, cIdx) => `
               <span style="font-size: 11px; padding: 4px 8px; background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 999px; color: #334155; display: inline-flex; align-items: center; gap: 6px;">
-                ${chip}
+                ${escapeHtml(chip)}
                 <button type="button" class="btn-remove-chip" data-chip-idx="${cIdx}" style="background: none; border: none; color: #DC2626; cursor: pointer; padding: 0; font-size: 11px;">✕</button>
               </span>
             `).join('')}
@@ -549,7 +585,7 @@ class BBVisionModal {
             <input 
               type="text" 
               id="txtNovoChipInput" 
-              placeholder="Digite sugestão técnica (ex: Prumo regular)..." 
+              placeholder="Digite sugestão técnica..." 
               style="flex: 1; padding: 6px 10px; font-size: 12px; border: 1.5px solid #CBD5E1; border-radius: 6px; outline: none;"
             />
             <button type="button" id="btnAddChipBtn" style="background: #002D62; color: #FFFFFF; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer;">
@@ -592,12 +628,12 @@ class BBVisionModal {
         localOpcoes = [
           { valor: 'Sim', label: 'Sim (Conforme)', detalhe: 'Atende aos critérios', tag: 'Conforme', classeTag: 'tag-conforme' },
           { valor: 'Parcial', label: 'Parcial (Ressalva)', detalhe: 'Com pendências leves', tag: 'Atenção', classeTag: 'tag-atencao' },
-          { valor: 'Não', label: 'Não (Inconforme)', detalhe: 'Não atende', tag: 'Não Conforme', classeTag: 'tag-erro' }
+          { valor: 'Não', label: 'Não (Inconforme)', detalhe: 'Não atende', tag: 'Não Conforme', classeTag: 'tag-erro' },
         ];
       } else if (novoTipo === 'caixa' && (!localOpcoes || localOpcoes.length === 0)) {
         localOpcoes = [
           { valor: 'Item 1 verificado', label: 'Item 1 verificado', detalhe: 'Conforme' },
-          { valor: 'Item 2 em conformidade', label: 'Item 2 em conformidade', detalhe: 'Conforme' }
+          { valor: 'Item 2 em conformidade', label: 'Item 2 em conformidade', detalhe: 'Conforme' },
         ];
       }
       renderOpcoesSection();
@@ -613,17 +649,16 @@ class BBVisionModal {
       const tipo = selTipo.value;
 
       if (!titulo) {
-        alert('Por favor, informe o enunciado da pergunta.');
+        toast.warning('Campo Obrigatório', 'Informe o enunciado da pergunta.');
         return;
       }
 
       if ((tipo === 'multipla_escolha' || tipo === 'caixa') && localOpcoes.length < 2) {
-        alert('Por favor, informe ao menos 2 opções de resposta.');
+        toast.warning('Mínimo de Opções', 'Informe ao menos 2 opções de resposta.');
         return;
       }
 
       const tipoLabel = tipo === 'multipla_escolha' ? 'Múltipla Escolha' : (tipo === 'caixa' ? 'Caixas de Seleção' : 'Campo de Texto Descritivo');
-      const tipoIcon = '';
       const chaveResposta = pergunta?.chaveResposta || pergunta?.id || `perg_${Date.now()}`;
 
       const perguntaEditada = {
@@ -632,16 +667,14 @@ class BBVisionModal {
         numero: index !== null ? index + 1 : (pergunta?.numero || 1),
         tipo,
         tipoLabel,
-        tipoIcon,
+        tipoIcon: '',
         titulo,
         subtitulo,
         chaveResposta,
-        padrao: tipo === 'multipla_escolha' 
-          ? (localOpcoes[0]?.valor || 'Sim') 
-          : (tipo === 'caixa' ? [localOpcoes[0]?.valor || 'Item 1'] : 'Execução conforme projeto BB.'),
+        padrao: tipo === 'caixa' ? [] : '',
         opcoes: (tipo === 'multipla_escolha' || tipo === 'caixa') ? localOpcoes : undefined,
         chipsRapidos: tipo === 'texto' ? localChips : undefined,
-        placeholder: tipo === 'texto' ? (pergunta?.placeholder || 'Digite observações técnicas...') : undefined
+        placeholder: tipo === 'texto' ? (pergunta?.placeholder || 'Digite observações técnicas relevantes...') : undefined,
       };
 
       if (typeof onSave === 'function') {
@@ -653,22 +686,29 @@ class BBVisionModal {
   }
 
   /**
-   * Abre formulário corporativo para o Fiscal de Obras cadastrar nova obra
-   * Exclusivo para Fiscais de Obra / Engenharia do Banco do Brasil
-   * Inclui visualização, edição, adição e remoção de perguntas do checklist desta obra
+   * Modal para cadastro de Nova Obra (Exclusivo para Fiscais)
+   * Usa empreiteiras REAIS cadastradas no sistema.
    */
-  openNovaObraModal({ fiscalUser, onSave }) {
+  openNovaObraModal({ fiscalUser, empreiteiras = [], onSave }) {
     this.close();
 
-    const fiscalNome = fiscalUser?.nome || 'Mariana Vasconcelos';
-    const fiscalMatricula = fiscalUser?.registro_profissional || 'Matrícula BB 459812-X';
+    const fiscalNome = fiscalUser?.nome || 'Fiscal de Obra';
+    const fiscalRegistro = fiscalUser?.registro_profissional ? ` (${fiscalUser.registro_profissional})` : '';
+    const listaEmpreiteiras = Array.isArray(empreiteiras) ? empreiteiras : [];
 
-    // Copia do checklist padrão para customização desta obra
     let perguntasObra = JSON.parse(JSON.stringify(state.checklistTemplate || PERGUNTAS_PADRAO_BB));
 
     const overlay = document.createElement('div');
     overlay.className = 'bb-modal-overlay fade-in';
     overlay.id = 'bbNovaObraModalOverlay';
+
+    const opcoesEmpreiteirasHtml = [
+      `<option value="">A definir (vincular posteriormente)</option>`,
+      ...listaEmpreiteiras.map(emp => {
+        const labelEmpresa = emp.empresa ? ` — ${emp.empresa}` : '';
+        return `<option value="${escapeHtml(emp.id)}" data-nome="${escapeHtml(emp.nome)}">${escapeHtml(emp.nome)}${escapeHtml(labelEmpresa)}</option>`;
+      }),
+    ].join('');
 
     overlay.innerHTML = `
       <div class="bb-modal-dialog bb-nova-obra-dialog" style="max-width: 640px; width: 95%;">
@@ -678,8 +718,8 @@ class BBVisionModal {
               ${Icons.iconeCadastro(22, '#FED304')}
             </span>
             <div>
-              <h3 class="bb-modal-title" style="color: #FFFFFF; font-size: 16px;">Cadastrar Nova Obra BB</h3>
-              <span class="bb-modal-subtitle" style="color: #94A3B8;">Credenciamento, Atribuição e Checklist Técnico • Banco do Brasil S.A.</span>
+              <h3 class="bb-modal-title" style="color: #FFFFFF; font-size: 16px;">Cadastrar Nova Obra</h3>
+              <span class="bb-modal-subtitle" style="color: #94A3B8;">Credenciamento, Vínculo de Empreiteira e Checklist Técnico</span>
             </div>
           </div>
           <button class="bb-modal-close-btn" id="btnCloseNovaObraModal" title="Fechar">✕</button>
@@ -687,30 +727,25 @@ class BBVisionModal {
 
         <form id="formNovaObra" style="display: flex; flex-direction: column; overflow-y: auto; max-height: calc(85vh - 130px);">
           <div style="padding: 20px 22px; display: flex; flex-direction: column; gap: 16px;">
-            <!-- Badge de fiscal responsável cadastrador -->
-            <div style="background: #F1F5F9; border-left: 3px solid #002D62; padding: 10px 14px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
-              <span style="color: #002D62; font-weight: 700;">
-                Fiscal Cadastrador(a):
-              </span>
-              <span style="color: #334155; font-weight: 600;">${escapeHtml(fiscalNome)} (${escapeHtml(fiscalMatricula)})</span>
+            <div style="background: #F1F5F9; border-left: 3px solid #002D62; padding: 10px 14px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; gap: 8px; flex-wrap: wrap;">
+              <span style="color: #002D62; font-weight: 700;">Fiscal Cadastrador(a):</span>
+              <span style="color: #334155; font-weight: 600;">${escapeHtml(fiscalNome)}${escapeHtml(fiscalRegistro)}</span>
             </div>
 
-            <!-- Campo 1: Nome da Obra / Agência -->
             <div class="form-group-field" style="display: flex; flex-direction: column; gap: 6px;">
               <label for="txtNomeObra" style="font-size: 12.5px; font-weight: 700; color: #002D62;">
-                Nome da Obra / Unidade BB <span style="color: #DC2626;">*</span>
+                Nome da Obra / Unidade <span style="color: #DC2626;">*</span>
               </label>
               <input 
                 type="text" 
                 id="txtNomeObra" 
                 class="form-control-input" 
-                placeholder="Ex: Agência Centro Histórico (Reforma e Modernização)" 
+                placeholder="Informe o nome da agência, prédio ou unidade" 
                 required 
-                style="padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13.5px; outline: none; transition: border-color 0.2s;"
+                style="padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13.5px; outline: none;"
               />
             </div>
 
-            <!-- Campo 2: Tipo de Obra -->
             <div class="form-group-field" style="display: flex; flex-direction: column; gap: 6px;">
               <label for="selTipoObra" style="font-size: 12.5px; font-weight: 700; color: #002D62;">
                 Tipo de Intervenção Técnica <span style="color: #DC2626;">*</span>
@@ -729,7 +764,6 @@ class BBVisionModal {
               </select>
             </div>
 
-            <!-- Campo 3: Endereço Completo -->
             <div class="form-group-field" style="display: flex; flex-direction: column; gap: 6px;">
               <label for="txtEnderecoObra" style="font-size: 12.5px; font-weight: 700; color: #002D62;">
                 Endereço Completo da Unidade <span style="color: #DC2626;">*</span>
@@ -738,63 +772,56 @@ class BBVisionModal {
                 type="text" 
                 id="txtEnderecoObra" 
                 class="form-control-input" 
-                placeholder="Ex: Av. Rio Branco, 240 - Bairro do Recife, Recife/PE" 
+                placeholder="Logradouro, número, bairro, cidade/UF" 
                 required 
                 style="padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13.5px; outline: none;"
               />
             </div>
 
-            <!-- Campo 4: Empreiteira Designada (1:N) & Responsável -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
               <div class="form-group-field" style="display: flex; flex-direction: column; gap: 6px;">
                 <label for="selEmpreiteira" style="font-size: 12.5px; font-weight: 700; color: #002D62;">
-                  Empreiteira Designada <span style="color: #DC2626;">*</span>
+                  Empreiteira Designada
                 </label>
                 <select 
                   id="selEmpreiteira" 
                   class="form-control-input"
-                  style="padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13.5px; background: #FFFFFF; outline: none;"
+                  style="padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13px; background: #FFFFFF; outline: none;"
                 >
-                  <option value="11111111-1111-4111-8111-111111111111" selected>Silva Engenharia (Rodrigo)</option>
-                  <option value="33333333-3333-4333-8333-333333333333">Consórcio Construtor Brasil</option>
-                  <option value="55555555-5555-4555-8555-555555555555">Aliança Reformas Prediais</option>
+                  ${opcoesEmpreiteirasHtml}
                 </select>
+                ${listaEmpreiteiras.length === 0 ? `<span style="font-size: 11px; color: #64748B;">Nenhuma empreiteira cadastrada ainda. Você poderá vincular depois em Editar Obra.</span>` : ''}
               </div>
 
-              <!-- Campo 5: Responsável Técnico da Empreiteira -->
               <div class="form-group-field" style="display: flex; flex-direction: column; gap: 6px;">
                 <label for="txtResponsavelObra" style="font-size: 12.5px; font-weight: 700; color: #002D62;">
-                  Engenheiro de Campo <span style="color: #DC2626;">*</span>
+                  Responsável Técnico de Campo
                 </label>
                 <input 
                   type="text" 
                   id="txtResponsavelObra" 
                   class="form-control-input" 
-                  value="Rodrigo Silva" 
-                  required 
+                  placeholder="Nome do engenheiro ou responsável" 
+                  value="" 
                   style="padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13.5px; outline: none;"
                 />
               </div>
             </div>
 
-            <!-- Campo 6: Status Inicial -->
             <div class="form-group-field" style="display: flex; flex-direction: column; gap: 6px;">
               <label for="selStatusInicial" style="font-size: 12.5px; font-weight: 700; color: #002D62;">
-                Status Inicial no Radar de Fiscalização
+                Status Inicial
               </label>
               <select 
                 id="selStatusInicial" 
                 class="form-control-input"
                 style="padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13.5px; background: #FFFFFF; outline: none;"
               >
-                <option value="REGULAR" selected>REGULAR — Aprovada para Vistorias</option>
+                <option value="REGULAR" selected>REGULAR — Liberada para Vistorias</option>
                 <option value="EM_ANDAMENTO">EM_ANDAMENTO — Mobilização Inicial</option>
               </select>
             </div>
 
-            <!-- ============================================================== -->
-            <!-- SEÇÃO DE GESTÃO DAS PERGUNTAS DO CHECKLIST DESTA OBRA -->
-            <!-- ============================================================== -->
             <div class="form-group-field" style="background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px;">
               <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
                 <div>
@@ -805,29 +832,21 @@ class BBVisionModal {
                     </span>
                   </div>
                   <p style="font-size: 11.5px; color: #64748B; margin: 3px 0 0 0;">
-                    O fiscal de obras pode editar, excluir ou adicionar perguntas que a empreiteira responderá no canteiro.
+                    Edite, exclua ou adicione perguntas que a empreiteira responderá no canteiro.
                   </p>
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 6px;">
-                  <button type="button" id="btnRestaurarPerguntasNovaObra" title="Restaurar Perguntas Padrão BB" style="background: #FFFFFF; border: 1px solid #CBD5E1; color: #475569; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 600; cursor: pointer;">
+                  <button type="button" id="btnRestaurarPerguntasNovaObra" style="background: #FFFFFF; border: 1px solid #CBD5E1; color: #475569; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 600; cursor: pointer;">
                     Padrão BB
                   </button>
-                  <button type="button" id="btnAddPerguntaNovaObra" title="Adicionar Nova Pergunta" style="background: #002D62; color: #FED304; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; box-shadow: 0 1px 4px rgba(0,45,98,0.25);">
+                  <button type="button" id="btnAddPerguntaNovaObra" style="background: #002D62; color: #FED304; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer;">
                     + Nova Pergunta
                   </button>
                 </div>
               </div>
 
-              <!-- Lista Dinâmica de Perguntas -->
-              <div id="containerPerguntasNovaObra" style="display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; padding-right: 4px;">
-                <!-- Preenchido via renderPerguntasList() -->
-              </div>
-            </div>
-
-            <!-- Aviso de Governança e Regras de Negócio BB -->
-            <div style="background: rgba(0, 45, 98, 0.05); border: 1px dashed rgba(0, 45, 98, 0.25); border-radius: 8px; padding: 10px 14px; font-size: 11.5px; color: #475569; line-height: 1.45;">
-              <strong>Regra de Negócio:</strong> Conforme diretrizes oficiais do BB, a Empreiteira designada receberá esta obra automaticamente em sua lista para vistorias in-loco com o checklist configurado e IA.
+              <div id="containerPerguntasNovaObra" style="display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; padding-right: 4px;"></div>
             </div>
           </div>
 
@@ -835,7 +854,7 @@ class BBVisionModal {
             <button type="button" class="btn-modal-cancel" id="btnCancelNovaObra" style="padding: 9px 18px; font-size: 13px; font-weight: 600;">
               Cancelar
             </button>
-            <button type="submit" class="btn-modal-confirm" id="btnSubmitNovaObra" style="background: #002D62; color: #FFFFFF; padding: 9px 24px; font-size: 13px; font-weight: 700; border-radius: 6px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(0, 45, 98, 0.25);">
+            <button type="submit" class="btn-modal-confirm" id="btnSubmitNovaObra" style="background: #002D62; color: #FFFFFF; padding: 9px 24px; font-size: 13px; font-weight: 700; border-radius: 6px;">
               <span>Salvar e Cadastrar Obra</span>
             </button>
           </footer>
@@ -855,93 +874,41 @@ class BBVisionModal {
 
     const selEmpreiteira = overlay.querySelector('#selEmpreiteira');
     const txtResponsavel = overlay.querySelector('#txtResponsavelObra');
+
     selEmpreiteira.addEventListener('change', () => {
-      if (selEmpreiteira.value === '11111111-1111-4111-8111-111111111111') {
-        txtResponsavel.value = 'Rodrigo Silva';
-      } else if (selEmpreiteira.value === '33333333-3333-4333-8333-333333333333') {
-        txtResponsavel.value = 'Carlos Drummond';
-      } else {
-        txtResponsavel.value = 'Engenheiro Responsável';
+      const selectedOpt = selEmpreiteira.options[selEmpreiteira.selectedIndex];
+      const nomeEmp = selectedOpt?.getAttribute('data-nome') || '';
+      if (nomeEmp) {
+        txtResponsavel.value = nomeEmp;
       }
     });
 
-    // Função para renderizar a lista de perguntas dentro do modal de Nova Obra
     const renderPerguntasList = () => {
       const container = overlay.querySelector('#containerPerguntasNovaObra');
       const badgeCount = overlay.querySelector('#badgePerguntasNovaObraCount');
       if (badgeCount) badgeCount.textContent = `${perguntasObra.length} pergunta${perguntasObra.length !== 1 ? 's' : ''}`;
       if (!container) return;
 
-      if (perguntasObra.length === 0) {
-        container.innerHTML = `
-          <div style="text-align: center; padding: 20px 12px; background: #FFFFFF; border: 1.5px dashed #CBD5E1; border-radius: 8px; color: #64748B;">
-            <strong style="font-size: 13px; color: #1E293B;">Nenhuma pergunta configurada</strong>
-            <p style="font-size: 11.5px; margin: 4px 0 10px;">Adicione ao menos uma pergunta ou restaure o modelo padrão do Banco do Brasil.</p>
-            <button type="button" id="btnRestaurarVazio" style="background: #002D62; color: #FED304; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;">
-              Restaurar Padrão BB
-            </button>
-          </div>
-        `;
-        container.querySelector('#btnRestaurarVazio')?.addEventListener('click', () => {
-          perguntasObra = JSON.parse(JSON.stringify(PERGUNTAS_PADRAO_BB));
-          renderPerguntasList();
-        });
-        return;
-      }
-
       container.innerHTML = perguntasObra.map((p, idx) => {
         const tipoLabel = p.tipo === 'multipla_escolha' ? 'Múltipla Escolha' : (p.tipo === 'caixa' ? 'Caixas de Seleção' : 'Texto Descritivo');
-        const tipoTagStyle = p.tipo === 'multipla_escolha' 
-          ? 'background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE;' 
-          : (p.tipo === 'caixa' ? 'background: #F0FDF4; color: #15803D; border: 1px solid #BBF7D0;' : 'background: #FEF3C7; color: #B45309; border: 1px solid #FDE68A;');
-
-        let opcoesResumo = '';
-        if (Array.isArray(p.opcoes) && p.opcoes.length > 0) {
-          opcoesResumo = `
-            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;">
-              ${p.opcoes.map(op => {
-                const label = typeof op === 'string' ? op : (op.label || op.valor || '');
-                return `<span style="font-size: 10.5px; padding: 2px 7px; background: #F1F5F9; border-radius: 4px; color: #475569;">${escapeHtml(label)}</span>`;
-              }).join('')}
-            </div>
-          `;
-        } else if (p.tipo === 'texto') {
-          opcoesResumo = `<span style="font-size: 11px; color: #64748B; font-style: italic; margin-top: 2px; display: block;">Campo de texto com observações técnicas e chips rápidos</span>`;
-        }
-
         return `
-          <div class="pergunta-item-card" data-idx="${idx}" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+          <div class="pergunta-item-card" data-idx="${idx}" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 5px;">
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 6px;">
                 <span style="background: #002D62; color: #FFFFFF; font-weight: 800; font-size: 11px; padding: 2px 7px; border-radius: 4px;">#${idx + 1}</span>
-                <span style="font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; ${tipoTagStyle}">${tipoLabel}</span>
+                <span style="font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE;">${tipoLabel}</span>
               </div>
               <div style="display: flex; align-items: center; gap: 4px;">
-                <button type="button" class="btn-editar-pergunta-obra" data-idx="${idx}" title="Editar Pergunta" style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #002D62; padding: 3px 9px; border-radius: 5px; font-size: 11.5px; font-weight: 600; cursor: pointer;">
-                  Editar
-                </button>
-                <button type="button" class="btn-remover-pergunta-obra" data-idx="${idx}" title="Remover Pergunta" style="background: #FEE2E2; border: 1px solid #FECACA; color: #DC2626; padding: 3px 8px; border-radius: 5px; font-size: 11.5px; font-weight: 600; cursor: pointer;">
-                  Excluir
-                </button>
+                <button type="button" class="btn-editar-pergunta-obra" data-idx="${idx}" style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #002D62; padding: 3px 9px; border-radius: 5px; font-size: 11.5px; font-weight: 600; cursor: pointer;">Editar</button>
+                <button type="button" class="btn-remover-pergunta-obra" data-idx="${idx}" style="background: #FEE2E2; border: 1px solid #FECACA; color: #DC2626; padding: 3px 8px; border-radius: 5px; font-size: 11.5px; font-weight: 600; cursor: pointer;">Excluir</button>
               </div>
             </div>
-
-            <div style="font-size: 12.5px; font-weight: 700; color: #0F172A; line-height: 1.3;">
-              ${p.titulo}
-            </div>
-
-            ${p.subtitulo ? `
-              <div style="font-size: 11.5px; color: #64748B; line-height: 1.25;">
-                ${p.subtitulo}
-              </div>
-            ` : ''}
-
-            ${opcoesResumo}
+            <div style="font-size: 12.5px; font-weight: 700; color: #0F172A; line-height: 1.3;">${escapeHtml(p.titulo)}</div>
+            ${p.subtitulo ? `<div style="font-size: 11.5px; color: #64748B;">${escapeHtml(p.subtitulo)}</div>` : ''}
           </div>
         `;
       }).join('');
 
-      // Wire up botões de editar pergunta
       container.querySelectorAll('.btn-editar-pergunta-obra').forEach(btn => {
         btn.addEventListener('click', () => {
           const idx = parseInt(btn.getAttribute('data-idx'), 10);
@@ -951,57 +918,59 @@ class BBVisionModal {
             onSave: (perguntaEditada) => {
               perguntasObra[idx] = perguntaEditada;
               renderPerguntasList();
-            }
+            },
           });
         });
       });
 
-      // Wire up botões de remover pergunta
       container.querySelectorAll('.btn-remover-pergunta-obra').forEach(btn => {
         btn.addEventListener('click', () => {
           const idx = parseInt(btn.getAttribute('data-idx'), 10);
           if (perguntasObra.length <= 1) {
-            alert('O checklist da obra deve possuir ao menos 1 pergunta técnica.');
+            toast.warning('Mínimo Obrigatório', 'O checklist da obra deve possuir ao menos 1 pergunta técnica.');
             return;
           }
-          if (confirm(`Deseja remover a pergunta #${idx + 1} do checklist desta obra?`)) {
-            perguntasObra.splice(idx, 1);
-            perguntasObra.forEach((p, i) => p.numero = i + 1);
-            renderPerguntasList();
-          }
+          this.openConfirmDialog({
+            title: 'Remover Pergunta',
+            message: `Deseja remover a pergunta #${idx + 1} do checklist desta obra?`,
+            confirmLabel: 'Remover',
+            danger: true,
+            onConfirm: () => {
+              perguntasObra.splice(idx, 1);
+              perguntasObra.forEach((p, i) => { p.numero = i + 1; });
+              renderPerguntasList();
+            },
+          });
         });
       });
     };
 
     renderPerguntasList();
 
-    // Botão Adicionar Pergunta
-    const btnAddPergunta = overlay.querySelector('#btnAddPerguntaNovaObra');
-    if (btnAddPergunta) {
-      btnAddPergunta.addEventListener('click', () => {
-        this.openEditarPerguntaModal({
-          pergunta: null,
-          index: perguntasObra.length,
-          onSave: (novaPergunta) => {
-            novaPergunta.numero = perguntasObra.length + 1;
-            perguntasObra.push(novaPergunta);
-            renderPerguntasList();
-          }
-        });
+    overlay.querySelector('#btnAddPerguntaNovaObra')?.addEventListener('click', () => {
+      this.openEditarPerguntaModal({
+        pergunta: null,
+        index: perguntasObra.length,
+        onSave: (novaPergunta) => {
+          novaPergunta.numero = perguntasObra.length + 1;
+          perguntasObra.push(novaPergunta);
+          renderPerguntasList();
+        },
       });
-    }
+    });
 
-    // Botão Restaurar Padrão BB
-    const btnRestaurar = overlay.querySelector('#btnRestaurarPerguntasNovaObra');
-    if (btnRestaurar) {
-      btnRestaurar.addEventListener('click', () => {
-        if (confirm('Deseja restaurar as perguntas para o modelo oficial padrão do Banco do Brasil?')) {
+    overlay.querySelector('#btnRestaurarPerguntasNovaObra')?.addEventListener('click', () => {
+      this.openConfirmDialog({
+        title: 'Restaurar Padrão',
+        message: 'Deseja restaurar as perguntas para o modelo oficial padrão?',
+        confirmLabel: 'Restaurar',
+        onConfirm: () => {
           perguntasObra = JSON.parse(JSON.stringify(PERGUNTAS_PADRAO_BB));
           renderPerguntasList();
-          toast.info('Padrão Restaurado', 'As perguntas do checklist foram redefinidas para o modelo oficial do Banco do Brasil.');
-        }
+          toast.info('Padrão Restaurado', 'As perguntas foram redefinidas para o modelo oficial.');
+        },
       });
-    }
+    });
 
     const form = overlay.querySelector('#formNovaObra');
     form.addEventListener('submit', async (e) => {
@@ -1009,17 +978,17 @@ class BBVisionModal {
       const nome = overlay.querySelector('#txtNomeObra').value.trim();
       const endereco = overlay.querySelector('#txtEnderecoObra').value.trim();
       const tipo = overlay.querySelector('#selTipoObra').value;
-      const responsavel = txtResponsavel.value.trim() || 'Rodrigo Silva';
-      const empreiteira_id = selEmpreiteira.value;
+      const responsavel = txtResponsavel.value.trim();
+      const empreiteira_id = selEmpreiteira.value || null;
       const status = overlay.querySelector('#selStatusInicial').value;
 
       if (!nome || !endereco) {
-        alert('Por favor, preencha o nome e o endereço completo da obra.');
+        toast.warning('Campos Obrigatórios', 'Preencha o nome e o endereço completo da obra.');
         return;
       }
 
       if (!perguntasObra || perguntasObra.length === 0) {
-        alert('Por favor, defina ao menos 1 pergunta para o checklist técnico desta obra.');
+        toast.warning('Checklist Vazio', 'Defina ao menos 1 pergunta para o checklist técnico desta obra.');
         return;
       }
 
@@ -1037,38 +1006,161 @@ class BBVisionModal {
             empreiteira_id,
             status,
             perguntasChecklist: perguntasObra,
-            checklist_perguntas: perguntasObra
+            checklist_perguntas: perguntasObra,
           });
         }
         this.close();
       } catch (err) {
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = `<span>Salvar e Cadastrar Obra</span>`;
-        alert(`Erro ao cadastrar obra: ${err.message}`);
+        toast.error('Erro ao Cadastrar Obra', err.message || 'Falha ao salvar a obra.');
       }
     });
   }
 
   /**
-   * Abre o Gerenciador Central de Perguntas do Checklist
-   * Permite ao Fiscal Mariana visualizar, editar, reordenar, adicionar e excluir perguntas
-   * Pode operar sobre o template oficial BB ou sobre uma obra específica
+   * Modal para Editar Obra Existente e Vincular/Alterar Empreiteira (Exclusivo Fiscal)
+   */
+  openEditarObraModal({ obra, empreiteiras = [], onSave }) {
+    this.close();
+    if (!obra) return;
+
+    const listaEmpreiteiras = Array.isArray(empreiteiras) ? empreiteiras : [];
+    const opcoesEmpreiteirasHtml = [
+      `<option value="" ${!obra.empreiteira_id ? 'selected' : ''}>A definir (sem vínculo imediato)</option>`,
+      ...listaEmpreiteiras.map(emp => {
+        const sel = obra.empreiteira_id === emp.id ? 'selected' : '';
+        const labelEmpresa = emp.empresa ? ` — ${emp.empresa}` : '';
+        return `<option value="${escapeHtml(emp.id)}" data-nome="${escapeHtml(emp.nome)}" ${sel}>${escapeHtml(emp.nome)}${escapeHtml(labelEmpresa)}</option>`;
+      }),
+    ].join('');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'bb-modal-overlay fade-in';
+    overlay.id = 'bbEditarObraModalOverlay';
+
+    overlay.innerHTML = `
+      <div class="bb-modal-dialog" style="max-width: 560px; width: 95%;">
+        <header class="bb-modal-header" style="background: #001B3D; border-bottom: 3px solid #FED304; padding: 16px 20px;">
+          <div class="bb-modal-header-brand">
+            <span class="bb-stamp-icon" style="color: #FED304; display: flex; align-items: center;">
+              ${Icons.penAssinatura(20, '#FED304')}
+            </span>
+            <div>
+              <h3 class="bb-modal-title" style="color: #FFFFFF; font-size: 16px;">Editar Dados da Obra</h3>
+              <span class="bb-modal-subtitle" style="color: #94A3B8;">Atualização cadastral e vínculo de empreiteira</span>
+            </div>
+          </div>
+          <button class="bb-modal-close-btn" id="btnCloseEditarObra" title="Fechar">✕</button>
+        </header>
+
+        <form id="formEditarObra" style="display: flex; flex-direction: column; overflow-y: auto; max-height: calc(85vh - 120px);">
+          <div style="padding: 20px 22px; display: flex; flex-direction: column; gap: 14px;">
+            <div class="form-group-field" style="display: flex; flex-direction: column; gap: 5px;">
+              <label for="editNomeObra" style="font-size: 12.5px; font-weight: 700; color: #002D62;">Nome da Obra / Unidade *</label>
+              <input type="text" id="editNomeObra" value="${escapeHtml(obra.nome || '')}" required style="padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13.5px;" />
+            </div>
+
+            <div class="form-group-field" style="display: flex; flex-direction: column; gap: 5px;">
+              <label for="editEnderecoObra" style="font-size: 12.5px; font-weight: 700; color: #002D62;">Endereço Completo *</label>
+              <input type="text" id="editEnderecoObra" value="${escapeHtml(obra.endereco || '')}" required style="padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13.5px;" />
+            </div>
+
+            <div class="form-group-field" style="display: flex; flex-direction: column; gap: 5px;">
+              <label for="editTipoObra" style="font-size: 12.5px; font-weight: 700; color: #002D62;">Tipo de Intervenção</label>
+              <input type="text" id="editTipoObra" value="${escapeHtml(obra.tipo || '')}" style="padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13.5px;" />
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="form-group-field" style="display: flex; flex-direction: column; gap: 5px;">
+                <label for="editSelEmpreiteira" style="font-size: 12.5px; font-weight: 700; color: #002D62;">Empreiteira Vinculada</label>
+                <select id="editSelEmpreiteira" style="padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13px; background: #FFFFFF;">
+                  ${opcoesEmpreiteirasHtml}
+                </select>
+              </div>
+              <div class="form-group-field" style="display: flex; flex-direction: column; gap: 5px;">
+                <label for="editResponsavelObra" style="font-size: 12.5px; font-weight: 700; color: #002D62;">Responsável Técnico</label>
+                <input type="text" id="editResponsavelObra" value="${escapeHtml(obra.responsavel || '')}" style="padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13.5px;" />
+              </div>
+            </div>
+
+            <div class="form-group-field" style="display: flex; flex-direction: column; gap: 5px;">
+              <label for="editStatusObra" style="font-size: 12.5px; font-weight: 700; color: #002D62;">Status da Obra</label>
+              <select id="editStatusObra" style="padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13.5px; background: #FFFFFF;">
+                <option value="REGULAR" ${obra.status === 'REGULAR' ? 'selected' : ''}>REGULAR</option>
+                <option value="EM_ANDAMENTO" ${obra.status === 'EM_ANDAMENTO' ? 'selected' : ''}>EM_ANDAMENTO</option>
+                <option value="PENDENTE_AJUSTE" ${obra.status === 'PENDENTE_AJUSTE' ? 'selected' : ''}>PENDENTE_AJUSTE</option>
+                <option value="CONCLUIDO" ${obra.status === 'CONCLUIDO' ? 'selected' : ''}>CONCLUIDO</option>
+              </select>
+            </div>
+          </div>
+
+          <footer class="bb-modal-footer" style="padding: 14px 22px; justify-content: flex-end; gap: 10px; background: #F8FAFC; border-top: 1px solid #E2E8F0;">
+            <button type="button" class="btn-modal-cancel" id="btnCancelEditarObra">Cancelar</button>
+            <button type="submit" class="btn-modal-confirm" id="btnSalvarEditarObra" style="background: #002D62; color: #FFFFFF; padding: 9px 22px; font-size: 13px; font-weight: 700; border-radius: 6px;">Salvar Alterações</button>
+          </footer>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+    this.activeModal = overlay;
+
+    const closeHandler = () => this.close();
+    overlay.querySelector('#btnCloseEditarObra').addEventListener('click', closeHandler);
+    overlay.querySelector('#btnCancelEditarObra').addEventListener('click', closeHandler);
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) this.close();
+    });
+
+    const selEmp = overlay.querySelector('#editSelEmpreiteira');
+    const txtResp = overlay.querySelector('#editResponsavelObra');
+    selEmp.addEventListener('change', () => {
+      const opt = selEmp.options[selEmp.selectedIndex];
+      const nomeEmp = opt?.getAttribute('data-nome') || '';
+      if (nomeEmp) txtResp.value = nomeEmp;
+    });
+
+    overlay.querySelector('#formEditarObra').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = overlay.querySelector('#btnSalvarEditarObra');
+      btn.disabled = true;
+      btn.textContent = 'Salvando...';
+      try {
+        if (typeof onSave === 'function') {
+          await onSave({
+            nome: overlay.querySelector('#editNomeObra').value.trim(),
+            endereco: overlay.querySelector('#editEnderecoObra').value.trim(),
+            tipo: overlay.querySelector('#editTipoObra').value.trim(),
+            responsavel: txtResp.value.trim(),
+            empreiteira_id: selEmp.value || null,
+            status: overlay.querySelector('#editStatusObra').value,
+          });
+        }
+        this.close();
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'Salvar Alterações';
+        toast.error('Erro ao Atualizar Obra', err.message || 'Não foi possível salvar.');
+      }
+    });
+  }
+
+  /**
+   * Gerenciador Central de Perguntas do Checklist (Template oficial ou Obra específica)
    */
   openGerenciadorPerguntasModal({ fiscalUser, obra = null, onSave = null }) {
     this.close();
 
-    const isObra = !!obra;
-    const tituloModal = isObra ? `Checklist Técnico: ${obra.nome}` : 'Modelo Oficial de Checklist do Banco do Brasil';
-    const subtituloModal = isObra 
-      ? 'Perguntas configuradas exclusivamente para vistorias desta obra' 
-      : 'Template corporativo padrão para novos canteiros de obras';
+    const isObra = Boolean(obra);
+    const tituloModal = isObra ? `Checklist Técnico: ${obra.nome}` : 'Modelo Oficial de Checklist';
+    const subtituloModal = isObra
+      ? 'Perguntas configuradas exclusivamente para vistorias desta obra'
+      : 'Template padrão aplicado ao cadastrar novas obras';
 
-    let perguntas = [];
-    if (isObra) {
-      perguntas = state.getPerguntasParaObra(obra.id);
-    } else {
-      perguntas = JSON.parse(JSON.stringify(state.checklistTemplate || PERGUNTAS_PADRAO_BB));
-    }
+    let perguntas = isObra
+      ? state.getPerguntasParaObra(obra.id)
+      : JSON.parse(JSON.stringify(state.checklistTemplate || PERGUNTAS_PADRAO_BB));
 
     const overlay = document.createElement('div');
     overlay.className = 'bb-modal-overlay fade-in';
@@ -1083,15 +1175,13 @@ class BBVisionModal {
             </span>
             <div>
               <h3 class="bb-modal-title" style="color: #FFFFFF; font-size: 16px;">${escapeHtml(tituloModal)}</h3>
-              <span class="bb-modal-subtitle" style="color: #94A3B8;">${subtituloModal}</span>
+              <span class="bb-modal-subtitle" style="color: #94A3B8;">${escapeHtml(subtituloModal)}</span>
             </div>
           </div>
           <button class="bb-modal-close-btn" id="btnCloseGerenciadorPerguntas" title="Fechar">✕</button>
         </header>
 
         <div style="display: flex; flex-direction: column; overflow-y: auto; max-height: calc(85vh - 140px); padding: 18px 22px; gap: 14px;">
-          
-          <!-- Barra de Ações do Gerenciador -->
           <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 14px;">
             <div style="display: flex; align-items: center; gap: 8px;">
               <span style="font-size: 12.5px; font-weight: 700; color: #002D62;">Itens de Vistoria:</span>
@@ -1104,29 +1194,21 @@ class BBVisionModal {
               <button type="button" id="btnRestaurarGerenciador" style="background: #FFFFFF; border: 1px solid #CBD5E1; color: #475569; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 600; cursor: pointer;">
                 Padrão BB
               </button>
-              <button type="button" id="btnAddPerguntaGerenciador" style="background: #002D62; color: #FED304; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; box-shadow: 0 1px 4px rgba(0,45,98,0.25);">
+              <button type="button" id="btnAddPerguntaGerenciador" style="background: #002D62; color: #FED304; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer;">
                 + Nova Pergunta
               </button>
             </div>
           </div>
 
-          <!-- Container da Lista de Perguntas -->
-          <div id="containerListaGerenciadorPerguntas" style="display: flex; flex-direction: column; gap: 10px;">
-            <!-- Renderizado dinamicamente -->
-          </div>
-
-          <!-- Aviso de Governança -->
-          <div style="background: rgba(0, 45, 98, 0.04); border-left: 3px solid #002D62; padding: 10px 12px; border-radius: 4px; font-size: 11.5px; color: #475569;">
-            <strong>Acesso Exclusivo Fiscal BB:</strong> Alterações nas perguntas passarão a vigorar imediatamente nas vistorias técnicas executadas pelas empreiteiras no aplicativo móvel.
-          </div>
+          <div id="containerListaGerenciadorPerguntas" style="display: flex; flex-direction: column; gap: 10px;"></div>
         </div>
 
         <footer class="bb-modal-footer" style="padding: 14px 22px; justify-content: space-between; background: #F8FAFC; border-top: 1px solid #E2E8F0;">
           <button type="button" class="btn-modal-cancel" id="btnFecharGerenciador" style="padding: 9px 18px; font-size: 13px; font-weight: 600;">
             Cancelar
           </button>
-          <button type="button" class="btn-modal-confirm" id="btnSalvarGerenciador" style="background: #002D62; color: #FFFFFF; padding: 9px 24px; font-size: 13px; font-weight: 700; border-radius: 6px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(0, 45, 98, 0.25); cursor: pointer;">
-            <span>Salvar Checklist ${isObra ? 'da Obra' : 'Oficial BB'}</span>
+          <button type="button" class="btn-modal-confirm" id="btnSalvarGerenciador" style="background: #002D62; color: #FFFFFF; padding: 9px 24px; font-size: 13px; font-weight: 700; border-radius: 6px; cursor: pointer;">
+            <span>Salvar Checklist ${isObra ? 'da Obra' : 'Oficial'}</span>
           </button>
         </footer>
       </div>
@@ -1148,102 +1230,42 @@ class BBVisionModal {
       if (badgeCount) badgeCount.textContent = `${perguntas.length} pergunta${perguntas.length !== 1 ? 's' : ''}`;
       if (!container) return;
 
-      if (perguntas.length === 0) {
-        container.innerHTML = `
-          <div style="text-align: center; padding: 28px 16px; background: #F8FAFC; border: 1.5px dashed #CBD5E1; border-radius: 8px; color: #64748B;">
-            <strong style="font-size: 13.5px; color: #1E293B;">Nenhuma pergunta cadastrada</strong>
-            <p style="font-size: 12px; margin: 4px 0 12px;">Adicione ao menos uma pergunta ou restaure o modelo padrão do Banco do Brasil.</p>
-            <button type="button" id="btnRestaurarVazioGerenciador" style="background: #002D62; color: #FED304; border: none; padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;">
-              Restaurar Padrão BB
-            </button>
-          </div>
-        `;
-        container.querySelector('#btnRestaurarVazioGerenciador')?.addEventListener('click', () => {
-          perguntas = JSON.parse(JSON.stringify(PERGUNTAS_PADRAO_BB));
-          renderListaGerenciador();
-        });
-        return;
-      }
-
       container.innerHTML = perguntas.map((p, idx) => {
         const tipoLabel = p.tipo === 'multipla_escolha' ? 'Múltipla Escolha' : (p.tipo === 'caixa' ? 'Caixas de Seleção' : 'Texto Descritivo');
-        const tipoTagStyle = p.tipo === 'multipla_escolha' 
-          ? 'background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE;' 
-          : (p.tipo === 'caixa' ? 'background: #F0FDF4; color: #15803D; border: 1px solid #BBF7D0;' : 'background: #FEF3C7; color: #B45309; border: 1px solid #FDE68A;');
-
-        let opcoesResumo = '';
-        if (Array.isArray(p.opcoes) && p.opcoes.length > 0) {
-          opcoesResumo = `
-            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px;">
-              ${p.opcoes.map(op => {
-                const label = typeof op === 'string' ? op : (op.label || op.valor || '');
-                return `<span style="font-size: 11px; padding: 2px 8px; background: #F1F5F9; border-radius: 4px; color: #475569;">${escapeHtml(label)}</span>`;
-              }).join('')}
-            </div>
-          `;
-        } else if (p.tipo === 'texto') {
-          opcoesResumo = `<span style="font-size: 11.5px; color: #64748B; font-style: italic; margin-top: 4px; display: block;">Campo de texto com observações técnicas e chips rápidos</span>`;
-        }
-
         return `
-          <div class="pergunta-item-card" data-idx="${idx}" style="background: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+          <div class="pergunta-item-card" data-idx="${idx}" style="background: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;">
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 6px;">
                 <span style="background: #002D62; color: #FFFFFF; font-weight: 800; font-size: 11px; padding: 2px 8px; border-radius: 4px;">#${idx + 1}</span>
-                <span style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; ${tipoTagStyle}">${tipoLabel}</span>
+                <span style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE;">${tipoLabel}</span>
               </div>
               <div style="display: flex; align-items: center; gap: 4px;">
-                <!-- Botões de mover para cima/baixo -->
-                <button type="button" class="btn-mover-pergunta" data-idx="${idx}" data-dir="up" title="Mover para cima" ${idx === 0 ? 'disabled' : ''} style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #475569; padding: 3px 6px; border-radius: 4px; font-size: 11px; cursor: ${idx === 0 ? 'not-allowed' : 'pointer'}; opacity: ${idx === 0 ? '0.4' : '1'};">
-                  ▲
-                </button>
-                <button type="button" class="btn-mover-pergunta" data-idx="${idx}" data-dir="down" title="Mover para baixo" ${idx === perguntas.length - 1 ? 'disabled' : ''} style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #475569; padding: 3px 6px; border-radius: 4px; font-size: 11px; cursor: ${idx === perguntas.length - 1 ? 'not-allowed' : 'pointer'}; opacity: ${idx === perguntas.length - 1 ? '0.4' : '1'};">
-                  ▼
-                </button>
-                <button type="button" class="btn-editar-gerenciador" data-idx="${idx}" title="Editar Pergunta" style="background: #EFF6FF; border: 1px solid #BFDBFE; color: #1D4ED8; padding: 3px 9px; border-radius: 4px; font-size: 11.5px; font-weight: 600; cursor: pointer;">
-                  Editar
-                </button>
-                <button type="button" class="btn-remover-gerenciador" data-idx="${idx}" title="Remover Pergunta" style="background: #FEE2E2; border: 1px solid #FECACA; color: #DC2626; padding: 3px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 600; cursor: pointer;">
-                  Excluir
-                </button>
+                <button type="button" class="btn-mover-pergunta" data-idx="${idx}" data-dir="up" ${idx === 0 ? 'disabled' : ''} style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #475569; padding: 3px 6px; border-radius: 4px; font-size: 11px; cursor: ${idx === 0 ? 'not-allowed' : 'pointer'}; opacity: ${idx === 0 ? '0.4' : '1'};">▲</button>
+                <button type="button" class="btn-mover-pergunta" data-idx="${idx}" data-dir="down" ${idx === perguntas.length - 1 ? 'disabled' : ''} style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #475569; padding: 3px 6px; border-radius: 4px; font-size: 11px; cursor: ${idx === perguntas.length - 1 ? 'not-allowed' : 'pointer'}; opacity: ${idx === perguntas.length - 1 ? '0.4' : '1'};">▼</button>
+                <button type="button" class="btn-editar-gerenciador" data-idx="${idx}" style="background: #EFF6FF; border: 1px solid #BFDBFE; color: #1D4ED8; padding: 3px 9px; border-radius: 4px; font-size: 11.5px; font-weight: 600; cursor: pointer;">Editar</button>
+                <button type="button" class="btn-remover-gerenciador" data-idx="${idx}" style="background: #FEE2E2; border: 1px solid #FECACA; color: #DC2626; padding: 3px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 600; cursor: pointer;">Excluir</button>
               </div>
             </div>
-
-            <div style="font-size: 13px; font-weight: 700; color: #0F172A; line-height: 1.35;">
-              ${p.titulo}
-            </div>
-
-            ${p.subtitulo ? `
-              <div style="font-size: 11.5px; color: #64748B; line-height: 1.3;">
-                ${p.subtitulo}
-              </div>
-            ` : ''}
-
-            ${opcoesResumo}
+            <div style="font-size: 13px; font-weight: 700; color: #0F172A;">${escapeHtml(p.titulo)}</div>
+            ${p.subtitulo ? `<div style="font-size: 11.5px; color: #64748B;">${escapeHtml(p.subtitulo)}</div>` : ''}
           </div>
         `;
       }).join('');
 
-      // Wire up mover botões
       container.querySelectorAll('.btn-mover-pergunta').forEach(btn => {
         btn.addEventListener('click', () => {
           const idx = parseInt(btn.getAttribute('data-idx'), 10);
           const dir = btn.getAttribute('data-dir');
           if (dir === 'up' && idx > 0) {
-            const temp = perguntas[idx];
-            perguntas[idx] = perguntas[idx - 1];
-            perguntas[idx - 1] = temp;
+            [perguntas[idx], perguntas[idx - 1]] = [perguntas[idx - 1], perguntas[idx]];
           } else if (dir === 'down' && idx < perguntas.length - 1) {
-            const temp = perguntas[idx];
-            perguntas[idx] = perguntas[idx + 1];
-            perguntas[idx + 1] = temp;
+            [perguntas[idx], perguntas[idx + 1]] = [perguntas[idx + 1], perguntas[idx]];
           }
-          perguntas.forEach((p, i) => p.numero = i + 1);
+          perguntas.forEach((p, i) => { p.numero = i + 1; });
           renderListaGerenciador();
         });
       });
 
-      // Wire up editar botões
       container.querySelectorAll('.btn-editar-gerenciador').forEach(btn => {
         btn.addEventListener('click', () => {
           const idx = parseInt(btn.getAttribute('data-idx'), 10);
@@ -1253,86 +1275,80 @@ class BBVisionModal {
             onSave: (perguntaEditada) => {
               perguntas[idx] = perguntaEditada;
               renderListaGerenciador();
-            }
+            },
           });
         });
       });
 
-      // Wire up remover botões
       container.querySelectorAll('.btn-remover-gerenciador').forEach(btn => {
         btn.addEventListener('click', () => {
           const idx = parseInt(btn.getAttribute('data-idx'), 10);
           if (perguntas.length <= 1) {
-            alert('O checklist deve conter ao menos 1 pergunta técnica.');
+            toast.warning('Mínimo Obrigatório', 'O checklist deve conter ao menos 1 pergunta técnica.');
             return;
           }
-          if (confirm(`Deseja remover a pergunta #${idx + 1}?`)) {
-            perguntas.splice(idx, 1);
-            perguntas.forEach((p, i) => p.numero = i + 1);
-            renderListaGerenciador();
-          }
+          this.openConfirmDialog({
+            title: 'Remover Pergunta',
+            message: `Deseja remover a pergunta #${idx + 1}?`,
+            confirmLabel: 'Remover',
+            danger: true,
+            onConfirm: () => {
+              perguntas.splice(idx, 1);
+              perguntas.forEach((p, i) => { p.numero = i + 1; });
+              renderListaGerenciador();
+            },
+          });
         });
       });
     };
 
     renderListaGerenciador();
 
-    // Botão Adicionar Pergunta
-    const btnAdd = overlay.querySelector('#btnAddPerguntaGerenciador');
-    if (btnAdd) {
-      btnAdd.addEventListener('click', () => {
-        this.openEditarPerguntaModal({
-          pergunta: null,
-          index: perguntas.length,
-          onSave: (novaPergunta) => {
-            novaPergunta.numero = perguntas.length + 1;
-            perguntas.push(novaPergunta);
-            renderListaGerenciador();
-          }
-        });
+    overlay.querySelector('#btnAddPerguntaGerenciador')?.addEventListener('click', () => {
+      this.openEditarPerguntaModal({
+        pergunta: null,
+        index: perguntas.length,
+        onSave: (novaPergunta) => {
+          novaPergunta.numero = perguntas.length + 1;
+          perguntas.push(novaPergunta);
+          renderListaGerenciador();
+        },
       });
-    }
+    });
 
-    // Botão Restaurar Padrão BB
-    const btnRestaurar = overlay.querySelector('#btnRestaurarGerenciador');
-    if (btnRestaurar) {
-      btnRestaurar.addEventListener('click', () => {
-        if (confirm('Deseja restaurar as perguntas para o modelo oficial padrão do Banco do Brasil?')) {
+    overlay.querySelector('#btnRestaurarGerenciador')?.addEventListener('click', () => {
+      this.openConfirmDialog({
+        title: 'Restaurar Padrão',
+        message: 'Deseja restaurar as perguntas para o modelo oficial padrão?',
+        confirmLabel: 'Restaurar',
+        onConfirm: () => {
           perguntas = JSON.parse(JSON.stringify(PERGUNTAS_PADRAO_BB));
           renderListaGerenciador();
-          toast.info('Padrão Restaurado', 'Checklist redefinido para o padrão Banco do Brasil.');
-        }
+          toast.info('Padrão Restaurado', 'Checklist redefinido para o modelo oficial.');
+        },
       });
-    }
+    });
 
-    // Botão Salvar Geral
     const btnSalvar = overlay.querySelector('#btnSalvarGerenciador');
-    if (btnSalvar) {
-      btnSalvar.addEventListener('click', async () => {
-        btnSalvar.disabled = true;
-        btnSalvar.innerHTML = `<span>Salvando...</span>`;
-
-        try {
-          if (isObra) {
-            await state.salvarChecklistObra(obra.id, perguntas);
-            toast.success('Checklist Atualizado', `Perguntas da obra "${obra.nome}" foram salvas.`);
-          } else {
-            await state.salvarChecklistTemplate(perguntas);
-            toast.success('Modelo Atualizado', 'Modelo padrão de checklist do Banco do Brasil atualizado.');
-          }
-
-          if (typeof onSave === 'function') {
-            onSave(perguntas);
-          }
-
-          this.close();
-        } catch (err) {
-          btnSalvar.disabled = false;
-          btnSalvar.innerHTML = `<span>Salvar Checklist</span>`;
-          alert(`Erro ao salvar checklist: ${err.message}`);
+    btnSalvar?.addEventListener('click', async () => {
+      btnSalvar.disabled = true;
+      btnSalvar.innerHTML = `<span>Salvando...</span>`;
+      try {
+        if (isObra) {
+          await state.salvarChecklistObra(obra.id, perguntas);
+          toast.success('Checklist Atualizado', `Perguntas da obra "${obra.nome}" foram salvas.`);
+        } else {
+          await state.salvarChecklistTemplate(perguntas);
+          toast.success('Modelo Atualizado', 'Modelo padrão de checklist atualizado.');
         }
-      });
-    }
+        if (typeof onSave === 'function') onSave(perguntas);
+        this.close();
+      } catch (err) {
+        btnSalvar.disabled = false;
+        btnSalvar.innerHTML = `<span>Salvar Checklist</span>`;
+        toast.error('Erro ao Salvar', err.message || 'Falha ao salvar checklist.');
+      }
+    });
   }
 
   close() {
@@ -1345,4 +1361,3 @@ class BBVisionModal {
 }
 
 export const modal = new BBVisionModal();
-

@@ -1,9 +1,7 @@
 /**
- * BVision - Tela de Relatório Bloqueado (Garantia de Imutabilidade)
- * Fiel ao print de referência: WhatsApp Image 2026-10-08 at 11.43.20.jpeg
- * Conforme Requisitos E4, 1.3.3, 5.1.4 e 8.6.6 do Documento Oficial TakeOff:
+ * BBVision - Tela de Relatório Concluído (Garantia de Imutabilidade)
  * - Bloqueio imediato para edições ou reenvios
- * - Exibição do código único oficial de 16 caracteres hex uppercase
+ * - Exibição do código único oficial de 16 caracteres hex uppercase e Hash SHA-256
  * - Disponibilização do PDF oficial compilado via PDFKit com carimbo de integridade
  */
 
@@ -11,19 +9,17 @@ import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { modal } from '../components/modal.js';
 import { toast } from '../components/toast.js';
+import { escapeHtml, normalizeImageSrc, NEUTRAL_PHOTO_PLACEHOLDER, copyToClipboard } from '../utils/formatters.js';
 
 export function renderRelatorioBloqueado() {
   const vistoria = state.currentVistoria;
-  const pdfUrl = vistoria.pdfUrl || (vistoria.relatorioId ? `/api/relatorios/${vistoria.relatorioId}/pdf` : '/api/relatorios/rel-seed-001/pdf');
+  const isOfflineQueue = !vistoria.relatorioId;
 
-  const rawImg = vistoria.fotoCamera || vistoria.fotoBase64 || vistoria.caminhoArquivoFoto || 'uploads/evidencias/seed_fachada_bb.png';
-  const fotoSrc = rawImg && (rawImg.startsWith('data:') || rawImg.startsWith('http') || rawImg.startsWith('/'))
-    ? rawImg
-    : `/${String(rawImg).replace(/^\/+/, '')}`;
+  const rawImg = vistoria.fotoCamera || vistoria.fotoBase64 || vistoria.caminhoArquivoFoto || '';
+  const fotoSrc = normalizeImageSrc(rawImg, NEUTRAL_PHOTO_PLACEHOLDER);
 
   return `
     <div class="page-container fade-in" id="relatorioBloqueadoPage">
-      <!-- Header Superior com Voltar e Logo BVision -->
       <header class="bloqueado-topbar">
         <button class="btn-icon-simple-sm" id="btnVoltarInicioBloqueado" title="Voltar ao Início">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -37,73 +33,90 @@ export function renderRelatorioBloqueado() {
         <div style="width: 28px;"></div>
       </header>
 
-      <!-- Título da Tela (Item 14: alterado de Relatório Bloqueado para Relatório Concluído) -->
       <div class="bloqueado-header-title">
-        <h2>Relatório Concluído</h2>
+        <h2>${isOfflineQueue ? 'Relatório Enfileirado (Offline)' : 'Relatório Concluído'}</h2>
       </div>
 
-      <!-- Ícone 3D da Caixa Lacrada e Notificação de Imutabilidade -->
       <div class="bloqueado-hero-section">
         <div class="box-locked-visual">
           ${Icons.boxLocked3D(90)}
         </div>
         <p class="bloqueado-warning-text">
-          Este relatório foi formalmente concluído<br/>e possui fé pública inviolável
+          ${
+            isOfflineQueue
+              ? 'Vistoria assinada e salva localmente.<br/>O PDF e o selo definitivo serão emitidos automaticamente ao reconectar.'
+              : 'Este relatório foi formalmente concluído<br/>e possui fé pública inviolável'
+          }
         </p>
+        ${
+          vistoria.validacaoManual
+            ? `<span style="display:inline-block; margin-top:8px; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:700; background:#FEF3C7; color:#92400E; border:1px solid #FDE68A;">
+                Validação Manual Assistida — Sinalizado para Auditoria do Fiscal
+              </span>`
+            : ''
+        }
       </div>
 
-      <!-- Evidência Fotográfica Registrada neste Relatório -->
       <div class="bloqueado-status-rules-card" style="margin-bottom: 12px; padding: 12px;">
         <div style="font-size: 12px; font-weight: 700; color: #002D72; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
           <span>Evidência Fotográfica Registrada na Vistoria</span>
-          <span style="font-size: 11px; color: #059669; font-weight: 700;">Registrada no Relatório & PDF</span>
+          <span style="font-size: 11px; color: #059669; font-weight: 700;">${
+            isOfflineQueue ? 'Armazenada para Envio' : 'Registrada no Relatório & PDF'
+          }</span>
         </div>
-        <div style="border-radius: 10px; overflow: hidden; border: 1px solid #CBD5E1; background: #0F172A;">
+        <div style="border-radius: 10px; overflow: hidden; border: 1px solid #CBD5E1; background: #F1F5F9;">
           <img
-            src="${fotoSrc}"
+            src="${escapeHtml(fotoSrc)}"
             alt="Foto capturada na vistoria"
             style="width: 100%; max-height: 190px; object-fit: cover; display: block;"
-            onerror="this.onerror=null; this.src='/uploads/evidencias/seed_fachada_bb.png';"
           />
         </div>
         <div style="font-size: 11px; color: #475569; margin-top: 6px; line-height: 1.35;">
-          ${vistoria.motivoIA || 'Evidência fotográfica capturada in-loco pela empreiteira e auditada pela IA.'}
+          ${escapeHtml(vistoria.motivoIA || 'Evidência fotográfica capturada in-loco pela empreiteira.')}
         </div>
       </div>
 
-      <!-- Card Azul Marinho com Identificação e Timestamp Oficial -->
       <div class="bloqueado-protocolo-card">
         <div class="proto-card-top-row">
-          <span class="proto-card-label">Código Oficial:</span>
-          <button class="proto-dots-btn" id="btnCopiarCodigoBloqueado" title="Copiar Código">
+          <span class="proto-card-label">${isOfflineQueue ? 'Código Provisório (Offline):' : 'Código Oficial:'}</span>
+          <button type="button" class="proto-dots-btn" id="btnCopiarCodigoBloqueado" title="Copiar Código">
             Copiar
           </button>
         </div>
 
         <div class="proto-codigo-val" id="lblCodigoBloqueado">
-          ${vistoria.codigoUnico}
+          ${escapeHtml(vistoria.codigoUnico || 'Pendente')}
         </div>
 
         <div class="proto-meta-data">
-          <span><strong>Enviado em:</strong> ${vistoria.dataFoto} às ${vistoria.horaFoto}</span>
-          <span><strong>Responsável Técnico:</strong> ${vistoria.responsavel}</span>
-          <span style="font-size: 11px; opacity: 0.85; font-family: monospace; word-break: break-all;">
-            <strong>SHA-256:</strong> ${vistoria.hashSha256}
-          </span>
+          <span><strong>Registrado em:</strong> ${escapeHtml(vistoria.dataFoto)} às ${escapeHtml(vistoria.horaFoto)}</span>
+          <span><strong>Responsável Técnico:</strong> ${escapeHtml(vistoria.responsavel || state.user?.nome || 'Responsável Técnico')}</span>
+          ${
+            vistoria.hashSha256
+              ? `<span style="font-size: 11px; opacity: 0.85; font-family: monospace; word-break: break-all;">
+                  <strong>SHA-256:</strong> ${escapeHtml(vistoria.hashSha256)}
+                </span>`
+              : `<span style="font-size: 11px; opacity: 0.85;">
+                  <strong>SHA-256:</strong> Será consolidado no servidor após sincronização
+                </span>`
+          }
         </div>
       </div>
 
-      <!-- Card com as Regras de Inviolabilidade Ativas -->
       <div class="bloqueado-status-rules-card">
-        <div class="rule-status-row clickable" id="btnAbrirVisualizacao">
+        <div class="rule-status-row ${isOfflineQueue ? 'locked-state' : 'clickable'}" id="btnAbrirVisualizacao" style="${isOfflineQueue ? 'opacity: 0.65;' : ''}">
           <div class="rule-status-left">
             <span class="rule-icon-box" style="display:inline-flex; align-items:center; justify-content:center; color:#002D62;">${Icons.pdfDocument(17)}</span>
-            <span class="rule-title-text">Visualizar PDF Oficial (Carimbo BB)</span>
+            <span class="rule-title-text">${
+              isOfflineQueue ? 'PDF Oficial (Disponível após sincronização)' : 'Visualizar PDF Oficial (Carimbo BB)'
+            }</span>
           </div>
           <div class="rule-arrow">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
+            ${
+              isOfflineQueue
+                ? '<span style="font-size: 11px; color: #94A3B8;">Offline</span>'
+                : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>`
+            }
           </div>
         </div>
 
@@ -128,11 +141,14 @@ export function renderRelatorioBloqueado() {
         </div>
       </div>
 
-      <!-- Botões de Ação Final -->
       <div class="bloqueado-action-footer">
-        <button class="btn-secondary-white" id="btnValidarFePublicaDoc" style="margin-bottom: 8px;">
-          Validar Autenticidade (Fé Pública)
-        </button>
+        ${
+          !isOfflineQueue && vistoria.codigoUnico
+            ? `<button class="btn-secondary-white" id="btnValidarFePublicaDoc" style="margin-bottom: 8px;">
+                Validar Autenticidade (Fé Pública)
+              </button>`
+            : ''
+        }
         <button class="btn-primary-bb-yellow" id="btnVoltarDashboard">
           Voltar para Minhas Obras
         </button>
@@ -142,58 +158,53 @@ export function renderRelatorioBloqueado() {
 }
 
 export function bindRelatorioBloqueadoEvents() {
-  const btnVoltar = document.getElementById('btnVoltarInicioBloqueado');
-  const btnDash = document.getElementById('btnVoltarDashboard');
-  
-  if (btnVoltar) {
-    btnVoltar.addEventListener('click', () => {
-      state.navigate('inicio', 'inicio');
-    });
-  }
+  document.getElementById('btnVoltarInicioBloqueado')?.addEventListener('click', () => {
+    state.navigate('inicio', 'inicio');
+  });
 
-  if (btnDash) {
-    btnDash.addEventListener('click', () => {
-      state.navigate('inicio', 'inicio');
-    });
-  }
+  document.getElementById('btnVoltarDashboard')?.addEventListener('click', () => {
+    state.navigate('inicio', 'inicio');
+  });
 
-  // Copiar código
-  const btnCopiar = document.getElementById('btnCopiarCodigoBloqueado');
-  if (btnCopiar) {
-    btnCopiar.addEventListener('click', () => {
-      navigator.clipboard.writeText(state.currentVistoria.codigoUnico);
-      toast.success('Código Copiado', `Código ${state.currentVistoria.codigoUnico} copiado para a área de transferência.`);
-    });
-  }
+  document.getElementById('btnCopiarCodigoBloqueado')?.addEventListener('click', async () => {
+    const cod = state.currentVistoria.codigoUnico;
+    if (!cod) return;
+    const ok = await copyToClipboard(cod);
+    if (ok) {
+      toast.success('Código Copiado', `Código ${cod} copiado para a área de transferência.`);
+    }
+  });
 
-  // Visualizar PDF Oficial compilado pelo PDFKit
-  const btnVisualizar = document.getElementById('btnAbrirVisualizacao');
-  if (btnVisualizar) {
-    btnVisualizar.addEventListener('click', () => {
-      const relId = state.currentVistoria.relatorioId || 'rel-seed-001';
-      const pdfUrl = `/api/relatorios/${relId}/pdf`;
-      modal.openPdfViewer({
-        title: `Relatório BBVision • ${state.currentVistoria.obraNome}`,
-        pdfUrl: pdfUrl,
-        codigo: state.currentVistoria.codigoUnico,
-        hash: state.currentVistoria.hashSha256
-      });
+  document.getElementById('btnAbrirVisualizacao')?.addEventListener('click', () => {
+    const relId = state.currentVistoria.relatorioId;
+    if (!relId) {
+      toast.info(
+        'Aguardando Sincronização',
+        'O relatório está na fila offline. Assim que a conexão retornar, o PDF oficial ficará disponível em Relatórios.'
+      );
+      return;
+    }
+    const pdfUrl = state.currentVistoria.pdfUrl || `/api/relatorios/${encodeURIComponent(relId)}/pdf`;
+    modal.openPdfViewer({
+      title: `Relatório BBVision • ${state.currentVistoria.obraNome || 'Vistoria'}`,
+      pdfUrl,
+      codigo: state.currentVistoria.codigoUnico,
+      hash: state.currentVistoria.hashSha256,
     });
-  }
+  });
 
-  // Navegar para o Validador de Fé Pública com o código já preenchido
-  const btnValidar = document.getElementById('btnValidarFePublicaDoc');
-  if (btnValidar) {
-    btnValidar.addEventListener('click', () => {
-      state.currentVistoria.codigoParaValidar = state.currentVistoria.codigoUnico;
-      state.navigate('validador-publico');
-    });
-  }
+  document.getElementById('btnValidarFePublicaDoc')?.addEventListener('click', () => {
+    state.currentVistoria.codigoParaValidar = state.currentVistoria.codigoUnico;
+    state.navigate('validador-publico');
+  });
 
-  // Feedback sobre regras de inviolabilidade
   document.querySelectorAll('.rule-status-row.locked-state').forEach(row => {
+    if (row.id === 'btnAbrirVisualizacao') return;
     row.addEventListener('click', () => {
-      toast.info('Inviolabilidade Criptográfica Ativa', 'Conforme as normas de engenharia e governança do Banco do Brasil, relatórios finalizados são selados por Hash SHA-256 e código único, impedindo qualquer alteração posterior.');
+      toast.info(
+        'Inviolabilidade Criptográfica Ativa',
+        'Relatórios finalizados são selados por Hash SHA-256 e código único, impedindo qualquer alteração posterior.'
+      );
     });
   });
 }

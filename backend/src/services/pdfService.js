@@ -1,14 +1,26 @@
 /**
  * BBVision - Serviço de Geração de Relatório Técnico em PDF (PDFKit)
- * Em conformidade com o Documento de Entrega Oficial TakeOff (Seção 6, 8.6)
- * Gera relatórios imutáveis com código único, hashes SHA-256, fotos in-loco e pareceres
+ * Gera relatórios imutáveis com código único, hashes SHA-256, fotos in-loco,
+ * geolocalização, assinatura digital do responsável técnico e parecer fiscal.
  */
 
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
-const { resolveSafePath } = require('../utils/securityUtils');
-const { UPLOAD_ROOT, RELATORIOS_DIR } = require('../middlewares/uploadMiddleware');
+const { resolveSafePath, validateImageMagicBytes } = require('../utils/securityUtils');
+const { UPLOAD_ROOT } = require('../middlewares/uploadMiddleware');
+
+function decodeBase64Image(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  try {
+    const b64Data = raw.includes(',') ? raw.split(',')[1] : raw;
+    const buf = Buffer.from(b64Data, 'base64');
+    const check = validateImageMagicBytes(buf);
+    return check.valid ? buf : null;
+  } catch (_) {
+    return null;
+  }
+}
 
 /**
  * Compila o relatório completo de vistoria técnica em um buffer PDF
@@ -23,7 +35,7 @@ function gerarRelatorioPdfBuffer(relatorio) {
         margins: { top: 40, bottom: 45, left: 45, right: 45 },
         info: {
           Title: `BBVision_Relatorio_${relatorio.codigo_unico || 'Vistoria'}`,
-          Author: 'Banco do Brasil - BBVision TakeOff',
+          Author: 'Banco do Brasil - BBVision',
           Subject: 'Fiscalização Remota de Obras',
           Keywords: 'BBVision, Banco do Brasil, Fiscalização, Inviolabilidade, SHA-256, IA',
         },
@@ -34,7 +46,6 @@ function gerarRelatorioPdfBuffer(relatorio) {
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', err => reject(err));
 
-      // Paleta Oficial BBVision / Banco do Brasil
       const AZUL_BB = '#003882';
       const AMARELO_BB = '#FCDB00';
       const CINZA_ESCURO = '#1E293B';
@@ -43,13 +54,19 @@ function gerarRelatorioPdfBuffer(relatorio) {
       const BORDA_CINZA = '#CBD5E1';
       const VERDE_SUCESSO = '#059669';
       const VERMELHO_ERRO = '#DC2626';
+      const AMBAR_ALERTA = '#B45309';
+
+      const ensureSpace = (neededHeight) => {
+        if (currentY + neededHeight > 745) {
+          doc.addPage();
+          currentY = 45;
+        }
+      };
 
       // ------------------------------------------------------------------------
       // 1. CABEÇALHO INSTITUCIONAL
       // ------------------------------------------------------------------------
       doc.rect(45, 40, 505, 55).fill(AZUL_BB);
-
-      // Faixa Amarela decorativa BB
       doc.rect(45, 95, 505, 4).fill(AMARELO_BB);
 
       doc.fillColor('#FFFFFF')
@@ -63,17 +80,22 @@ function gerarRelatorioPdfBuffer(relatorio) {
         .text('Diretoria de Engenharia, Infraestrutura e Patrimônio • DIPAT', 60, 80);
 
       // ------------------------------------------------------------------------
-      // 2. CARIMBO DE INVIOLABILIDADE & CÓDIGO ÚNICO (DESTAQUE MÁXIMO)
+      // 2. CARIMBO DE INVIOLABILIDADE & CÓDIGO ÚNICO
       // ------------------------------------------------------------------------
       const yBox = 112;
-      doc.rect(45, yBox, 505, 82).fillAndStroke(CINZA_CLARO, BORDA_CINZA);
+      const temValidacaoManual = Boolean(
+        relatorio.validacao_manual ||
+        (Array.isArray(relatorio.fotos) && relatorio.fotos.some(f => (f.avaliacao_gemini || f.status_ia) === 'VALIDACAO_MANUAL'))
+      );
+      const boxHeight = temValidacaoManual ? 96 : 82;
+
+      doc.rect(45, yBox, 505, boxHeight).fillAndStroke(CINZA_CLARO, BORDA_CINZA);
 
       doc.fillColor(AZUL_BB)
         .fontSize(10)
         .font('Helvetica-Bold')
         .text('CARIMBO DIGITAL DE INTEGRIDADE & NÃO-REPÚDIO', 58, yBox + 9);
 
-      // Coluna Esquerda: Código Único
       doc.fillColor(CINZA_ESCURO).fontSize(8.5).font('Helvetica');
       doc.text('CÓDIGO ÚNICO:', 58, yBox + 26);
       doc.fillColor(AZUL_BB)
@@ -81,7 +103,6 @@ function gerarRelatorioPdfBuffer(relatorio) {
         .fontSize(13)
         .text(relatorio.codigo_unico || 'NÃO FINALIZADO', 145, yBox + 24);
 
-      // Status
       doc.fillColor(CINZA_ESCURO).fontSize(8.5).font('Helvetica');
       doc.text('STATUS DO DOCUMENTO:', 58, yBox + 44);
       const statusDoc = String(relatorio.status || 'EM_ANDAMENTO').toUpperCase();
@@ -101,22 +122,32 @@ function gerarRelatorioPdfBuffer(relatorio) {
         .font('Helvetica-Bold')
         .text(statusLabel, 195, yBox + 44);
 
-      // Data de finalização
       doc.fillColor(CINZA_ESCURO).font('Helvetica');
       doc.text('DATA DA EMISSÃO:', 58, yBox + 58);
-      const dataFormatada = relatorio.data_finalizacao || relatorio.data
-        ? new Date(relatorio.data_finalizacao || relatorio.data).toLocaleString('pt-BR')
+      const dataFormatada = relatorio.data_finalizacao || relatorio.finalizado_em || relatorio.data
+        ? new Date(relatorio.data_finalizacao || relatorio.finalizado_em || relatorio.data).toLocaleString('pt-BR')
         : new Date().toLocaleString('pt-BR');
       doc.text(dataFormatada, 160, yBox + 58);
 
-      // Hash SHA-256 no rodapé do carimbo
       doc.fontSize(7).font('Courier');
-      doc.text(`HASH SHA-256: ${relatorio.hash_integridade || 'Pendente de finalização criptográfica'}`, 58, yBox + 70);
+      doc.text(`HASH SHA-256: ${relatorio.hash_integridade || 'Pendente de finalização criptográfica'}`, 58, yBox + 70, { width: 480 });
+
+      if (temValidacaoManual) {
+        doc.fillColor(AMBAR_ALERTA)
+          .fontSize(7.5)
+          .font('Helvetica-Bold')
+          .text(
+            `AVISO DE GOVERNANÇA: Validação Manual Assistida aplicada${relatorio.motivo_validacao_manual ? ` (${relatorio.motivo_validacao_manual})` : ''}. Requer atenção na auditoria fiscal.`,
+            58,
+            yBox + 82,
+            { width: 480 }
+          );
+      }
 
       // ------------------------------------------------------------------------
-      // 3. DADOS CADASTRAIS DA MEDIÇÃO
+      // 3. DADOS CADASTRAIS DA MEDIÇÃO (LAYOUT DINÂMICO SEM SOBREPOSIÇÃO)
       // ------------------------------------------------------------------------
-      let currentY = 208;
+      let currentY = yBox + boxHeight + 16;
       doc.fillColor(AZUL_BB)
         .fontSize(10.5)
         .font('Helvetica-Bold')
@@ -127,27 +158,47 @@ function gerarRelatorioPdfBuffer(relatorio) {
 
       const obra = relatorio.obra || {};
       const usuario = relatorio.usuario || {};
+      const respNome = usuario.nome || obra.responsavel || 'Responsável Técnico';
+      const respCargo = usuario.cargo || 'empreiteira';
+      const respReg = usuario.registro_profissional ? ` • ${usuario.registro_profissional}` : '';
 
-      doc.fillColor(CINZA_ESCURO).fontSize(8.5).font('Helvetica');
-      doc.text('Obra / Unidade:', 45, currentY);
-      doc.font('Helvetica-Bold').text(`${obra.nome || 'Não informada'}`, 140, currentY);
+      const coordsTexto =
+        relatorio.latitude !== null && relatorio.latitude !== undefined && relatorio.longitude !== null && relatorio.longitude !== undefined
+          ? `${Number(relatorio.latitude).toFixed(5)}, ${Number(relatorio.longitude).toFixed(5)}${relatorio.precisao_gps ? ` (±${Math.round(Number(relatorio.precisao_gps))}m)` : ''}`
+          : '';
+      const localizacaoLinha = relatorio.localizacao_texto
+        ? relatorio.localizacao_texto
+        : (coordsTexto ? `GPS: ${coordsTexto}` : 'Não capturada no dispositivo');
 
-      doc.font('Helvetica').text('Endereço:', 45, currentY + 14);
-      doc.font('Helvetica-Bold').text(`${obra.endereco || 'Não informado'}`, 140, currentY + 14);
+      const camposCadastrais = [
+        { label: 'Obra / Unidade:', value: obra.nome || 'Não informada', color: CINZA_ESCURO },
+        { label: 'Endereço:', value: obra.endereco || 'Não informado', color: CINZA_ESCURO },
+        { label: 'Tipo de Local:', value: relatorio.tipo_local || obra.tipo || 'Não especificado', color: CINZA_ESCURO },
+        { label: 'Localização In-Loco:', value: localizacaoLinha, color: CINZA_ESCURO },
+        { label: 'Responsável Técnico:', value: `${respNome} (${respCargo}${respReg})`, color: CINZA_ESCURO },
+        {
+          label: 'Condição da Obra:',
+          value: obra.status || 'REGULAR',
+          color: obra.status === 'REGULAR' ? VERDE_SUCESSO : (obra.status === 'PENDENTE_AJUSTE' ? VERMELHO_ERRO : AMBAR_ALERTA),
+        },
+      ];
 
-      doc.font('Helvetica').text('Responsável Técnico:', 45, currentY + 28);
-      const respNome = usuario.nome || obra.responsavel || 'Rodrigo Silva';
-      const respCargo = usuario.cargo || 'Empreiteira';
-      doc.font('Helvetica-Bold').text(`${respNome} (${respCargo})`, 140, currentY + 28);
+      for (const campo of camposCadastrais) {
+        doc.font('Helvetica-Bold').fontSize(8.5);
+        const valHeight = doc.heightOfString(String(campo.value), { width: 405 });
+        const rowH = Math.max(14, valHeight + 3);
+        ensureSpace(rowH);
 
-      doc.font('Helvetica').text('Condição da Obra:', 45, currentY + 42);
-      const corObra = (obra.status === 'REGULAR') ? VERDE_SUCESSO : VERMELHO_ERRO;
-      doc.fillColor(corObra).font('Helvetica-Bold').text(`${obra.status || 'REGULAR'}`, 140, currentY + 42);
+        doc.fillColor(CINZA_ESCURO).font('Helvetica').fontSize(8.5).text(campo.label, 45, currentY);
+        doc.fillColor(campo.color).font('Helvetica-Bold').fontSize(8.5).text(String(campo.value), 145, currentY, { width: 405 });
+        currentY += rowH;
+      }
 
       // ------------------------------------------------------------------------
       // 4. CHECKLIST TÉCNICO DE VERIFICAÇÃO
       // ------------------------------------------------------------------------
-      currentY += 64;
+      currentY += 12;
+      ensureSpace(45);
       doc.fillColor(AZUL_BB)
         .fontSize(10.5)
         .font('Helvetica-Bold')
@@ -178,13 +229,8 @@ function gerarRelatorioPdfBuffer(relatorio) {
           const hIa = iaTxt ? doc.heightOfString(iaTxt, { width: 480 }) + 3 : 0;
 
           const blocoAltura = hPergunta + hValor + hJust + hIa + 14;
+          ensureSpace(blocoAltura);
 
-          if (currentY + blocoAltura > 735) {
-            doc.addPage();
-            currentY = 45;
-          }
-
-          // Fundo sutil alternado para facilitar leitura sem sobreposição
           if (idx % 2 === 0) {
             doc.rect(45, currentY - 3, 505, blocoAltura - 4).fill('#F8FAFC');
           }
@@ -198,7 +244,7 @@ function gerarRelatorioPdfBuffer(relatorio) {
           currentY += hValor + 3;
 
           if (justTxt) {
-            doc.fillColor('#B45309').fontSize(8).font('Helvetica-Oblique')
+            doc.fillColor(AMBAR_ALERTA).fontSize(8).font('Helvetica-Oblique')
               .text(justTxt, 58, currentY, { width: 480 });
             currentY += hJust;
           }
@@ -217,10 +263,7 @@ function gerarRelatorioPdfBuffer(relatorio) {
       // 5. EVIDÊNCIAS FOTOGRÁFICAS IN-LOCO
       // ------------------------------------------------------------------------
       currentY += 8;
-      if (currentY > 580) {
-        doc.addPage();
-        currentY = 45;
-      }
+      ensureSpace(160);
 
       doc.fillColor(AZUL_BB)
         .fontSize(10.5)
@@ -230,78 +273,45 @@ function gerarRelatorioPdfBuffer(relatorio) {
       doc.rect(45, currentY + 15, 505, 1).fill(BORDA_CINZA);
       currentY += 22;
 
-      let fotos = Array.isArray(relatorio.fotos) && relatorio.fotos.length > 0 ? relatorio.fotos : [];
-      if (fotos.length === 0 && (relatorio.caminhoArquivoFoto || relatorio.caminho_arquivo || relatorio.fotoCamera || relatorio.fotoBase64)) {
-        fotos = [{
-          caminho_arquivo: relatorio.caminhoArquivoFoto || relatorio.caminho_arquivo,
-          imagemBase64: relatorio.fotoCamera || relatorio.fotoBase64,
-          hash_integridade: relatorio.hash_integridade,
-          avaliacao_gemini: 'APROVADO',
-          confianca: relatorio.confiancaIA || 0.95,
-          motivo: relatorio.motivoIA || 'Evidência fotográfica capturada in-loco pela empreiteira.',
-        }];
-      }
-
+      const fotos = Array.isArray(relatorio.fotos) ? relatorio.fotos : [];
       if (fotos.length === 0) {
         doc.fillColor(CINZA_TEXTO).fontSize(8.5).font('Helvetica-Oblique').text('Nenhuma evidência fotográfica anexada.', 45, currentY);
         currentY += 20;
       } else {
         fotos.forEach((foto, idx) => {
-          if (currentY > 600) {
-            doc.addPage();
-            currentY = 45;
-          }
+          ensureSpace(140);
 
           const fotoBoxY = currentY;
           const cardHeight = 126;
           doc.rect(45, fotoBoxY, 505, cardHeight).fillAndStroke(CINZA_CLARO, BORDA_CINZA);
 
-          // Inclusão segura de imagem (suporta Buffer, Base64 Data URI ou caminho seguro em disco)
           let imgInserida = false;
           let imgBuffer = null;
 
-          // 1. Tenta decodificar Data URI ou Base64 direto
           const candidateBase64 = foto.imagemBase64 || foto.previewDataUrl || (typeof foto.url === 'string' && foto.url.startsWith('data:image/') ? foto.url : null);
-          if (candidateBase64 && typeof candidateBase64 === 'string') {
-            try {
-              const b64Data = candidateBase64.includes(',') ? candidateBase64.split(',')[1] : candidateBase64;
-              imgBuffer = Buffer.from(b64Data, 'base64');
-            } catch (e) {
-              imgBuffer = null;
-            }
+          if (candidateBase64) {
+            imgBuffer = decodeBase64Image(candidateBase64);
           }
 
-          // 2. Se não houver Buffer em memória, lê do disco SOMENTE a partir de caminho validado dentro de UPLOAD_ROOT
           if (!imgBuffer) {
             const rawSource = foto.caminho_arquivo || foto.url;
             if (rawSource && typeof rawSource === 'string' && !rawSource.startsWith('data:')) {
               try {
                 const fullPath = resolveSafePath(rawSource, UPLOAD_ROOT);
-
                 if (fullPath && fs.existsSync(fullPath)) {
                   imgBuffer = fs.readFileSync(fullPath);
                 } else {
-                  // Fallback seguro para arquivo direto dentro de uploads/evidencias
                   const directEvidencePath = resolveSafePath(path.join('evidencias', path.basename(rawSource)), UPLOAD_ROOT);
                   if (directEvidencePath && fs.existsSync(directEvidencePath)) {
                     imgBuffer = fs.readFileSync(directEvidencePath);
                   }
                 }
-              } catch (e) {
+              } catch (_) {
                 imgBuffer = null;
               }
             }
           }
 
-          // 3. Fallback inteligente para imagem de semente se for registro seed
-          if (!imgBuffer && foto.id && String(foto.id).includes('seed')) {
-            const seedCandidate = path.join(UPLOAD_ROOT, 'evidencias', 'seed_fachada_bb.png');
-            if (fs.existsSync(seedCandidate)) {
-              try { imgBuffer = fs.readFileSync(seedCandidate); } catch (e) {}
-            }
-          }
-
-          // Desenha a imagem no PDF
           if (imgBuffer && Buffer.isBuffer(imgBuffer) && imgBuffer.length > 32) {
             try {
               doc.rect(53, fotoBoxY + 8, 149, 110).fillAndStroke('#FFFFFF', BORDA_CINZA);
@@ -322,69 +332,114 @@ function gerarRelatorioPdfBuffer(relatorio) {
             .text('Validação IA:', textLeft, fotoBoxY + 24);
 
           const statusIA = foto.avaliacao_gemini || foto.status_ia || 'APROVADO';
-          const corIA = statusIA === 'APROVADO' ? VERDE_SUCESSO : '#D97706';
-          const confVal = foto.confianca || foto.confianca_ia;
-          const confPercent = confVal ? Math.round(confVal * 100) : 95;
+          const corIA = statusIA === 'APROVADO' ? VERDE_SUCESSO : (statusIA === 'REJEITADO' ? VERMELHO_ERRO : AMBAR_ALERTA);
+          const confVal = foto.confianca !== undefined && foto.confianca !== null ? foto.confianca : foto.confianca_ia;
+          const confTexto = confVal !== undefined && confVal !== null ? ` (Confiança: ${Math.round(Number(confVal) * 100)}%)` : '';
 
           doc.fillColor(corIA).font('Helvetica-Bold')
-            .text(`${statusIA} (Confiança: ${confPercent}%)`, textLeft + 56, fotoBoxY + 24, { width: Math.max(120, textWidth - 56) });
+            .text(`${statusIA}${confTexto}`, textLeft + 56, fotoBoxY + 24, { width: Math.max(120, textWidth - 56) });
 
-          const motivoIA = foto.motivo || foto.motivo_ia || 'Foto de obra/construção com boa iluminação e nitidez.';
+          const motivoIA = foto.motivo || foto.motivo_ia || 'Evidência fotográfica registrada em campo.';
           doc.fillColor(CINZA_ESCURO).font('Helvetica')
             .text(`Parecer Técnico / IA: "${motivoIA}"`, textLeft, fotoBoxY + 38, { width: textWidth, height: 28, ellipsis: true });
 
           const dataHoraStr = foto.data_captura || foto.created_at
             ? new Date(foto.data_captura || foto.created_at).toLocaleString('pt-BR')
-            : (relatorio.data_finalizacao || relatorio.data ? new Date(relatorio.data_finalizacao || relatorio.data).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR'));
+            : dataFormatada;
           doc.fillColor(CINZA_TEXTO).fontSize(7.5).font('Helvetica')
             .text(`Carimbo Temporal In-Loco: ${dataHoraStr}`, textLeft, fotoBoxY + 70, { width: textWidth });
 
-          const hashFoto = foto.hash_integridade || foto.hash_sha256 || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+          const hashFoto = foto.hash_integridade || foto.hash_sha256 || 'Não disponível';
           doc.fillColor(CINZA_TEXTO).fontSize(6.8).font('Courier')
             .text(`Hash SHA-256: ${hashFoto}`, textLeft, fotoBoxY + 86, { width: textWidth });
 
           doc.font('Helvetica').fontSize(7.2)
-            .text('Origem: Câmera In-Loco BBVision | Inviolabilidade & Bloqueio de Galeria Ativo', textLeft, fotoBoxY + 104, { width: textWidth });
+            .text('Origem: Câmera In-Loco BBVision | Bloqueio de Galeria Ativo', textLeft, fotoBoxY + 104, { width: textWidth });
 
           currentY += cardHeight + 10;
         });
       }
 
       // ------------------------------------------------------------------------
-      // 6. PARECER DO FISCAL & TERMO DE NÃO-REPÚDIO
+      // 6. ASSINATURA DIGITAL DO RESPONSÁVEL TÉCNICO
       // ------------------------------------------------------------------------
-      if (currentY > 660) {
-        doc.addPage();
-        currentY = 45;
+      const sigBuffer = decodeBase64Image(relatorio.assinatura_base64);
+      ensureSpace(sigBuffer ? 115 : 65);
+
+      currentY += 6;
+      doc.fillColor(AZUL_BB)
+        .fontSize(10.5)
+        .font('Helvetica-Bold')
+        .text('4. ASSINATURA DIGITAL E DECLARAÇÃO DE VERACIDADE', 45, currentY);
+      doc.rect(45, currentY + 15, 505, 1).fill(BORDA_CINZA);
+      currentY += 22;
+
+      if (sigBuffer) {
+        doc.rect(45, currentY, 210, 68).fillAndStroke('#FFFFFF', BORDA_CINZA);
+        try {
+          doc.image(sigBuffer, 52, currentY + 4, { fit: [196, 60], align: 'center', valign: 'center' });
+        } catch (_) {}
+        doc.fillColor(CINZA_ESCURO).fontSize(8.5).font('Helvetica-Bold')
+          .text(respNome, 270, currentY + 10, { width: 280 });
+        doc.fillColor(CINZA_TEXTO).fontSize(8).font('Helvetica')
+          .text(`Perfil: ${respCargo}${respReg}`, 270, currentY + 24, { width: 280 })
+          .text(`Assinado digitalmente em: ${dataFormatada}`, 270, currentY + 38, { width: 280 })
+          .text('Declaração de veracidade confirmada mediante autenticação de credencial.', 270, currentY + 52, { width: 280 });
+        currentY += 78;
+      } else {
+        doc.fillColor(CINZA_TEXTO).fontSize(8.2).font('Helvetica')
+          .text(`Responsável Técnico: ${respNome}${respReg} — Autenticado por sessão JWT em ${dataFormatada}.`, 45, currentY, { width: 505 });
+        currentY += 20;
       }
+
+      // ------------------------------------------------------------------------
+      // 7. PARECER DO FISCAL & TERMO DE NÃO-REPÚDIO
+      // ------------------------------------------------------------------------
+      const justificativa = relatorio.justificativa_fiscal || relatorio.justificativa || '';
+      doc.font('Helvetica').fontSize(8.5);
+      const justHeight = justificativa ? doc.heightOfString(`Justificativa / Parecer: "${justificativa}"`, { width: 505 }) : 14;
+      ensureSpace(justHeight + 115);
 
       currentY += 8;
       doc.fillColor(AZUL_BB)
         .fontSize(10.5)
         .font('Helvetica-Bold')
-        .text('4. PARECER DO FISCAL / AUDITORIA DE ENGENHARIA', 45, currentY);
+        .text('5. PARECER DO FISCAL / AUDITORIA DE ENGENHARIA', 45, currentY);
 
       doc.rect(45, currentY + 15, 505, 1).fill(BORDA_CINZA);
       currentY += 22;
 
-      doc.fillColor(CINZA_ESCURO).fontSize(8.5).font('Helvetica')
+      doc.fillColor(CINZA_ESCURO).fontSize(8.5).font('Helvetica-Bold')
         .text(`Status de Aprovação: ${relatorio.status}`, 45, currentY);
+      currentY += 14;
 
-      const justificativa = relatorio.justificativa_fiscal || relatorio.justificativa;
+      if (relatorio.fiscal_julgador && relatorio.fiscal_julgador.nome) {
+        const dataJulgStr = relatorio.data_julgamento || relatorio.julgado_em
+          ? new Date(relatorio.data_julgamento || relatorio.julgado_em).toLocaleString('pt-BR')
+          : '';
+        const regFiscal = relatorio.fiscal_julgador.registro_profissional ? ` (${relatorio.fiscal_julgador.registro_profissional})` : '';
+        doc.fillColor(CINZA_TEXTO).fontSize(8).font('Helvetica')
+          .text(`Auditor(a): ${relatorio.fiscal_julgador.nome}${regFiscal}${dataJulgStr ? ` • Julgado em: ${dataJulgStr}` : ''}`, 45, currentY, { width: 505 });
+        currentY += 14;
+      }
+
       if (justificativa) {
-        doc.text(`Justificativa / Parecer: "${justificativa}"`, 45, currentY + 14, { width: 505 });
-        currentY += 28;
+        doc.fillColor(CINZA_ESCURO).fontSize(8.5).font('Helvetica')
+          .text(`Justificativa / Parecer: "${justificativa}"`, 45, currentY, { width: 505 });
+        currentY += justHeight + 8;
       } else {
-        doc.text('Aguardando análise conclusiva no Painel de Auditoria da Fiscalização BB.', 45, currentY + 14);
-        currentY += 26;
+        doc.fillColor(CINZA_TEXTO).fontSize(8.5).font('Helvetica-Oblique')
+          .text('Aguardando análise conclusiva no Painel de Auditoria da Fiscalização.', 45, currentY);
+        currentY += 18;
       }
 
       // Rodapé Institucional de Fé Pública
-      currentY += 12;
+      ensureSpace(60);
+      currentY += 8;
       doc.rect(45, currentY, 505, 46).fillAndStroke('#F1F5F9', BORDA_CINZA);
       doc.fillColor(CINZA_TEXTO).fontSize(7).font('Helvetica')
-        .text('Declaração de Integridade: Este documento foi emitido e assinado criptograficamente pelo ecossistema BBVision.', 55, currentY + 7)
-        .text('O registro temporal e os hashes criptográficos garantem o não-repúdio das evidências coletadas em campo.', 55, currentY + 19)
+        .text('Declaração de Integridade: Este documento foi emitido e selado criptograficamente pelo ecossistema BBVision.', 55, currentY + 7)
+        .text('O registro temporal, assinatura digital e hashes SHA-256 garantem o não-repúdio das evidências coletadas em campo.', 55, currentY + 19)
         .text('Banco do Brasil S.A. | Diretoria de Engenharia, Infraestrutura e Patrimônio (DIPAT)', 55, currentY + 31);
 
       doc.end();
@@ -394,12 +449,6 @@ function gerarRelatorioPdfBuffer(relatorio) {
   });
 }
 
-/**
- * Salva o PDF no disco do servidor de forma assíncrona
- * @param {Object} relatorio 
- * @param {string} uploadSubdir 
- * @returns {Promise<{ filePath: string, relativePath: string, buffer: Buffer }>}
- */
 async function salvarRelatorioPdf(relatorio, uploadSubdir = 'relatorios') {
   const buffer = await gerarRelatorioPdfBuffer(relatorio);
   const targetDir = path.join(UPLOAD_ROOT, uploadSubdir);

@@ -1,18 +1,15 @@
 /**
- * BVision Main Frontend Application Controller
- * Coordena o ciclo de vida, navegação e injeção das telas
+ * BBVision Main Frontend Application Controller
+ * Coordena ciclo de vida, limpeza automática de hardware (câmera/GPS), RBAC e roteamento SPA.
  */
 
 import { state } from './services/state.js';
 import { renderLogin, bindLoginEvents } from './pages/login.js';
 import { renderInicio, bindInicioEvents } from './pages/inicio.js';
 import { renderObras, bindObrasEvents } from './pages/obras.js';
-import { renderVistoria, bindVistoriaEvents } from './pages/vistoria.js';
 import { renderRelatorios, bindRelatoriosEvents } from './pages/relatorios.js';
 import { renderPerfil, bindPerfilEvents } from './pages/perfil.js';
 import { renderBottomNav, bindBottomNavEvents } from './components/bottomNav.js';
-
-// Novas Telas Conforme Prints dos Mockups Oficiais
 import { renderObraDetalhe, bindObraDetalheEvents } from './pages/obraDetalhe.js';
 import { renderTipoLocal, bindTipoLocalEvents } from './pages/tipoLocal.js';
 import { renderCameraIa, bindCameraIaEvents } from './pages/cameraIa.js';
@@ -24,30 +21,40 @@ import { renderAssinaturaResponsavel, bindAssinaturaResponsavelEvents } from './
 import { renderRelatorioBloqueado, bindRelatorioBloqueadoEvents } from './pages/relatorioBloqueado.js';
 import { renderFiscalAuditoria, bindFiscalAuditoriaEvents } from './pages/fiscalAuditoria.js';
 import { renderValidadorPublico, bindValidadorPublicoEvents } from './pages/validadorPublico.js';
-
 import { toast } from './components/toast.js';
 
 class BVisionApp {
   constructor() {
     this.screenContainer = document.getElementById('appScreenContainer');
     this.bottomNavSlot = document.getElementById('bottomNavSlot');
+    this.currentRenderedPage = null;
+    this.activeCleanup = null;
     this.init();
   }
 
   init() {
-    // 1. Processa rotas diretas via URL ou Hash (ex: QR Code de Validação Pública ou links compartilhados)
     this.handleInitialRouting();
 
     window.addEventListener('popstate', () => this.handleInitialRouting());
     window.addEventListener('hashchange', () => this.handleInitialRouting());
+    window.addEventListener('pagehide', () => this.runCleanup());
 
-    // 2. Escuta mudanças de estado e re-renderiza a tela ativa
     state.subscribe(() => {
       this.render();
     });
 
-    // Render inicial
     this.render();
+  }
+
+  runCleanup() {
+    if (typeof this.activeCleanup === 'function') {
+      try {
+        this.activeCleanup();
+      } catch (err) {
+        console.warn('[BBVision App] Erro ao liberar recursos da tela anterior:', err);
+      }
+      this.activeCleanup = null;
+    }
   }
 
   handleInitialRouting() {
@@ -57,17 +64,11 @@ class BVisionApp {
       const codigoParam = urlParams.get('codigo') || urlParams.get('validar') || urlParams.get('hash');
 
       if (codigoParam || hash === '#validador' || hash.includes('validador')) {
-        state.currentPage = 'validador-publico';
         if (codigoParam) {
-          setTimeout(() => {
-            const input = document.getElementById('inputTermoValidacao');
-            const btn = document.getElementById('btnConsultarIntegridade');
-            if (input && btn) {
-              input.value = codigoParam;
-              btn.click();
-            }
-          }, 250);
+          state.currentVistoria.codigoParaValidar = codigoParam;
         }
+        state.currentPage = 'validador-publico';
+        state.notify();
       }
     } catch (e) {
       console.warn('[BBVision App] Erro ao processar rota de URL:', e);
@@ -78,40 +79,61 @@ class BVisionApp {
     const page = state.currentPage;
     const userRole = state.user?.cargo || 'empreiteira';
 
-    // Evita loop de re-renderização e tela piscando na câmera
+    // Evita reiniciar a câmera ao vivo durante atualizações internas de estado na mesma tela
     if (this.currentRenderedPage === page && page === 'camera-ia' && !force) {
       return;
     }
+
+    // Sempre libera câmera/GPS/intervals ao sair de uma tela
+    if (this.currentRenderedPage !== page || force) {
+      this.runCleanup();
+    }
+
     this.currentRenderedPage = page;
 
-    // Regra de Autenticação Real: Redireciona para login se não autenticado
+    // Regra de Autenticação: redireciona para login se não autenticado
     if (!state.user && page !== 'login' && page !== 'validador-publico') {
       state.currentPage = 'login';
+      this.currentRenderedPage = 'login';
       this.screenContainer.innerHTML = renderLogin();
       bindLoginEvents();
       this.bottomNavSlot.innerHTML = '';
       this.screenContainer.style.paddingBottom = '0px';
-      this.updateClock();
       return;
     }
 
-    // Regra de Controle de Acesso por Persona (RBAC):
-    // 1. Empreiteira não pode acessar o painel de auditoria e julgamento exclusivo do Fiscal BB
+    // RBAC: Empreiteira não acessa Painel de Auditoria do Fiscal
     if (page === 'fiscal-auditoria' && userRole === 'empreiteira') {
-      toast.warning('Acesso Restrito', 'O Painel de Auditoria e Julgamento é restrito aos fiscais de obra e auditores de engenharia do Banco do Brasil.');
+      toast.warning('Acesso Restrito', 'O Painel de Auditoria e Julgamento é restrito aos Fiscais de Obra.');
       state.navigate('inicio', 'inicio');
       return;
     }
 
-    // 2. Fiscal BB não executa captura in-loco de campo (função exclusiva da Empreiteira)
-    const paginasExclusivasEmpreiteira = ['tipo-local', 'camera-ia', 'imagem-protegida', 'assinatura-responsavel', 'vistoria'];
+    // RBAC: Fiscal não executa captura in-loco de campo
+    const paginasExclusivasEmpreiteira = [
+      'tipo-local',
+      'checklist-pergunta',
+      'checklist-dinamico',
+      'checklist-verificacao',
+      'camera-ia',
+      'imagem-protegida',
+      'assinatura-responsavel',
+    ];
     if (paginasExclusivasEmpreiteira.includes(page) && userRole === 'fiscal') {
-      toast.warning('Fluxo Exclusivo de Campo', 'A captura fotográfica e assinatura in-loco são exclusivas da Empreiteira. Utilize o Painel de Auditoria ou o Editor de Checklist.');
+      toast.warning('Fluxo Exclusivo de Campo', 'A vistoria in-loco e captura fotográfica são exclusivas da Empreiteira.');
       state.navigate('fiscal-auditoria', 'fiscal-auditoria');
       return;
     }
 
-    // 1. Renderiza o conteúdo da tela ativa
+    // Guard: telas de vistoria exigem uma obra selecionada
+    if ((page === 'obra-detalhe' || paginasExclusivasEmpreiteira.includes(page)) && !state.currentVistoria?.obraId) {
+      toast.info('Selecione uma Obra', 'Escolha uma obra na lista antes de iniciar a vistoria.');
+      state.navigate('obras', 'obras');
+      return;
+    }
+
+    let cleanupFn = null;
+
     switch (page) {
       case 'login':
         this.screenContainer.innerHTML = renderLogin();
@@ -140,7 +162,7 @@ class BVisionApp {
 
       case 'camera-ia':
         this.screenContainer.innerHTML = renderCameraIa();
-        bindCameraIaEvents();
+        cleanupFn = bindCameraIaEvents();
         break;
 
       case 'imagem-protegida':
@@ -178,11 +200,6 @@ class BVisionApp {
         bindFiscalAuditoriaEvents();
         break;
 
-      case 'vistoria':
-        this.screenContainer.innerHTML = renderVistoria();
-        bindVistoriaEvents();
-        break;
-
       case 'relatorios':
         this.screenContainer.innerHTML = renderRelatorios();
         bindRelatoriosEvents();
@@ -204,12 +221,14 @@ class BVisionApp {
         break;
     }
 
-    // Scroll para o topo ao trocar de tela
+    if (typeof cleanupFn === 'function') {
+      this.activeCleanup = cleanupFn;
+    }
+
     this.screenContainer.scrollTop = 0;
 
-    // 2. Renderiza a barra inferior de navegação (exceto login, câmera e assinatura digital)
-    const semBottomNav = ['login', 'camera-ia', 'assinatura-responsavel'];
-    if (semBottomNav.includes(page)) {
+    const semBottomNav = ['login', 'camera-ia', 'assinatura-responsavel', 'validador-publico'];
+    if (semBottomNav.includes(page) || !state.user) {
       this.bottomNavSlot.innerHTML = '';
       this.screenContainer.style.paddingBottom = '0px';
     } else {
@@ -217,24 +236,9 @@ class BVisionApp {
       bindBottomNavEvents();
       this.screenContainer.style.paddingBottom = '90px';
     }
-
-    // Atualiza o relógio da barra de status móvel
-    this.updateClock();
-  }
-
-  updateClock() {
-    const timeElem = document.getElementById('deviceTime');
-    if (timeElem) {
-      const now = new Date();
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      timeElem.innerText = `${hours}:${minutes}`;
-    }
   }
 }
 
-// Inicializa a aplicação quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', () => {
   new BVisionApp();
 });
-

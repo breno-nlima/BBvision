@@ -6,9 +6,8 @@
 
 const express = require('express');
 const router = express.Router();
-const mockData = require('../mockData');
+const dataStore = require('../repositories/dataStore');
 const siteConfig = require('../config/siteConfig');
-const { isConfigured } = require('../config/supabase');
 const { getLlmsTxt, getMarkdownPage, getMcpServerCard } = require('../services/agentContentService');
 
 const MCP_PROTOCOL_VERSION = '2025-11-25';
@@ -29,7 +28,6 @@ function jsonRpcError(id, code, message) {
   };
 }
 
-// GET /api/mcp -> Metadados do servidor MCP
 router.get('/', (req, res) => {
   res.status(200).json({
     protocol: 'model-context-protocol',
@@ -44,7 +42,6 @@ router.get('/', (req, res) => {
   });
 });
 
-// POST /api/mcp -> Handler JSON-RPC 2.0
 router.post('/', async (req, res) => {
   const body = req.body;
   if (!body || typeof body !== 'object' || body.jsonrpc !== '2.0' || !body.method) {
@@ -94,16 +91,23 @@ router.post('/', async (req, res) => {
             );
           }
 
-          const relatorio = await mockData.findRelatorioByCodigoOuHashAsync(termo);
-          const payload = relatorio
+          const relatorio = await dataStore.findRelatorioByCodigoOuHashAsync(termo);
+          const relValido = relatorio && relatorio.status !== 'EM_ANDAMENTO' ? relatorio : null;
+          let relPublico = null;
+          if (relValido) {
+            const { assinatura_base64, ...rest } = relValido;
+            relPublico = rest;
+          }
+
+          const payload = relPublico
             ? {
                 autentico: true,
                 mensagem: 'Documento de vistoria atestado como autêntico e íntegro.',
-                relatorio,
+                relatorio: relPublico,
               }
             : {
                 autentico: false,
-                mensagem: 'Documento não localizado no acervo oficial de vistorias do Banco do Brasil.',
+                mensagem: 'Documento não localizado no acervo oficial de vistorias.',
                 termoPesquisado: termo,
               };
 
@@ -117,9 +121,9 @@ router.post('/', async (req, res) => {
         if (toolName === 'get_system_health') {
           const payload = {
             status: 'online',
-            sistema: 'BBVision Backend (TakeOff)',
+            sistema: 'BBVision Backend',
             versao: siteConfig.version,
-            bancoDados: isConfigured ? 'Supabase Conectado' : 'Camada Desacoplada em Memória (Ativa)',
+            bancoDados: dataStore.getStorageModeLabel(),
             timestamp: new Date().toISOString(),
           };
           return res.status(200).json(

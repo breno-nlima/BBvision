@@ -8,7 +8,7 @@ O BBVision é a plataforma de monitoramento, auditoria e fiscalização remota d
 
 - [Início e Portal BBVision](https://antiquewhite-dolphin-779579.hostingersite.com/): Acesso ao portal corporativo de fiscalização remota de obras para Empreiteiras e Fiscais do Banco do Brasil.
 - [Validador Público de Fé Pública](https://antiquewhite-dolphin-779579.hostingersite.com/validador): Consulta aberta para verificar a autenticidade e integridade criptográfica SHA-256 de laudos emitidos pelo BBVision.
-- [Sobre o BBVision](https://antiquewhite-dolphin-779579.hostingersite.com/about): Visão geral da arquitetura, personas (Rodrigo — Empreiteira e Mariana — Fiscal BB), governança de IA e equipe TakeOff / Porto Digital.
+- [Sobre o BBVision](https://antiquewhite-dolphin-779579.hostingersite.com/about): Visão geral da arquitetura, perfis de acesso (Empreiteira e Fiscal de Obras), governança de IA e equipe TakeOff / Porto Digital.
 - [Contato e Suporte Institucional](https://antiquewhite-dolphin-779579.hostingersite.com/contact): E-mail oficial, telefone institucional, endereço no Porto Digital (Recife/PE) e canais de suporte técnico.
 - [Termos de Uso e Governança](https://antiquewhite-dolphin-779579.hostingersite.com/terms): Regras de utilização, inviolabilidade documental, proibição de upload via galeria e responsabilidades legais.
 - [Política de Privacidade e LGPD](https://antiquewhite-dolphin-779579.hostingersite.com/privacy): Tratamento de dados pessoais, evidências fotográficas, trilhas de auditoria e direitos dos titulares conforme a LGPD.

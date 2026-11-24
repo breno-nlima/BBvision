@@ -1,55 +1,70 @@
 /**
  * BBVision - Middleware de Autenticação JWT e RBAC (Role-Based Access Control)
- * Gerencia acessos das personas Rodrigo (empreiteira) e Mariana (fiscal/engenheira)
- * Em conformidade com o Documento de Entrega Oficial TakeOff (Seção 8.1 e 8.5)
+ * Gerencia acessos autenticados para Empreiteiras e Fiscais de Obra sem contas fictícias.
  */
 
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const mockData = require('../mockData');
+const dataStore = require('../repositories/dataStore');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'bbvision_takeoff_secret_key_2026_jwt_token_bancodobrasil';
+const rawSecret = (process.env.JWT_SECRET || '').trim();
+const isWeakSecret =
+  !rawSecret ||
+  rawSecret.length < 16 ||
+  rawSecret.includes('sua-chave-') ||
+  rawSecret.includes('substitua-por-');
 
-if (process.env.NODE_ENV === 'production' && JWT_SECRET.includes('bbvision_takeoff_secret_key_2026')) {
-  console.warn('[ALERTA DE SEGURANÇA] JWT_SECRET padrão está sendo utilizado em ambiente de produção. Configure uma chave segura no .env.');
+const JWT_SECRET = isWeakSecret
+  ? (process.env.NODE_ENV === 'production'
+      ? crypto.randomBytes(48).toString('hex')
+      : crypto.createHash('sha256').update(`bbvision-dev-${process.cwd()}`).digest('hex'))
+  : rawSecret;
+
+if (isWeakSecret && process.env.NODE_ENV === 'production') {
+  console.warn('[ALERTA DE SEGURANÇA] JWT_SECRET não definido no .env em produção. Uma chave aleatória efêmera foi gerada para esta instância. Configure JWT_SECRET (>=32 chars) no .env para manter sessões entre reinicializações.');
 }
 
 /**
- * Middleware para exigir usuário autenticado via Bearer Token
+ * Extrai token Bearer do cabeçalho Authorization ou (opcionalmente) da query string ?token=
+ * (usado exclusivamente para abertura de PDF em iframe/nova aba quando o relatório ainda não é público).
+ */
+function extractToken(req, allowQuery = false) {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.split(' ')[1]?.trim() || null;
+  }
+  if (allowQuery && req.query && typeof req.query.token === 'string' && req.query.token.trim()) {
+    return req.query.token.trim();
+  }
+  return null;
+}
+
+/**
+ * Middleware obrigatório de autenticação via Bearer Token JWT
  */
 async function requireAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({
-      status: 401,
-      erro: 'Acesso não autorizado. Token Bearer não fornecido no cabeçalho Authorization.',
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  const token = authHeader.split(' ')[1]?.trim();
+  const token = extractToken(req, false);
 
   if (!token) {
     return res.status(401).json({
       status: 401,
-      erro: 'Token de autenticação ausente ou em formato inválido.',
+      erro: 'Acesso não autorizado. Efetue login para obter um token de autenticação.',
       timestamp: new Date().toISOString(),
     });
   }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await mockData.findUserByIdAsync ? await mockData.findUserByIdAsync(decoded.id) : mockData.findUserById(decoded.id);
+    const user = await dataStore.findUserByIdAsync(decoded.id);
 
     if (!user) {
       return res.status(401).json({
         status: 401,
-        erro: 'Sessão expirada ou usuário associado ao token não existe no sistema.',
+        erro: 'Sessão expirada ou usuário não localizado no sistema.',
         timestamp: new Date().toISOString(),
       });
     }
 
-    // Remove campos sensíveis antes de injetar em req.user
     const { senha_hash, ...safeUser } = user;
     req.user = safeUser;
     next();
@@ -57,46 +72,42 @@ async function requireAuth(req, res, next) {
     const isExpired = err.name === 'TokenExpiredError';
     return res.status(401).json({
       status: 401,
-      erro: isExpired ? 'Token expirado. Por favor, efetue login novamente.' : 'Token inválido ou corrompido.',
-      detalhe: err.message,
+      erro: isExpired ? 'Sessão expirada. Por favor, efetue login novamente.' : 'Token de autenticação inválido ou corrompido.',
       timestamp: new Date().toISOString(),
     });
   }
 }
 
 /**
- * Middleware opcional de autenticação:
- * - Se fornecer Bearer token, valida obrigatoriamente.
- * - Se não fornecer token, injeta o usuário padrão Rodrigo (empreiteira) para facilitar testes locais.
+ * Middleware opcional de autenticação (sem injeção de usuário simulado).
+ * Se houver Bearer token ou ?token= (para rotas que permitem), valida e popula req.user;
+ * caso contrário, segue com req.user = null.
  */
 async function optionalAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
-
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    return requireAuth(req, res, next);
-  }
-
-  // Em ambiente de produção, sem token não há injeção de usuário simulado
-  if (process.env.NODE_ENV === 'production') {
+  const token = extractToken(req, true);
+  if (!token) {
     req.user = null;
     return next();
   }
 
-  // Fallback dev/sandbox para facilidade de testes locais
-  req.user = {
-    id: '11111111-1111-4111-8111-111111111111',
-    nome: 'Rodrigo Silva (Empreiteira)',
-    email: 'rodrigo@empreiteira.com',
-    cargo: 'empreiteira',
-    empresa: 'Silva Engenharia & Reformas',
-    registro_profissional: 'CREA-SP 987654/D',
-  };
-  next();
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await dataStore.findUserByIdAsync(decoded.id);
+    if (user) {
+      const { senha_hash, ...safeUser } = user;
+      req.user = safeUser;
+    } else {
+      req.user = null;
+    }
+  } catch (_) {
+    req.user = null;
+  }
+  return next();
 }
 
 /**
  * Middleware de restrição de acesso por papéis (RBAC)
- * @param {string[]} rolesPermitidos Ex: ['fiscal', 'engenheiro']
+ * @param {string[]} rolesPermitidos Ex: ['fiscal', 'engenheiro', 'admin']
  */
 function requireRole(rolesPermitidos = []) {
   return (req, res, next) => {
@@ -114,7 +125,7 @@ function requireRole(rolesPermitidos = []) {
     if (!permitido) {
       return res.status(403).json({
         status: 403,
-        erro: `Acesso negado. Ação restrita a usuários com perfil: [${rolesPermitidos.join(', ')}]. Seu perfil atual é: "${req.user.cargo}".`,
+        erro: `Acesso negado. Operação restrita a perfis autorizados (${rolesPermitidos.join(', ')}).`,
         timestamp: new Date().toISOString(),
       });
     }

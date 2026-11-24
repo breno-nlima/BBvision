@@ -1,22 +1,27 @@
 /**
  * BBVision - Controller de Relatórios de Vistoria, Inviolabilidade e Auditoria
- * Implementa finalização inviolável, código de 16 caracteres hexadecimais, hashes SHA-256 e PDFKit
- * Em estrita conformidade com as Seções 6, 8.3, 8.5 e 8.6 do Documento de Entrega TakeOff
+ * Implementa finalização inviolável, validação real de senha na assinatura,
+ * código único de 16 caracteres hexadecimais, hashes SHA-256, geolocalização,
+ * assinatura digital no PDFKit e parecer fiscal com recompilação automática.
  */
 
 const fs = require('fs');
 const path = require('path');
-const mockData = require('../mockData');
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
+const dataStore = require('../repositories/dataStore');
 const pdfService = require('../services/pdfService');
 const emailService = require('../services/emailService');
 const { generateUniqueCode, generateReportIntegrityHash, generateSha256 } = require('../utils/cryptoUtils');
 const { resolveSafePath, sanitizeString, validateImageMagicBytes } = require('../utils/securityUtils');
 const { UPLOAD_ROOT, EVIDENCIAS_DIR } = require('../middlewares/uploadMiddleware');
 
-/**
- * Decodifica e salva uma imagem Base64 validando assinatura binária (Magic Bytes)
- * e limites seguros antes de gravar em disco.
- */
+const CARGOS_FISCAL = ['fiscal', 'engenheiro', 'admin'];
+
+function isFiscalRole(user) {
+  return Boolean(user && CARGOS_FISCAL.includes(String(user.cargo || '').toLowerCase()));
+}
+
 async function salvarFotoBase64Segura(rawBase64, prefix = 'evidencia_rel') {
   if (!rawBase64 || typeof rawBase64 !== 'string') return null;
   if (rawBase64.length > 25 * 1024 * 1024) {
@@ -36,17 +41,15 @@ async function salvarFotoBase64Segura(rawBase64, prefix = 'evidencia_rel') {
 
   const buffer = Buffer.from(base64Part, 'base64');
   const magic = validateImageMagicBytes(buffer);
-  if (!magic.valid && buffer.length > 500) {
+  if (!magic.valid) {
     const err = new Error('A evidência enviada não possui assinatura binária válida de imagem (JPEG, PNG ou WEBP).');
     err.status = 400;
     throw err;
   }
-  if (magic.valid) {
-    mimeType = magic.mimeType;
-  }
+  mimeType = magic.mimeType;
 
   const ext = mimeType === 'image/png' ? '.png' : mimeType === 'image/webp' ? '.webp' : '.jpg';
-  const fileName = `${prefix}_${Date.now()}_${Math.round(Math.random() * 1e6)}${ext}`;
+  const fileName = `${prefix}_${Date.now()}_${crypto.randomBytes(4).toString('hex')}${ext}`;
   const filePath = path.join(EVIDENCIAS_DIR, fileName);
   await fs.promises.writeFile(filePath, buffer);
 
@@ -56,23 +59,69 @@ async function salvarFotoBase64Segura(rawBase64, prefix = 'evidencia_rel') {
   };
 }
 
+async function calcularHashDeArquivoExistente(caminhoRelativo) {
+  const safePath = resolveSafePath(caminhoRelativo, UPLOAD_ROOT);
+  if (!safePath || !fs.existsSync(safePath)) return null;
+  const buf = await fs.promises.readFile(safePath);
+  return generateSha256(buf);
+}
+
+function validarAssinaturaBase64(rawSig) {
+  if (!rawSig || typeof rawSig !== 'string') return null;
+  if (rawSig.length > 2 * 1024 * 1024) {
+    const err = new Error('A assinatura digital excede o tamanho máximo permitido.');
+    err.status = 400;
+    throw err;
+  }
+  const b64Part = rawSig.includes(',') ? rawSig.split(',')[1] : rawSig;
+  const buf = Buffer.from(b64Part, 'base64');
+  const magic = validateImageMagicBytes(buf);
+  if (!magic.valid) {
+    const err = new Error('Formato da assinatura digital inválido (esperado imagem PNG/JPEG/WEBP).');
+    err.status = 400;
+    throw err;
+  }
+  return `data:${magic.mimeType};base64,${buf.toString('base64')}`;
+}
+
 function verificarPermissaoMutacaoRelatorio(req, relatorio) {
   if (!req.user) return false;
-  if (req.user.cargo === 'empreiteira' && relatorio.usuario_id && relatorio.usuario_id !== req.user.id) {
+  if (!isFiscalRole(req.user) && relatorio.usuario_id !== req.user.id) {
     return false;
   }
   return true;
 }
 
+function parseOptionalNumber(val, min, max) {
+  if (val === null || val === undefined || val === '') return null;
+  const num = Number(val);
+  if (Number.isNaN(num) || !Number.isFinite(num)) return null;
+  if (num < min || num > max) return null;
+  return num;
+}
+
+async function resolverEmailFiscalDaObra(obra, emailOverride = null) {
+  if (emailOverride && typeof emailOverride === 'string' && emailOverride.trim()) {
+    return emailOverride.trim();
+  }
+  if (obra && obra.fiscal_responsavel_id) {
+    const fiscal = await dataStore.findUserByIdAsync(obra.fiscal_responsavel_id);
+    if (fiscal && fiscal.email) return fiscal.email;
+  }
+  if (obra && obra.cadastrado_por_fiscal_id) {
+    const cadastrador = await dataStore.findUserByIdAsync(obra.cadastrado_por_fiscal_id);
+    if (cadastrador && cadastrador.email) return cadastrador.email;
+  }
+  return process.env.FISCAL_EMAIL_PADRAO || null;
+}
+
 const relatoriosController = {
   /**
    * POST /api/relatorios
-   * Cria nova vistoria em status EM_ANDAMENTO
-   * Também suporta carga inicial opcional de respostas/fotos se enviadas
    */
   async criar(req, res, next) {
     try {
-      const { obra_id, respostas, fotos } = req.body;
+      const { obra_id, respostas, fotos, tipo_local, localizacao_texto, latitude, longitude, precisao_gps } = req.body || {};
 
       if (!obra_id) {
         return res.status(400).json({
@@ -81,7 +130,7 @@ const relatoriosController = {
         });
       }
 
-      const obra = await mockData.findObraByIdAsync ? await mockData.findObraByIdAsync(obra_id) : mockData.findObraById(obra_id);
+      const obra = await dataStore.findObraByIdAsync(obra_id);
       if (!obra) {
         return res.status(404).json({
           status: 404,
@@ -89,14 +138,23 @@ const relatoriosController = {
         });
       }
 
-      const usuarioId = req.user ? req.user.id : '11111111-1111-4111-8111-111111111111';
+      if (!isFiscalRole(req.user) && obra.empreiteira_id !== req.user.id) {
+        return res.status(403).json({
+          status: 403,
+          erro: 'Acesso negado. Você só pode iniciar vistorias em obras atribuídas à sua conta.',
+        });
+      }
 
-      const novoRelatorio = mockData.createRelatorio({
+      const novoRelatorio = await dataStore.createRelatorioAsync({
         obra_id,
-        usuario_id: usuarioId,
+        usuario_id: req.user.id,
+        tipo_local: tipo_local ? sanitizeString(tipo_local).slice(0, 120) : null,
+        localizacao_texto: localizacao_texto ? sanitizeString(localizacao_texto).slice(0, 300) : null,
+        latitude: parseOptionalNumber(latitude, -90, 90),
+        longitude: parseOptionalNumber(longitude, -180, 180),
+        precisao_gps: parseOptionalNumber(precisao_gps, 0, 100000),
       });
 
-      // Salva respostas se fornecidas na criação
       if (Array.isArray(respostas) && respostas.length > 0) {
         const respostasSanitizadas = respostas.map(r => ({
           pergunta: sanitizeString(r.pergunta || 'Item não especificado'),
@@ -105,42 +163,40 @@ const relatoriosController = {
           sugestao_ia: r.sugestao_ia ? sanitizeString(r.sugestao_ia) : null,
           tipo: r.tipo === 'multipla_escolha' ? 'multipla_escolha' : 'texto',
         }));
-        mockData.saveRespostas(novoRelatorio.id, respostasSanitizadas);
+        await dataStore.saveRespostasAsync(novoRelatorio.id, respostasSanitizadas);
       }
 
-      // Salva fotos se fornecidas na criação
       if (Array.isArray(fotos) && fotos.length > 0) {
         for (const f of fotos) {
           let caminhoRelativo = f.caminho_arquivo || f.url || '';
           let hashFoto = f.hash_integridade || f.hash_sha256 || '';
-          let b64 = f.imagemBase64 || (typeof f.url === 'string' && f.url.startsWith('data:image/') ? f.url : null);
+          const b64 = f.imagemBase64 || (typeof f.url === 'string' && f.url.startsWith('data:image/') ? f.url : null);
 
           if (b64) {
             const saved = await salvarFotoBase64Segura(b64, 'evidencia_rel');
             if (saved) {
               caminhoRelativo = saved.caminhoRelativo;
-              hashFoto = hashFoto || saved.hash;
+              hashFoto = saved.hash;
             }
-          } else if (caminhoRelativo && !resolveSafePath(caminhoRelativo, UPLOAD_ROOT)) {
-            return res.status(400).json({
-              status: 400,
-              erro: 'Caminho de arquivo da evidência inválido ou não autorizado.',
-            });
+          } else if (caminhoRelativo) {
+            if (!resolveSafePath(caminhoRelativo, UPLOAD_ROOT)) {
+              return res.status(400).json({
+                status: 400,
+                erro: 'Caminho de arquivo da evidência inválido ou não autorizado.',
+              });
+            }
+            if (!hashFoto) {
+              hashFoto = await calcularHashDeArquivoExistente(caminhoRelativo);
+            }
           }
 
-          if (caminhoRelativo || b64) {
-            mockData.addFoto(novoRelatorio.id, {
-              caminho_arquivo: caminhoRelativo,
-              url: caminhoRelativo || b64,
-              imagemBase64: b64,
-              hash_integridade: hashFoto || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-              hash_sha256: hashFoto || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-              avaliacao_gemini: f.avaliacao_gemini || f.status_ia || 'APROVADO',
-              status_ia: f.avaliacao_gemini || f.status_ia || 'APROVADO',
-              confianca: f.confianca !== undefined ? f.confianca : 0.95,
-              confianca_ia: f.confianca !== undefined ? f.confianca : 0.95,
-              motivo: f.motivo || f.motivo_ia || 'Evidência fotográfica capturada in-loco.',
-              motivo_ia: f.motivo || f.motivo_ia || 'Evidência fotográfica capturada in-loco.',
+          if (caminhoRelativo && hashFoto) {
+            await dataStore.addFotoAsync(novoRelatorio.id, {
+              caminho_arquivo: sanitizeString(caminhoRelativo),
+              hash_integridade: sanitizeString(hashFoto),
+              avaliacao_gemini: sanitizeString(f.avaliacao_gemini || f.status_ia || 'APROVADO'),
+              confianca: typeof f.confianca === 'number' ? f.confianca : (typeof f.confianca_ia === 'number' ? f.confianca_ia : 0.94),
+              motivo: sanitizeString(f.motivo || f.motivo_ia || 'Evidência fotográfica capturada in-loco.'),
             });
           }
         }
@@ -153,17 +209,31 @@ const relatoriosController = {
         created_at: novoRelatorio.created_at,
       });
     } catch (err) {
+      if (err.status) {
+        return res.status(err.status).json({ status: err.status, erro: err.message });
+      }
       next(err);
     }
   },
 
   /**
    * POST /api/relatorios/sincronizar-offline
-   * Endpoint de sincronização de lote ou vistoria única finalizada offline (HU05)
    */
   async sincronizarOffline(req, res, next) {
     try {
-      const { obra_id, respostas, fotos, codigo_unico, timestamp } = req.body;
+      const {
+        obra_id,
+        respostas,
+        fotos,
+        codigo_unico,
+        timestamp,
+        assinatura_base64,
+        tipo_local,
+        localizacao_texto,
+        latitude,
+        longitude,
+        precisao_gps,
+      } = req.body || {};
 
       if (!obra_id) {
         return res.status(400).json({
@@ -172,7 +242,7 @@ const relatoriosController = {
         });
       }
 
-      const obra = await mockData.findObraByIdAsync ? await mockData.findObraByIdAsync(obra_id) : mockData.findObraById(obra_id);
+      const obra = await dataStore.findObraByIdAsync(obra_id);
       if (!obra) {
         return res.status(404).json({
           status: 404,
@@ -180,13 +250,27 @@ const relatoriosController = {
         });
       }
 
-      const usuarioId = req.user ? req.user.id : '11111111-1111-4111-8111-111111111111';
-      const novoRelatorio = mockData.createRelatorio({
+      if (!isFiscalRole(req.user) && obra.empreiteira_id !== req.user.id) {
+        return res.status(403).json({
+          status: 403,
+          erro: 'Acesso negado. Obra não vinculada à sua conta.',
+        });
+      }
+
+      const assinaturaValidada = assinatura_base64 ? validarAssinaturaBase64(assinatura_base64) : null;
+
+      const novoRelatorio = await dataStore.createRelatorioAsync({
         obra_id,
-        usuario_id: usuarioId,
+        usuario_id: req.user.id,
+        tipo_local: tipo_local ? sanitizeString(tipo_local).slice(0, 120) : null,
+        localizacao_texto: localizacao_texto ? sanitizeString(localizacao_texto).slice(0, 300) : null,
+        latitude: parseOptionalNumber(latitude, -90, 90),
+        longitude: parseOptionalNumber(longitude, -180, 180),
+        precisao_gps: parseOptionalNumber(precisao_gps, 0, 100000),
+        validacao_manual: true,
+        motivo_validacao_manual: 'Vistoria registrada em modo offline e sincronizada automaticamente.',
       });
 
-      // 1. Processa e anexa fotos enviadas
       if (Array.isArray(fotos) && fotos.length > 0) {
         for (const itemFoto of fotos) {
           let caminhoRelativo = itemFoto.caminho_arquivo || '';
@@ -198,19 +282,23 @@ const relatoriosController = {
               caminhoRelativo = saved.caminhoRelativo;
               hashFoto = saved.hash;
             }
+          } else if (caminhoRelativo) {
+            if (!resolveSafePath(caminhoRelativo, UPLOAD_ROOT)) continue;
+            if (!hashFoto) hashFoto = await calcularHashDeArquivoExistente(caminhoRelativo);
           }
 
-          mockData.addFoto(novoRelatorio.id, {
-            caminho_arquivo: caminhoRelativo,
-            hash_integridade: hashFoto || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-            avaliacao_gemini: itemFoto.avaliacao_gemini || 'VALIDACAO_MANUAL',
-            confianca: itemFoto.confianca || 0.75,
-            motivo: itemFoto.motivo || 'Evidência fotográfica sincronizada da fila offline.',
-          });
+          if (caminhoRelativo && hashFoto) {
+            await dataStore.addFotoAsync(novoRelatorio.id, {
+              caminho_arquivo: sanitizeString(caminhoRelativo),
+              hash_integridade: sanitizeString(hashFoto),
+              avaliacao_gemini: sanitizeString(itemFoto.avaliacao_gemini || 'VALIDACAO_MANUAL'),
+              confianca: typeof itemFoto.confianca === 'number' ? itemFoto.confianca : 0.75,
+              motivo: sanitizeString(itemFoto.motivo || 'Evidência fotográfica sincronizada da fila offline.'),
+            });
+          }
         }
       }
 
-      // 2. Processa respostas do checklist
       if (Array.isArray(respostas) && respostas.length > 0) {
         const respostasSanitizadas = respostas.map(r => ({
           pergunta: sanitizeString(r.pergunta || 'Item não especificado'),
@@ -219,42 +307,40 @@ const relatoriosController = {
           sugestao_ia: r.sugestao_ia ? sanitizeString(r.sugestao_ia) : null,
           tipo: r.tipo === 'multipla_escolha' ? 'multipla_escolha' : 'texto',
         }));
-        mockData.saveRespostas(novoRelatorio.id, respostasSanitizadas);
+        await dataStore.saveRespostasAsync(novoRelatorio.id, respostasSanitizadas);
       }
 
-      // 3. Finaliza com código de 16 hex e hash criptográfico
-      const codigo = codigo_unico && /^[0-9A-F]{16}$/i.test(codigo_unico)
-        ? codigo_unico.toUpperCase()
-        : generateUniqueCode();
+      const codigo =
+        codigo_unico && /^[0-9A-F]{16}$/i.test(String(codigo_unico))
+          ? String(codigo_unico).toUpperCase()
+          : generateUniqueCode();
 
       const parsedTime = timestamp ? new Date(timestamp).getTime() : NaN;
       const timeFinal = Number.isNaN(parsedTime) ? Date.now() : parsedTime;
+      const dataIso = new Date(timeFinal).toISOString();
       const hashIntegridade = generateReportIntegrityHash(codigo, timeFinal);
 
-      const relatorioFormatado = mockData.formatRelatorio({
-        ...novoRelatorio,
+      await dataStore.finalizarRelatorioAsync(novoRelatorio.id, {
         codigo_unico: codigo,
         hash_integridade: hashIntegridade,
-        status: 'FINALIZADO',
+        data_finalizacao: dataIso,
+        assinatura_base64: assinaturaValidada,
+        validacao_manual: true,
+        motivo_validacao_manual: 'Vistoria registrada em modo offline e sincronizada automaticamente.',
       });
 
-      // 4. Compilação do PDF Oficial
+      const relatorioCompleto = await dataStore.findRelatorioByIdAsync(novoRelatorio.id);
+
       let pdfRelativePath = null;
       try {
-        const resPdf = await pdfService.salvarRelatorioPdf(relatorioFormatado);
+        const resPdf = await pdfService.salvarRelatorioPdf(relatorioCompleto);
         pdfRelativePath = resPdf.relativePath;
-        // Notificação por e-mail em background
-        const emailDestino = req.body.destinatario_email || process.env.FISCAL_EMAIL_PADRAO;
-        emailService.enviarRelatorioEmail(relatorioFormatado, resPdf.buffer, emailDestino).catch(() => {});
+        await dataStore.atualizarPdfRelatorioAsync(novoRelatorio.id, pdfRelativePath);
+        const emailDestino = await resolverEmailFiscalDaObra(obra, req.body.destinatario_email);
+        emailService.enviarRelatorioEmail(relatorioCompleto, resPdf.buffer, emailDestino).catch(() => {});
       } catch (errPdf) {
         console.warn('[Offline Sync] Aviso ao compilar PDF:', errPdf.message);
       }
-
-      mockData.finalizarRelatorio(novoRelatorio.id, {
-        codigo_unico: codigo,
-        hash_integridade: hashIntegridade,
-        arquivo_pdf_url: pdfRelativePath,
-      });
 
       return res.status(200).json({
         sucesso: true,
@@ -266,17 +352,19 @@ const relatoriosController = {
         status: 'FINALIZADO',
       });
     } catch (err) {
+      if (err.status) {
+        return res.status(err.status).json({ status: err.status, erro: err.message });
+      }
       next(err);
     }
   },
 
   /**
    * GET /api/relatorios/painel/resumo
-   * Retorna métricas consolidadas para o painel de auditoria do fiscal Mariana
    */
   async obterPainelAuditoria(req, res, next) {
     try {
-      const painel = mockData.getPainelAuditoria();
+      const painel = await dataStore.getPainelAuditoriaAsync();
       return res.status(200).json(painel);
     } catch (err) {
       next(err);
@@ -285,12 +373,20 @@ const relatoriosController = {
 
   /**
    * GET /api/relatorios
-   * Listagem de relatórios com filtros opcionais por obra e status
    */
   async listar(req, res, next) {
     try {
       const { obra_id, status } = req.query;
-      const relatorios = mockData.listRelatorios({ obra_id, status });
+      const filtros = {};
+      if (obra_id) filtros.obra_id = obra_id;
+      if (status) filtros.status = status;
+
+      // Isolamento por perfil: empreiteira visualiza somente seus próprios relatórios
+      if (!isFiscalRole(req.user)) {
+        filtros.usuario_id = req.user.id;
+      }
+
+      const relatorios = await dataStore.listRelatoriosAsync(filtros);
       return res.status(200).json(relatorios);
     } catch (err) {
       next(err);
@@ -299,17 +395,23 @@ const relatoriosController = {
 
   /**
    * GET /api/relatorios/:id
-   * Retorna detalhes completos do relatório incluindo fotos e respostas
    */
   async obterPorId(req, res, next) {
     try {
       const { id } = req.params;
-      const relatorio = mockData.findRelatorioById(id);
+      const relatorio = await dataStore.findRelatorioByIdAsync(id);
 
       if (!relatorio) {
         return res.status(404).json({
           status: 404,
           erro: 'Relatório de vistoria não encontrado.',
+        });
+      }
+
+      if (!isFiscalRole(req.user) && relatorio.usuario_id !== req.user.id) {
+        return res.status(403).json({
+          status: 403,
+          erro: 'Acesso negado. Este relatório pertence a outro responsável.',
         });
       }
 
@@ -321,13 +423,11 @@ const relatoriosController = {
 
   /**
    * PUT /api/relatorios/:id/respostas
-   * Salva os itens do checklist dinâmico
-   * Regra de Inviolabilidade: bloqueado se o relatório já estiver finalizado
    */
   async salvarRespostas(req, res, next) {
     try {
       const { id } = req.params;
-      const rawRespostas = Array.isArray(req.body) ? req.body : req.body.respostas;
+      const rawRespostas = Array.isArray(req.body) ? req.body : req.body?.respostas;
 
       if (!rawRespostas || !Array.isArray(rawRespostas)) {
         return res.status(400).json({
@@ -336,7 +436,7 @@ const relatoriosController = {
         });
       }
 
-      const relatorio = mockData.findRelatorioById(id);
+      const relatorio = await dataStore.findRelatorioByIdAsync(id);
       if (!relatorio) {
         return res.status(404).json({
           status: 404,
@@ -351,7 +451,6 @@ const relatoriosController = {
         });
       }
 
-      // Regra de Inviolabilidade TakeOff: Não permite editar se estiver finalizado
       if (relatorio.status !== 'EM_ANDAMENTO') {
         return res.status(403).json({
           status: 403,
@@ -361,7 +460,6 @@ const relatoriosController = {
         });
       }
 
-      // Higieniza dados de entrada do checklist
       const respostasSanitizadas = rawRespostas.map(r => ({
         pergunta: sanitizeString(r.pergunta || 'Item não especificado'),
         valor: sanitizeString(r.valor || 'Não informado'),
@@ -370,10 +468,11 @@ const relatoriosController = {
         tipo: r.tipo === 'multipla_escolha' ? 'multipla_escolha' : 'texto',
       }));
 
-      mockData.saveRespostas(id, respostasSanitizadas);
+      const salvas = await dataStore.saveRespostasAsync(id, respostasSanitizadas);
 
       return res.status(200).json({
         mensagem: 'Respostas do checklist salvas com sucesso.',
+        respostas: Array.isArray(salvas) ? salvas : respostasSanitizadas,
       });
     } catch (err) {
       next(err);
@@ -382,12 +481,11 @@ const relatoriosController = {
 
   /**
    * POST /api/relatorios/:id/fotos
-   * Anexa uma evidência fotográfica validada ao relatório em andamento
    */
   async anexarFoto(req, res, next) {
     try {
       const { id } = req.params;
-      const relatorio = mockData.findRelatorioById(id);
+      const relatorio = await dataStore.findRelatorioByIdAsync(id);
 
       if (!relatorio) {
         return res.status(404).json({
@@ -422,7 +520,7 @@ const relatoriosController = {
         motivo_ia,
         imagemBase64,
         url,
-      } = req.body;
+      } = req.body || {};
 
       hash_integridade = hash_integridade || hash_sha256;
       avaliacao_gemini = avaliacao_gemini || status_ia;
@@ -430,8 +528,16 @@ const relatoriosController = {
       motivo = motivo || motivo_ia;
 
       if (req.file) {
-        caminho_arquivo = path.join('uploads', 'evidencias', path.basename(req.file.path)).replace(/\\/g, '/');
         const buffer = await fs.promises.readFile(req.file.path);
+        const magic = validateImageMagicBytes(buffer);
+        if (!magic.valid) {
+          try { await fs.promises.unlink(req.file.path); } catch (_) {}
+          return res.status(400).json({
+            status: 400,
+            erro: 'O arquivo enviado não possui assinatura binária válida de imagem (JPEG, PNG ou WEBP).',
+          });
+        }
+        caminho_arquivo = path.join('uploads', 'evidencias', path.basename(req.file.path)).replace(/\\/g, '/');
         hash_integridade = generateSha256(buffer);
       } else if (imagemBase64 || (url && typeof url === 'string' && url.startsWith('data:image/'))) {
         const rawCandidate = imagemBase64 || url;
@@ -439,48 +545,48 @@ const relatoriosController = {
           const saved = await salvarFotoBase64Segura(rawCandidate, 'evidencia_rel');
           if (saved) {
             caminho_arquivo = saved.caminhoRelativo;
-            if (!hash_integridade) {
-              hash_integridade = saved.hash;
-            }
+            hash_integridade = saved.hash;
           }
         }
       } else if (!caminho_arquivo && url && typeof url === 'string') {
         caminho_arquivo = url.trim();
       }
 
-      if (!caminho_arquivo || !hash_integridade) {
+      if (!caminho_arquivo) {
         return res.status(400).json({
           status: 400,
-          erro: 'Caminho do arquivo e hash de integridade SHA-256 são obrigatórios.',
+          erro: 'Evidência fotográfica ou caminho de arquivo válido é obrigatório.',
         });
       }
 
-      // Validação contra Path Traversal em caminhos fornecidos diretamente
-      if (!caminho_arquivo.startsWith('data:image/') && !resolveSafePath(caminho_arquivo, UPLOAD_ROOT)) {
+      if (!resolveSafePath(caminho_arquivo, UPLOAD_ROOT)) {
         return res.status(400).json({
           status: 400,
           erro: 'Caminho de arquivo da foto inválido ou fora do diretório de uploads autorizado.',
         });
       }
 
-      const cleanPath = sanitizeString(caminho_arquivo);
-      const cleanHash = sanitizeString(hash_integridade);
-      const cleanStatus = sanitizeString(avaliacao_gemini || 'APROVADO');
-      const cleanConf = typeof confianca === 'number' ? confianca : 0.95;
-      const cleanMotivo = sanitizeString(motivo || 'Evidência fotográfica capturada in-loco.');
+      if (!hash_integridade) {
+        hash_integridade = await calcularHashDeArquivoExistente(caminho_arquivo);
+      }
 
-      const foto = mockData.addFoto(id, {
-        url: cleanPath,
-        caminho_arquivo: cleanPath,
-        imagemBase64: typeof imagemBase64 === 'string' && imagemBase64.startsWith('data:image/') ? imagemBase64 : null,
-        hash_sha256: cleanHash,
-        hash_integridade: cleanHash,
+      if (!hash_integridade) {
+        return res.status(400).json({
+          status: 400,
+          erro: 'Hash de integridade SHA-256 é obrigatório (ou o arquivo informado não existe no servidor).',
+        });
+      }
+
+      const cleanStatus = ['APROVADO', 'REJEITADO', 'VALIDACAO_MANUAL', 'PENDENTE'].includes(String(avaliacao_gemini || '').toUpperCase())
+        ? String(avaliacao_gemini).toUpperCase()
+        : 'APROVADO';
+
+      const foto = await dataStore.addFotoAsync(id, {
+        caminho_arquivo: sanitizeString(caminho_arquivo),
+        hash_integridade: sanitizeString(hash_integridade),
         avaliacao_gemini: cleanStatus,
-        status_ia: cleanStatus,
-        confianca: cleanConf,
-        confianca_ia: cleanConf,
-        motivo: cleanMotivo,
-        motivo_ia: cleanMotivo,
+        confianca: typeof confianca === 'number' ? confianca : 0.94,
+        motivo: sanitizeString(motivo || 'Evidência fotográfica capturada in-loco.'),
       });
 
       return res.status(201).json({
@@ -488,19 +594,20 @@ const relatoriosController = {
         foto,
       });
     } catch (err) {
+      if (err.status) {
+        return res.status(err.status).json({ status: err.status, erro: err.message });
+      }
       next(err);
     }
   },
 
   /**
    * POST /api/relatorios/:id/finalizar
-   * Finalização oficial da vistoria com código de 16 caracteres hexadecimais,
-   * hash de integridade SHA-256, geração de PDF oficial e disparo de e-mail ao fiscal
    */
   async finalizar(req, res, next) {
     try {
       const { id } = req.params;
-      const relatorio = mockData.findRelatorioById(id);
+      const relatorio = await dataStore.findRelatorioByIdAsync(id);
 
       if (!relatorio) {
         return res.status(404).json({
@@ -516,7 +623,6 @@ const relatoriosController = {
         });
       }
 
-      // Regra de Imutabilidade e Prevenção de Duplicidade
       if (relatorio.status !== 'EM_ANDAMENTO') {
         return res.status(400).json({
           status: 400,
@@ -527,18 +633,34 @@ const relatoriosController = {
         });
       }
 
-      // Processa fotos adicionais enviadas na finalização com deduplicação por hash SHA-256 / caminho
+      const body = req.body || {};
+
+      // Validação criptográfica da senha do responsável quando enviada na assinatura digital
+      if (body.senha_confirmacao !== undefined) {
+        const userFull = await dataStore.findUserByIdAsync(req.user.id);
+        const senhaOk = userFull && (await bcrypt.compare(String(body.senha_confirmacao), userFull.senha_hash));
+        if (!senhaOk) {
+          return res.status(401).json({
+            status: 401,
+            erro: 'Senha de confirmação incorreta. Informe sua senha de acesso para assinar e concluir o relatório.',
+          });
+        }
+      }
+
+      // Validação da assinatura digital PNG (quando enviada)
+      const assinaturaValidada = body.assinatura_base64 ? validarAssinaturaBase64(body.assinatura_base64) : null;
+
+      // Deduplicação de fotos adicionais na finalização
       const existingHashes = new Set((relatorio.fotos || []).map(f => f.hash_integridade || f.hash_sha256).filter(Boolean));
       const existingPaths = new Set((relatorio.fotos || []).map(f => f.caminho_arquivo || f.url).filter(Boolean));
 
-      const fotosParaAnexar = req.body.fotos || (req.body.foto ? [req.body.foto] : (req.body.imagemBase64 ? [req.body] : []));
+      const fotosParaAnexar = body.fotos || (body.foto ? [body.foto] : (body.imagemBase64 ? [body] : []));
       if (Array.isArray(fotosParaAnexar) && fotosParaAnexar.length > 0) {
         for (const itemFoto of fotosParaAnexar) {
           let caminhoRel = itemFoto.caminho_arquivo || itemFoto.url || '';
           let hashFoto = itemFoto.hash_integridade || itemFoto.hash_sha256 || '';
-          let b64 = itemFoto.imagemBase64 || (typeof itemFoto.url === 'string' && itemFoto.url.startsWith('data:image/') ? itemFoto.url : null);
+          const b64 = itemFoto.imagemBase64 || (typeof itemFoto.url === 'string' && itemFoto.url.startsWith('data:image/') ? itemFoto.url : null);
 
-          // Evita anexar foto duplicada se já foi vinculada anteriormente via POST /fotos
           if ((hashFoto && existingHashes.has(hashFoto)) || (caminhoRel && existingPaths.has(caminhoRel))) {
             continue;
           }
@@ -547,79 +669,65 @@ const relatoriosController = {
             const saved = await salvarFotoBase64Segura(b64, 'evidencia_fin');
             if (saved) {
               caminhoRel = saved.caminhoRelativo;
-              hashFoto = hashFoto || saved.hash;
+              hashFoto = saved.hash;
             }
-          } else if (caminhoRel && !resolveSafePath(caminhoRel, UPLOAD_ROOT)) {
+          } else if (caminhoRel) {
+            if (!resolveSafePath(caminhoRel, UPLOAD_ROOT)) continue;
+            if (!hashFoto) hashFoto = await calcularHashDeArquivoExistente(caminhoRel);
+          }
+
+          if (!caminhoRel || !hashFoto || existingHashes.has(hashFoto)) {
             continue;
           }
 
-          if (hashFoto && existingHashes.has(hashFoto)) {
-            continue;
-          }
-
-          if (caminhoRel || b64) {
-            mockData.addFoto(id, {
-              caminho_arquivo: caminhoRel,
-              url: caminhoRel || b64,
-              imagemBase64: b64,
-              hash_integridade: hashFoto || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-              hash_sha256: hashFoto || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-              avaliacao_gemini: itemFoto.avaliacao_gemini || itemFoto.status_ia || 'APROVADO',
-              status_ia: itemFoto.avaliacao_gemini || itemFoto.status_ia || 'APROVADO',
-              confianca: itemFoto.confianca !== undefined ? itemFoto.confianca : 0.95,
-              confianca_ia: itemFoto.confianca !== undefined ? itemFoto.confianca : 0.95,
-              motivo: itemFoto.motivo || itemFoto.motivo_ia || 'Evidência fotográfica capturada in-loco.',
-              motivo_ia: itemFoto.motivo || itemFoto.motivo_ia || 'Evidência fotográfica capturada in-loco.',
-            });
-            if (hashFoto) existingHashes.add(hashFoto);
-            if (caminhoRel) existingPaths.add(caminhoRel);
-          }
+          await dataStore.addFotoAsync(id, {
+            caminho_arquivo: sanitizeString(caminhoRel),
+            hash_integridade: sanitizeString(hashFoto),
+            avaliacao_gemini: sanitizeString(itemFoto.avaliacao_gemini || itemFoto.status_ia || 'APROVADO'),
+            confianca: typeof itemFoto.confianca === 'number' ? itemFoto.confianca : 0.94,
+            motivo: sanitizeString(itemFoto.motivo || itemFoto.motivo_ia || 'Evidência fotográfica capturada in-loco.'),
+          });
+          existingHashes.add(hashFoto);
+          existingPaths.add(caminhoRel);
         }
       }
 
-      // Re-busca relatório com fotos consolidadas
-      const relatorioConsolidado = mockData.findRelatorioById(id) || relatorio;
-
-      // 1. Gera código único criptográfico (16 caracteres hexadecimais maiúsculos)
       const codigoUnico = generateUniqueCode();
-
-      // 2. Gera hash SHA-256 de integridade do relatório (codigoUnico + timestamp)
       const timestamp = Date.now();
       const hashIntegridade = generateReportIntegrityHash(codigoUnico, timestamp);
       const dataIso = new Date(timestamp).toISOString();
 
-      const relatorioCompleto = {
-        ...relatorioConsolidado,
+      await dataStore.finalizarRelatorioAsync(id, {
         codigo_unico: codigoUnico,
         hash_integridade: hashIntegridade,
-        data: dataIso,
         data_finalizacao: dataIso,
-        status: 'FINALIZADO',
-      };
+        assinatura_base64: assinaturaValidada,
+        latitude: parseOptionalNumber(body.latitude, -90, 90),
+        longitude: parseOptionalNumber(body.longitude, -180, 180),
+        precisao_gps: parseOptionalNumber(body.precisao_gps, 0, 100000),
+        localizacao_texto: body.localizacao_texto ? sanitizeString(body.localizacao_texto).slice(0, 300) : relatorio.localizacao_texto,
+        tipo_local: body.tipo_local ? sanitizeString(body.tipo_local).slice(0, 120) : relatorio.tipo_local,
+        validacao_manual: body.validacao_manual !== undefined ? Boolean(body.validacao_manual) : relatorio.validacao_manual,
+        motivo_validacao_manual: body.motivo_validacao_manual
+          ? sanitizeString(body.motivo_validacao_manual).slice(0, 300)
+          : relatorio.motivo_validacao_manual,
+      });
 
-      // 3. Compilação do PDF Oficial via PDFKit
+      const relatorioCompleto = await dataStore.findRelatorioByIdAsync(id);
+
       let pdfRelativePath = null;
-      let pdfBuffer = null;
       try {
         const resultadoPdf = await pdfService.salvarRelatorioPdf(relatorioCompleto);
         pdfRelativePath = resultadoPdf.relativePath;
-        pdfBuffer = resultadoPdf.buffer;
+        await dataStore.atualizarPdfRelatorioAsync(id, pdfRelativePath);
 
-        // 4. Disparo opcional assíncrono de e-mail transacional ao fiscal do BB
-        const destinatarioFiscal = req.body.destinatario_email || process.env.FISCAL_EMAIL_PADRAO;
-        emailService.enviarRelatorioEmail(relatorioCompleto, pdfBuffer, destinatarioFiscal).catch(err => {
+        const destinatarioFiscal = await resolverEmailFiscalDaObra(relatorioCompleto.obra, body.destinatario_email);
+        emailService.enviarRelatorioEmail(relatorioCompleto, resultadoPdf.buffer, destinatarioFiscal).catch(err => {
           console.warn('[Relatorios] Alerta no envio de e-mail de notificação:', err.message);
         });
       } catch (pdfErr) {
         console.error('[Relatorios] Falha na compilação do PDF:', pdfErr.message);
       }
-
-      // 5. Salva no banco/mock e ativa bloqueio de edição
-      mockData.finalizarRelatorio(id, {
-        codigo_unico: codigoUnico,
-        hash_integridade: hashIntegridade,
-        arquivo_pdf_url: pdfRelativePath,
-      });
 
       return res.status(200).json({
         mensagem: 'Relatório finalizado com sucesso!',
@@ -629,18 +737,22 @@ const relatoriosController = {
         status: 'FINALIZADO',
       });
     } catch (err) {
+      if (err.status) {
+        return res.status(err.status).json({ status: err.status, erro: err.message });
+      }
       next(err);
     }
   },
 
   /**
    * GET /api/relatorios/:id/pdf
-   * Visualização / Download do arquivo PDF oficial com carimbo de integridade
+   * Relatórios finalizados/homologados são auditáveis via Fé Pública.
+   * Relatórios ainda EM_ANDAMENTO exigem autenticação do dono ou fiscal.
    */
   async downloadPdf(req, res, next) {
     try {
       const { id } = req.params;
-      const relatorio = mockData.findRelatorioById(id);
+      const relatorio = await dataStore.findRelatorioByIdAsync(id);
 
       if (!relatorio) {
         return res.status(404).json({
@@ -649,7 +761,21 @@ const relatoriosController = {
         });
       }
 
-      // 1. Se já houver arquivo gerado no disco, serve via stream seguro
+      if (relatorio.status === 'EM_ANDAMENTO') {
+        if (!req.user) {
+          return res.status(401).json({
+            status: 401,
+            erro: 'Autenticação necessária para visualizar relatório em andamento.',
+          });
+        }
+        if (!isFiscalRole(req.user) && relatorio.usuario_id !== req.user.id) {
+          return res.status(403).json({
+            status: 403,
+            erro: 'Relatório em andamento só pode ser visualizado pelo responsável técnico ou pela fiscalização.',
+          });
+        }
+      }
+
       if (relatorio.arquivo_pdf_url) {
         const safePath = resolveSafePath(relatorio.arquivo_pdf_url, UPLOAD_ROOT);
         if (safePath && fs.existsSync(safePath)) {
@@ -664,7 +790,6 @@ const relatoriosController = {
         }
       }
 
-      // 2. Se ainda não houver arquivo compilado em disco, compila dinamicamente na hora
       const pdfBuffer = await pdfService.gerarRelatorioPdfBuffer(relatorio);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `inline; filename="BBVision_${relatorio.codigo_unico || id}.pdf"`);
@@ -676,14 +801,11 @@ const relatoriosController = {
 
   /**
    * PATCH /api/relatorios/:id/status
-   * Auditoria e Julgamento do Fiscal Mariana
-   * Acesso restrito a cargos de auditoria/engenharia do BB (RBAC)
-   * Aceita: APROVADO, REGULAR, REPROVADO, PENDENTE_AJUSTE
    */
   async atualizarStatusFiscal(req, res, next) {
     try {
       const { id } = req.params;
-      const { status, justificativa } = req.body;
+      const { status, justificativa } = req.body || {};
 
       const statusUpper = String(status || '').toUpperCase().trim();
 
@@ -694,7 +816,7 @@ const relatoriosController = {
         });
       }
 
-      const relatorio = mockData.findRelatorioById(id);
+      const relatorio = await dataStore.findRelatorioByIdAsync(id);
       if (!relatorio) {
         return res.status(404).json({
           status: 404,
@@ -709,20 +831,17 @@ const relatoriosController = {
         });
       }
 
-      // 'APROVADO' e 'REGULAR' homologam a vistoria
-      // 'REPROVADO' e 'PENDENTE_AJUSTE' exigem correções da empreiteira
       const statusNormalizado = (statusUpper === 'APROVADO' || statusUpper === 'REGULAR') ? 'APROVADO' : 'PENDENTE_AJUSTE';
       const obraNovoStatus = statusNormalizado === 'APROVADO' ? 'REGULAR' : 'PENDENTE_AJUSTE';
-      const justificativaSanitizada = sanitizeString(justificativa || '');
+      const justificativaSanitizada = sanitizeString(justificativa || '').slice(0, 1000);
 
-      mockData.atualizarStatusFiscal(id, statusNormalizado, justificativaSanitizada);
+      await dataStore.atualizarStatusFiscalAsync(id, statusNormalizado, justificativaSanitizada, req.user.id);
 
-      // Recompila o PDF oficial com o parecer e status atualizados do fiscal
       try {
-        const relatorioAtualizado = mockData.findRelatorioById(id);
+        const relatorioAtualizado = await dataStore.findRelatorioByIdAsync(id);
         if (relatorioAtualizado) {
           const novoPdf = await pdfService.salvarRelatorioPdf(relatorioAtualizado);
-          mockData.atualizarPdfRelatorio(id, novoPdf.relativePath);
+          await dataStore.atualizarPdfRelatorioAsync(id, novoPdf.relativePath);
         }
       } catch (pdfErr) {
         console.warn('[Relatorios] Aviso ao recompilar PDF após parecer fiscal:', pdfErr.message);

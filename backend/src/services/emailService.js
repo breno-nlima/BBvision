@@ -1,7 +1,7 @@
 /**
  * BBVision - Serviço de Envio de E-mails Transacionais
- * Dispara notificação e relatório PDF para o fiscal Mariana e equipe de engenharia
- * Provedor: Resend (integrado via Nodemailer) com fallback resiliente de auditoria em dev
+ * Dispara notificação e relatório PDF para o fiscal responsável pela obra
+ * Provedor: Resend (via Nodemailer)
  */
 
 const { transporter, emailFrom, fiscalEmailPadrao } = require('../config/email');
@@ -11,16 +11,21 @@ const { isValidEmail, sanitizeString } = require('../utils/securityUtils');
  * Envia o PDF do relatório por e-mail após a finalização da vistoria técnica
  * @param {Object} relatorio Dados do relatório finalizado
  * @param {Buffer} pdfBuffer Buffer do arquivo PDF gerado
- * @param {string} destinatario E-mail do destinatário (opcional)
- * @returns {Promise<{ sucesso: boolean, messageId?: string, destinatario: string, erro?: string }>}
+ * @param {string|null} destinatario E-mail do destinatário (fiscal responsável pela obra)
+ * @returns {Promise<{ sucesso: boolean, skipped?: boolean, messageId?: string, destinatario?: string, erro?: string }>}
  */
 async function enviarRelatorioEmail(relatorio, pdfBuffer, destinatario = null) {
-  let targetEmail = destinatario || fiscalEmailPadrao;
-
-  // Validação defensiva do e-mail de destino
+  let targetEmail = (destinatario || '').trim();
   if (!isValidEmail(targetEmail)) {
-    console.warn(`[Email Service] Destinatário inválido "${targetEmail}". Recorrendo ao e-mail fiscal padrão.`);
-    targetEmail = fiscalEmailPadrao;
+    targetEmail = (fiscalEmailPadrao || '').trim();
+  }
+
+  if (!isValidEmail(targetEmail)) {
+    return {
+      sucesso: false,
+      skipped: true,
+      erro: 'Nenhum e-mail de fiscal destinatário configurado para esta obra.',
+    };
   }
 
   const codigo = relatorio.codigo_unico || 'N/A';
@@ -30,18 +35,18 @@ async function enviarRelatorioEmail(relatorio, pdfBuffer, destinatario = null) {
   const hashSafe = sanitizeString(relatorio.hash_integridade || 'N/A');
 
   const mailOptions = {
-    from: `"BBVision - Banco do Brasil" <${emailFrom}>`,
+    from: `"BBVision - Fiscalização de Obras" <${emailFrom}>`,
     to: targetEmail,
     subject: `[BBVision] Relatório de Vistoria Finalizado - ${obraNome} (Cód: ${codigo})`,
-    text: 
+    text:
       `Prezado(a) Fiscal,\n\n` +
       `A vistoria técnica in-loco da obra "${obraNome}" foi finalizada com sucesso.\n\n` +
       `Código Único: ${codigo}\n` +
-      `Hash de Integridade: ${relatorio.hash_integridade || 'N/A'}\n` +
+      `Hash de Integridade SHA-256: ${relatorio.hash_integridade || 'N/A'}\n` +
       `Data: ${new Date().toLocaleString('pt-BR')}\n\n` +
-      `O relatório oficial em PDF com fotos in-loco e análises de IA segue em anexo para sua auditoria no painel.\n\n` +
+      `O relatório oficial em PDF com fotos in-loco, checklist e análises de IA segue em anexo para auditoria no painel.\n\n` +
       `Atenciosamente,\n` +
-      `Equipe BBVision - Banco do Brasil`,
+      `Plataforma BBVision`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
         <div style="background-color: #003882; padding: 20px; text-align: center; color: #ffffff;">
@@ -70,7 +75,7 @@ async function enviarRelatorioEmail(relatorio, pdfBuffer, destinatario = null) {
             </tr>
           </table>
           <p style="font-size: 14px; color: #475569;">
-            O arquivo PDF oficial completo com as fotos in-loco, análises de IA e respostas do checklist segue anexado a esta mensagem.
+            O arquivo PDF oficial completo com evidências in-loco, assinatura digital, análises de IA e respostas do checklist segue anexado a esta mensagem.
           </p>
         </div>
         <div style="background-color: #f1f5f9; padding: 12px; text-align: center; font-size: 11px; color: #64748b;">
@@ -78,13 +83,15 @@ async function enviarRelatorioEmail(relatorio, pdfBuffer, destinatario = null) {
         </div>
       </div>
     `,
-    attachments: pdfBuffer ? [
-      {
-        filename: `BBVision_Relatorio_${codigo}.pdf`,
-        content: pdfBuffer,
-        contentType: 'application/pdf',
-      },
-    ] : [],
+    attachments: pdfBuffer
+      ? [
+          {
+            filename: `BBVision_Relatorio_${codigo}.pdf`,
+            content: pdfBuffer,
+            contentType: 'application/pdf',
+          },
+        ]
+      : [],
   };
 
   try {
@@ -93,7 +100,6 @@ async function enviarRelatorioEmail(relatorio, pdfBuffer, destinatario = null) {
     return { sucesso: true, messageId: result.messageId, destinatario: targetEmail };
   } catch (error) {
     console.error('[Email Service] Falha ao enviar e-mail:', error.message);
-    // Não interrompe o fluxo de finalização do relatório
     return { sucesso: false, destinatario: targetEmail, erro: error.message };
   }
 }

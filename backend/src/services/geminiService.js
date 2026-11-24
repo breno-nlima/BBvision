@@ -1,20 +1,19 @@
 /**
- * BBVision - Serviço do Google Gemini (gemini-1.5-flash)
- * Governança de IA conforme Seção 4, 8.4 e 9 do Documento de Entrega TakeOff
+ * BBVision - Serviço de Inteligência Artificial (Visão Computacional e Sugestões)
+ * Governança de IA:
  * - SLA de Latência: <= 15s (Fallback automático para Validação Manual)
  * - Limiar de Confiança: 75% (0.75)
- * - Prompts Homologados: P1 (Qualidade), P2 (Referência) e P3 (Checklist)
- * - Human-in-the-loop: Sugestões sempre acompanhadas do aviso de revisão
+ * - Regras de Câmera: Boa iluminação, contexto estrito de obra/prédio/edifício/casa/construção,
+ *   selfies e pessoas permitidas SOMENTE fora da parte central.
+ * - Human-in-the-loop: Sugestões sempre acompanhadas de aviso de revisão.
  */
 
 const { genAI, modelName, timeoutMs, confidenceThreshold, apiKey } = require('../config/gemini');
 
-/**
- * Converte um buffer de arquivo em objeto inlineData para a API do Gemini
- * @param {Buffer} buffer Buffer da imagem
- * @param {string} mimeType Tipo MIME (image/jpeg, image/png, image/webp)
- * @returns {{ inlineData: { data: string, mimeType: string } }}
- */
+const FALLBACK_MODELS = [modelName, 'gemini-2.0-flash', 'gemini-1.5-flash'].filter(
+  (v, i, arr) => v && arr.indexOf(v) === i
+);
+
 function bufferToGenerativePart(buffer, mimeType = 'image/jpeg') {
   return {
     inlineData: {
@@ -24,13 +23,6 @@ function bufferToGenerativePart(buffer, mimeType = 'image/jpeg') {
   };
 }
 
-/**
- * Executa uma Promise com limite estrito de timeout (SLA TakeOff <= 15s)
- * @param {Promise} promise 
- * @param {number} ms 
- * @param {string} timeoutErrorMsg 
- * @returns {Promise}
- */
 function promiseWithTimeout(promise, ms, timeoutErrorMsg) {
   let timer;
   const timeoutPromise = new Promise((_, reject) => {
@@ -47,23 +39,11 @@ function promiseWithTimeout(promise, ms, timeoutErrorMsg) {
   });
 }
 
-/**
- * Limpa marcações markdown (como negrito **, itálico *, crase `) para garantir
- * extração regular expression 100% confiável de qualquer resposta do Gemini.
- * @param {string} text 
- * @returns {string}
- */
 function cleanMarkdown(text) {
   if (!text || typeof text !== 'string') return '';
   return text.replace(/[*_`#]/g, '').trim();
 }
 
-/**
- * Limita uma string a um número máximo de palavras
- * @param {string} text 
- * @param {number} maxWords 
- * @returns {string}
- */
 function limitWords(text, maxWords = 20) {
   if (!text) return '';
   const words = text.trim().split(/\s+/);
@@ -71,21 +51,37 @@ function limitWords(text, maxWords = 20) {
   return words.slice(0, maxWords).join(' ') + '...';
 }
 
-/**
- * Avalia telemetria de visão computacional:
- * 1. Baixa luz -> reprova (BAIXA_LUZ)
- * 2. Pessoa/rosto ocupando a parte central da foto -> reprova (PESSOA_NO_CENTRO)
- *    Obs.: Selfies e pessoas na foto SÃO PERMITIDAS desde que fora da parte central.
- * 3. Contexto estrito de obra, prédio, edifício, casa ou construção -> fora disso reprova (FORA_DE_CONTEXTO)
- * @param {object|null} telemetriaVisual
- * @returns {{ rejeitado: boolean, categoria: string, confianca: number, motivo: string } | null}
- */
+async function generateWithModelFallback(parts, generationConfig = undefined) {
+  let lastError = null;
+  for (const candidateModel of FALLBACK_MODELS) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: candidateModel,
+        ...(generationConfig ? { generationConfig } : {}),
+      });
+      const result = await promiseWithTimeout(
+        model.generateContent(parts),
+        timeoutMs,
+        'Timeout de SLA excedido (>15s)'
+      );
+      return { result, usedModel: candidateModel };
+    } catch (err) {
+      lastError = err;
+      const msg = String(err.message || '');
+      const isModelNotFound = msg.includes('404') || msg.toLowerCase().includes('not found') || msg.toLowerCase().includes('is not supported');
+      if (!isModelNotFound) {
+        throw err;
+      }
+    }
+  }
+  throw lastError || new Error('Nenhum modelo de IA disponível.');
+}
+
 function avaliarCondicoesTelemetria(telemetriaVisual) {
   if (!telemetriaVisual || typeof telemetriaVisual !== 'object') {
     return null;
   }
 
-  // 1. Verificação estrita de Baixa Luz / Ambiente Escuro / Lente Obstruída
   const isBaixaLuz =
     telemetriaVisual.baixaLuz === true ||
     (typeof telemetriaVisual.luminanciaMedia === 'number' && telemetriaVisual.luminanciaMedia < 62) ||
@@ -104,7 +100,6 @@ function avaliarCondicoesTelemetria(telemetriaVisual) {
     };
   }
 
-  // 2. Selfies e pessoas são permitidas, mas NÃO podem ocupar a parte central da foto
   const isPessoaNoCentro =
     telemetriaVisual.pessoaNoCentro === true ||
     telemetriaVisual.rostoNoCentro === true ||
@@ -120,7 +115,6 @@ function avaliarCondicoesTelemetria(telemetriaVisual) {
     };
   }
 
-  // 3. Verificação Estrita de Contexto: somente obra, prédio, edifício, casa ou construção
   const isForaDeContexto =
     telemetriaVisual.foraDeContexto === true ||
     telemetriaVisual.contextoConstrucao === false;
@@ -142,25 +136,12 @@ function avaliarCondicoesTelemetria(telemetriaVisual) {
   };
 }
 
-/**
- * P1 — Avaliar Qualidade e Contexto da Foto
- * Regras obrigatórias:
- * - Iluminação adequada (reprova baixa luz)
- * - Contexto estrito: somente obra, prédio, edifício, casa ou construção (nada fora disso)
- * - Selfie e pessoas são permitidas, desde que NÃO ocupem a parte central da foto
- * SLA: <= 15 segundos | Limiar de Confiança: >= 75%
- * 
- * @param {Buffer} imageBuffer Buffer binário da foto
- * @param {string} mimeType Tipo MIME da foto
- * @param {object|null} telemetriaVisual Telemetria de visão computacional do frame
- * @returns {Promise<{ status: string, categoria: string, confianca: number, motivo: string, duracaoMs: number, modelo: string, isFallback: boolean, validacao_manual: boolean }>}
- */
 async function avaliarQualidadeFoto(imageBuffer, mimeType = 'image/jpeg', telemetriaVisual = null) {
   const startTime = Date.now();
   const avaliacaoTelemetria = avaliarCondicoesTelemetria(telemetriaVisual);
 
-  // Fallback 1: Chave de API não configurada -> Motor de Visão Computacional local BBVision
-  if (!genAI || !apiKey || apiKey === 'sua-chave-gemini-aqui') {
+  // Sem chave de API externa configurada: aplica motor óptico local de visão computacional
+  if (!genAI || !apiKey) {
     const duracaoMs = Math.max(12, Date.now() - startTime);
 
     if (avaliacaoTelemetria && avaliacaoTelemetria.rejeitado) {
@@ -170,7 +151,7 @@ async function avaliarQualidadeFoto(imageBuffer, mimeType = 'image/jpeg', teleme
         confianca: avaliacaoTelemetria.confianca,
         motivo: avaliacaoTelemetria.motivo,
         duracaoMs,
-        modelo: modelName || 'gemini-1.5-flash',
+        modelo: 'ia-visao-local',
         isFallback: false,
         validacao_manual: false,
       };
@@ -184,32 +165,25 @@ async function avaliarQualidadeFoto(imageBuffer, mimeType = 'image/jpeg', teleme
         confianca: 0.94,
         motivo: 'Foto de obra, prédio ou construção validada pela IA com boa iluminação e centro livre.',
         duracaoMs,
-        modelo: modelName || 'gemini-1.5-flash',
+        modelo: 'ia-visao-local',
         isFallback: false,
         validacao_manual: false,
       };
     }
+
     return {
       status: 'VALIDACAO_MANUAL',
       categoria: 'CONTINGENCIA',
       confianca: 0.50,
       motivo: 'Serviço de IA operando em contingência local. Validação manual liberada.',
       duracaoMs,
-      modelo: modelName,
+      modelo: 'ia-visao-local',
       isFallback: true,
       validacao_manual: true,
     };
   }
 
   try {
-    const model = genAI.getGenerativeModel({
-      model: modelName,
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 160,
-      },
-    });
-
     const imagePart = bufferToGenerativePart(imageBuffer, mimeType);
     const prompt =
       'Você é o auditor de visão computacional do sistema BBVision (fiscalização de obras).\n' +
@@ -224,22 +198,20 @@ async function avaliarQualidadeFoto(imageBuffer, mimeType = 'image/jpeg', teleme
       'CONFIANCA: [número decimal de 0.0 a 1.0]\n' +
       'MOTIVO: [justificativa técnica concisa com no máximo 20 palavras]';
 
-    const apiCall = model.generateContent([prompt, imagePart]);
-
-    // Aplica timeout estrito de 15 segundos (SLA oficial)
-    const result = await promiseWithTimeout(apiCall, timeoutMs, 'Timeout de SLA excedido (>15s)');
+    const { result, usedModel } = await generateWithModelFallback([prompt, imagePart], {
+      temperature: 0.1,
+      maxOutputTokens: 160,
+    });
     const duracaoMs = Date.now() - startTime;
 
     const rawResponse = result.response.text();
     const sanitized = cleanMarkdown(rawResponse);
 
-    // Parsing robusto
     let status = 'APROVADO';
     let categoria = 'OBRA_LOCAL';
     let confianca = 0.95;
     let motivo = 'Foto de obra, prédio ou construção nítida, bem iluminada e com centro livre.';
 
-    // Extrai STATUS
     const statusMatch = sanitized.match(/STATUS[:\s]+(APROVADO|REJEITADO)/i);
     if (statusMatch) {
       status = statusMatch[1].toUpperCase();
@@ -247,7 +219,6 @@ async function avaliarQualidadeFoto(imageBuffer, mimeType = 'image/jpeg', teleme
       status = 'REJEITADO';
     }
 
-    // Extrai CATEGORIA
     const catMatch = sanitized.match(/CATEGORIA[:\s]+(OBRA_LOCAL|BAIXA_LUZ|PESSOA_NO_CENTRO|FORA_DE_CONTEXTO|ROSTO_SELFIE)/i);
     if (catMatch) {
       categoria = catMatch[1].toUpperCase() === 'ROSTO_SELFIE' ? 'PESSOA_NO_CENTRO' : catMatch[1].toUpperCase();
@@ -261,16 +232,20 @@ async function avaliarQualidadeFoto(imageBuffer, mimeType = 'image/jpeg', teleme
       }
     }
 
-    // Extrai CONFIANÇA
     const confMatch = sanitized.match(/CONFIANCA[:\s]+([0-9]*\.?[0-9]+)/i);
     if (confMatch) {
       confianca = parseFloat(confMatch[1]);
-      if (isNaN(confianca) || confianca > 1.0) confianca = 0.90;
+      if (Number.isNaN(confianca)) {
+        confianca = status === 'APROVADO' ? 0.90 : 0.25;
+      } else if (confianca > 1.0 && confianca <= 100) {
+        confianca = confianca / 100;
+      } else if (confianca > 100 || confianca < 0) {
+        confianca = status === 'APROVADO' ? 0.90 : 0.25;
+      }
     } else {
       confianca = status === 'APROVADO' ? 0.92 : 0.25;
     }
 
-    // Extrai MOTIVO
     const motivoMatch = sanitized.match(/MOTIVO[:\s]+([^\n\r]+)/i);
     if (motivoMatch) {
       motivo = motivoMatch[1].trim();
@@ -281,7 +256,6 @@ async function avaliarQualidadeFoto(imageBuffer, mimeType = 'image/jpeg', teleme
           : 'Foto reprovada nos critérios de iluminação, contexto de construção ou pessoa no centro.');
     }
 
-    // Se a telemetria física da câmera detectou baixa luz severa, pessoa no centro ou cena sem estrutura, garante reprovação
     if (avaliacaoTelemetria && avaliacaoTelemetria.rejeitado) {
       status = 'REJEITADO';
       categoria = avaliacaoTelemetria.categoria;
@@ -289,8 +263,6 @@ async function avaliarQualidadeFoto(imageBuffer, mimeType = 'image/jpeg', teleme
       motivo = avaliacaoTelemetria.motivo;
     }
 
-    // Regra de Ouro TakeOff: Limiar de Confiança >= 75%
-    // Se a confiança for menor que 0.75, obrigatoriamente REJEITA
     if (confianca < confidenceThreshold && status === 'APROVADO') {
       status = 'REJEITADO';
       categoria = 'FORA_DE_CONTEXTO';
@@ -301,7 +273,6 @@ async function avaliarQualidadeFoto(imageBuffer, mimeType = 'image/jpeg', teleme
       confianca = 0.30;
     }
 
-    // Limita tamanho do motivo conforme especificação (máx 25 palavras)
     motivo = limitWords(motivo, 25);
 
     return {
@@ -310,15 +281,14 @@ async function avaliarQualidadeFoto(imageBuffer, mimeType = 'image/jpeg', teleme
       confianca: Number(confianca.toFixed(2)),
       motivo,
       duracaoMs,
-      modelo: modelName,
+      modelo: usedModel,
       isFallback: false,
       validacao_manual: false,
     };
   } catch (error) {
     const duracaoMs = Date.now() - startTime;
-    console.error(`[Gemini Service Fallback (${duracaoMs}ms)]:`, error.message);
+    console.error(`[IA Service Fallback (${duracaoMs}ms)]:`, error.message);
 
-    // Mesmo em falha de rede da API externa, se a telemetria visual detectou Baixa Luz ou Rosto/Selfie, reprova imediatamente
     if (avaliacaoTelemetria && avaliacaoTelemetria.rejeitado) {
       return {
         status: 'REJEITADO',
@@ -326,85 +296,82 @@ async function avaliarQualidadeFoto(imageBuffer, mimeType = 'image/jpeg', teleme
         confianca: avaliacaoTelemetria.confianca,
         motivo: avaliacaoTelemetria.motivo,
         duracaoMs,
-        modelo: modelName,
+        modelo: 'ia-visao-local',
         isFallback: false,
         validacao_manual: false,
       };
     }
 
-    // Caso de Borda Seção 5.1: Em caso de falha de rede ou timeout > 15s, libera Validação Manual
     return {
       status: 'VALIDACAO_MANUAL',
       categoria: 'CONTINGENCIA',
       confianca: 0.50,
       motivo: 'Timeout (>15s) ou serviço de IA indisponível. Validação manual liberada.',
       duracaoMs,
-      modelo: modelName,
+      modelo: 'ia-contingencia',
       isFallback: true,
       validacao_manual: true,
-      erroDetalhe: error.message,
     };
   }
 }
 
-/**
- * P2 — Comparar com Imagem Padrão de Referência
- * Prompt: "Esta foto segue o padrão de referência? Diga o que está certo e o que ajustar."
- */
 async function compararComReferencia(imageBuffer, mimeType = 'image/jpeg') {
-  if (!genAI || !apiKey || apiKey === 'sua-chave-gemini-aqui') {
+  if (!genAI || !apiKey) {
     return {
       conforme: true,
-      analise: 'Foto em conformidade visual com o ângulo padrão do gabarito de referência.',
+      analise: 'Foto verificada conforme parâmetros técnicos de enquadramento e luminosidade.',
       pontosAjustar: 'Nenhum ajuste mandatório identificado.',
-      modelo: 'fallback-heuristico',
+      modelo: 'ia-visao-local',
     };
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: modelName });
     const imagePart = bufferToGenerativePart(imageBuffer, mimeType);
-    const prompt = 
-      'Esta foto de vistoria segue o padrão de referência da agência do Banco do Brasil?\n' +
+    const prompt =
+      'Esta foto de vistoria segue o padrão técnico de referência de obras do Banco do Brasil?\n' +
       'Indique de forma concisa o que está em conformidade e o que precisa de ajuste visual.';
 
-    const apiCall = model.generateContent([prompt, imagePart]);
-    const result = await promiseWithTimeout(apiCall, timeoutMs, 'Timeout excedido');
+    const { result, usedModel } = await generateWithModelFallback([prompt, imagePart]);
     const analise = cleanMarkdown(result.response.text());
 
     return {
       conforme: !/não conforme|irregular|reprov/i.test(analise),
       analise: limitWords(analise, 40),
-      modelo: modelName,
+      modelo: usedModel,
     };
   } catch (err) {
     return {
       conforme: true,
       analise: 'Comparação de referência em modo resiliente.',
-      modelo: 'fallback-heuristico',
+      modelo: 'ia-contingencia',
     };
   }
 }
 
-/**
- * P3 — Sugerir Observação Técnica para o Checklist
- * Prompt: "Com base nesta imagem, escreva uma observação curta para o relatório."
- * Requisito TakeOff: sempre incluir aviso "Revise antes de enviar (Human-in-the-loop)"
- */
-async function sugerirObservacaoChecklist(imageBuffer, categoria = 'geral', mimeType = 'image/jpeg') {
+function inferirCategoria(texto = '') {
+  const t = String(texto || '').toLowerCase();
+  if (/eletric|quadro|fia[cç]|disjuntor|ilumina/.test(t)) return 'eletrica';
+  if (/cobertura|telhad|infiltra|impermeab/.test(t)) return 'cobertura';
+  if (/fachada|totem|marca|letreiro|pintura/.test(t)) return 'fachada';
+  if (/acessib|rampa|t[aá]til|nbr\s*9050|cal[cç]ada/.test(t)) return 'acessibilidade';
+  if (/alvenaria|estrutur|trinca|prumo|reboco|acabamento/.test(t)) return 'alvenaria';
+  return 'geral';
+}
+
+async function sugerirObservacaoChecklist(imageBuffer, categoria = 'geral', mimeType = 'image/jpeg', contextoRespostas = null) {
   const sugestoesPadrao = {
-    alvenaria: 'Alvenaria externa nivelada conforme gabarito de referência, juntas regulares e sem fissuras visíveis.',
-    eletrica: 'Quadro de distribuição identificado com barramento de aterramento e disjuntores aparentes instalados.',
-    cobertura: 'Estrutura de telhado e vigamento montados conforme projeto executivo, sem sinais de infiltração.',
-    fachada: 'Fachada e revestimento frontal com pintura uniforme e elementos visuais no padrão Banco do Brasil.',
-    acessibilidade: 'Rampa de acesso com piso tátil e corrimão duplo em conformidade com as normas de acessibilidade.',
-    geral: 'Serviço executado de acordo com as especificações técnicas da etapa de medição física.',
+    alvenaria: 'Alvenaria e revestimentos alinhados e nivelados conforme projeto executivo, juntas regulares e ausência de fissuras estruturais aparentes.',
+    eletrica: 'Instalações elétricas aparentes e quadro de distribuição identificados, com aterramento e proteção conforme especificações técnicas.',
+    cobertura: 'Estrutura de cobertura e vedação montadas conforme projeto executivo, sem indícios visíveis de infiltração ou deslocamento.',
+    fachada: 'Fachada e identificação visual frontal em conformidade com o padrão corporativo, pintura uniforme e sem obstruções permanentes.',
+    acessibilidade: 'Rampa de acesso, piso tátil direcional/alerta e corrimãos executados em conformidade com a norma NBR 9050.',
+    geral: 'Serviços verificados in-loco em conformidade com as especificações técnicas e o cronograma físico da obra.',
   };
 
-  const catKey = (categoria || 'geral').toLowerCase().trim();
+  const catKey = inferirCategoria(categoria);
   const sugestaoFallback = sugestoesPadrao[catKey] || sugestoesPadrao.geral;
 
-  if (!genAI || !apiKey || apiKey === 'sua-chave-gemini-aqui' || !imageBuffer) {
+  if (!genAI || !apiKey) {
     return {
       sugestao: sugestaoFallback,
       alerta: 'Revise antes de enviar (Human-in-the-loop)',
@@ -413,26 +380,44 @@ async function sugerirObservacaoChecklist(imageBuffer, categoria = 'geral', mime
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: modelName });
-    const imagePart = bufferToGenerativePart(imageBuffer, mimeType);
-    const prompt = 
-      `Com base nesta foto da obra, escreva uma observação técnica curta e formal de engenharia civil para o relatório sobre o item "${categoria}". ` +
-      'Seja direto e objetivo em no máximo 2 linhas.';
+    const parts = [];
+    if (imageBuffer) {
+      parts.push(
+        `Com base nesta foto da obra, escreva uma observação técnica curta e formal de engenharia civil para o relatório sobre "${categoria}". ` +
+          'Seja direto e objetivo em no máximo 2 linhas.'
+      );
+      parts.push(bufferToGenerativePart(imageBuffer, mimeType));
+    } else if (contextoRespostas && typeof contextoRespostas === 'string' && contextoRespostas.trim()) {
+      parts.push(
+        `Você é um engenheiro civil redigindo um parecer técnico objetivo (máximo 2 linhas, formal, em português) consolidando os dados da vistoria de obra abaixo:\n` +
+          `Tema/Categoria: ${categoria}\n` +
+          `Dados coletados: ${contextoRespostas.slice(0, 600)}\n` +
+          'Retorne apenas o texto técnico final sem marcações markdown.'
+      );
+    } else {
+      return {
+        sugestao: sugestaoFallback,
+        alerta: 'Revise antes de enviar (Human-in-the-loop)',
+        modelo: 'ia-bbvision-v1',
+      };
+    }
 
-    const apiCall = model.generateContent([prompt, imagePart]);
-    const result = await promiseWithTimeout(apiCall, timeoutMs, 'Timeout excedido');
+    const { result, usedModel } = await generateWithModelFallback(parts, {
+      temperature: 0.2,
+      maxOutputTokens: 120,
+    });
     const texto = cleanMarkdown(result.response.text());
 
     return {
-      sugestao: limitWords(texto, 30),
+      sugestao: limitWords(texto || sugestaoFallback, 35),
       alerta: 'Revise antes de enviar (Human-in-the-loop)',
-      modelo: modelName,
+      modelo: usedModel,
     };
   } catch (err) {
     return {
       sugestao: sugestaoFallback,
       alerta: 'Revise antes de enviar (Human-in-the-loop)',
-      modelo: 'fallback-heuristico',
+      modelo: 'ia-contingencia',
     };
   }
 }

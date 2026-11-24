@@ -1,6 +1,6 @@
 /**
- * BVision Bottom Navigation Bar Component
- * Barra inferior adaptativa com base no perfil de acesso da Persona (Rodrigo vs Mariana)
+ * BBVision Bottom Navigation Bar Component
+ * Barra inferior adaptativa conforme o perfil de acesso (Empreiteira ou Fiscal)
  */
 
 import { Icons } from '../assets/icons.js';
@@ -11,7 +11,6 @@ export function renderBottomNav() {
   const isFiscal = state.user?.cargo === 'fiscal';
 
   if (isFiscal) {
-    // Barra de Navegação Exclusiva para a Fiscal Mariana
     return `
       <nav class="bottom-nav-bar fiscal-theme" id="bottomNav">
         <button class="nav-item-btn ${current === 'inicio' ? 'active' : ''}" data-nav="inicio" id="navItemInicio">
@@ -32,20 +31,19 @@ export function renderBottomNav() {
           <div class="nav-icon-container">
             ${Icons.navObras(current === 'obras')}
           </div>
-          <span class="nav-item-label">Obras BB</span>
+          <span class="nav-item-label">Obras</span>
         </button>
 
         <button class="nav-item-btn ${current === 'perfil' ? 'active' : ''}" data-nav="perfil" id="navItemPerfil">
           <div class="nav-icon-container">
             ${Icons.navPerfil(current === 'perfil')}
           </div>
-          <span class="nav-item-label">Perfil BB</span>
+          <span class="nav-item-label">Perfil</span>
         </button>
       </nav>
     `;
   }
 
-  // Barra de Navegação Exclusiva para a Empreiteira Rodrigo
   return `
     <nav class="bottom-nav-bar" id="bottomNav">
       <button class="nav-item-btn ${current === 'inicio' ? 'active' : ''}" data-nav="inicio" id="navItemInicio">

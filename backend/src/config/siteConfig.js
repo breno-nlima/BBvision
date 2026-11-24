@@ -21,8 +21,8 @@ const siteConfig = {
     name: 'BBVision — Equipe TakeOff',
     legalName: 'BBVision — Solução de Fiscalização Remota de Obras para o Banco do Brasil (TakeOff / Porto Digital)',
     alternateName: 'BBVision',
-    email: process.env.EMAIL_FROM || 'bbvision-notificacoes@bancodobrasil.com.br',
-    fiscalEmail: process.env.FISCAL_EMAIL_PADRAO || 'mariana.fiscal@bb.com.br',
+    email: (process.env.EMAIL_FROM || 'contato@bbvision.com.br').trim(),
+    fiscalEmail: (process.env.FISCAL_EMAIL_PADRAO || 'auditoria@bbvision.com.br').trim(),
     telephone: '+55-81-3419-8000',
     telephoneDisplay: '+55 (81) 3419-8000',
     address: {

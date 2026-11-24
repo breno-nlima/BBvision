@@ -1,30 +1,26 @@
 /**
  * BBVision - Cliente de Comunicação com a API Backend
  * Conecta o Frontend Vanilla JavaScript com os endpoints oficiais do Node.js
- * Suporte a Fila Local Offline (HU05)
  */
 
 function resolveApiBaseUrl() {
   if (typeof window === 'undefined') return 'http://127.0.0.1:3000';
 
-  // 1. Permite override manual salvo no navegador caso necessário
   const custom = localStorage.getItem('bbvision_api_url');
   if (custom) return custom.replace(/\/$/, '');
 
   const { protocol, hostname, port } = window.location;
 
-  // 2. Se a aplicação estiver em produção (HTTPS) ou servida pelo próprio Node.js
-  if (protocol === 'https:' || port === '3000' || port === '80' || port === '443') {
-    return '';
+  // Se estiver aberto diretamente do sistema de arquivos (file://) ou via Live Server local
+  if (protocol === 'file:') {
+    return 'http://127.0.0.1:3000';
   }
-
-  // 4. Se estiver no próprio computador acessando via outro servidor local (Live Server :5500, etc.)
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+  if ((hostname === 'localhost' || hostname === '127.0.0.1') && (port === '5500' || port === '5501' || port === '5173')) {
     return 'http://127.0.0.1:3000';
   }
 
-  // 5. Se for acessado pelo celular ou outro dispositivo na rede local (ex: http://192.168.50.85/...)
-  return `http://${hostname}:3000`;
+  // Em produção (HTTPS/HTTP na porta padrão ou mesma origem servida pelo Express), usa URL relativa
+  return '';
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
@@ -33,6 +29,11 @@ export { API_BASE_URL };
 class BBVisionApiClient {
   constructor() {
     this.token = localStorage.getItem('bbvision_token') || null;
+    this.onUnauthorized = null;
+  }
+
+  setUnauthorizedHandler(fn) {
+    this.onUnauthorized = fn;
   }
 
   setToken(token) {
@@ -55,11 +56,11 @@ class BBVisionApiClient {
     return headers;
   }
 
-  async request(endpoint, options = {}) {
+  async request(endpoint, options = {}, { skipAuthRedirect = false } = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
     try {
       const response = await fetch(url, options);
-      
+
       let data = null;
       const contentType = response.headers.get('content-type') || '';
       if (contentType.includes('application/json')) {
@@ -69,30 +70,44 @@ class BBVisionApiClient {
         try {
           data = JSON.parse(text);
         } catch {
-          data = { erro: text && text.length < 120 ? text : `Erro no servidor (HTTP ${response.status})` };
+          data = { erro: text && text.length < 160 ? text : `Erro no servidor (HTTP ${response.status})` };
         }
       }
 
       if (!response.ok) {
         const msg = (data && (data.erro || data.mensagem || data.message)) || `Erro HTTP ${response.status}`;
-        throw new Error(msg);
+        const err = new Error(msg);
+        err.status = response.status;
+
+        if (response.status === 401 && !skipAuthRedirect && typeof this.onUnauthorized === 'function') {
+          this.onUnauthorized(msg);
+        }
+
+        throw err;
       }
       return data;
     } catch (err) {
+      if (!err.status) {
+        err.isNetworkError = true;
+      }
       console.warn(`[API Fetch Warning] ${endpoint}:`, err.message);
       throw err;
     }
   }
 
   // ----------------------------------------------------------------------------
-  // AUTENTICAÇÃO
+  // AUTENTICAÇÃO E PERFIL
   // ----------------------------------------------------------------------------
   async login(email, senha) {
-    const data = await this.request('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, senha }),
-    });
+    const data = await this.request(
+      '/api/auth/login',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, senha }),
+      },
+      { skipAuthRedirect: true }
+    );
     if (data.token) {
       this.setToken(data.token);
     }
@@ -100,11 +115,15 @@ class BBVisionApiClient {
   }
 
   async register(dados) {
-    const data = await this.request('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dados),
-    });
+    const data = await this.request(
+      '/api/auth/register',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados),
+      },
+      { skipAuthRedirect: true }
+    );
     if (data.token) {
       this.setToken(data.token);
     }
@@ -112,7 +131,38 @@ class BBVisionApiClient {
   }
 
   async me() {
+    return this.request(
+      '/api/auth/me',
+      {
+        method: 'GET',
+        headers: this.getHeaders(),
+      },
+      { skipAuthRedirect: true }
+    );
+  }
+
+  async atualizarPerfil(dados) {
     return this.request('/api/auth/me', {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify(dados),
+    });
+  }
+
+  async alterarSenha(senhaAtual, novaSenha) {
+    return this.request(
+      '/api/auth/senha',
+      {
+        method: 'PATCH',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ senhaAtual, novaSenha }),
+      },
+      { skipAuthRedirect: true }
+    );
+  }
+
+  async getEmpreiteiras() {
+    return this.request('/api/auth/empreiteiras', {
       method: 'GET',
       headers: this.getHeaders(),
     });
@@ -120,12 +170,16 @@ class BBVisionApiClient {
 
   async logout() {
     try {
-      await this.request('/api/auth/logout', {
-        method: 'POST',
-        headers: this.getHeaders(),
-      });
-    } catch (err) {
-      // Ignora erro de rede/offline no logout para garantir saída local segura
+      await this.request(
+        '/api/auth/logout',
+        {
+          method: 'POST',
+          headers: this.getHeaders(),
+        },
+        { skipAuthRedirect: true }
+      );
+    } catch (_) {
+      // Ignora falha de rede no logout para garantir limpeza local
     } finally {
       this.setToken(null);
     }
@@ -142,7 +196,7 @@ class BBVisionApiClient {
   }
 
   async getObra(id) {
-    return this.request(`/api/obras/${id}`, {
+    return this.request(`/api/obras/${encodeURIComponent(id)}`, {
       method: 'GET',
       headers: this.getHeaders(),
     });
@@ -153,6 +207,21 @@ class BBVisionApiClient {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify(dados),
+    });
+  }
+
+  async atualizarObra(id, dados) {
+    return this.request(`/api/obras/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify(dados),
+    });
+  }
+
+  async excluirObra(id) {
+    return this.request(`/api/obras/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
     });
   }
 
@@ -172,14 +241,14 @@ class BBVisionApiClient {
   }
 
   async getChecklistObra(obraId) {
-    return this.request(`/api/obras/${obraId}/checklist`, {
+    return this.request(`/api/obras/${encodeURIComponent(obraId)}/checklist`, {
       method: 'GET',
       headers: this.getHeaders(),
     });
   }
 
   async salvarChecklistObra(obraId, perguntas) {
-    return this.request(`/api/obras/${obraId}/checklist`, {
+    return this.request(`/api/obras/${encodeURIComponent(obraId)}/checklist`, {
       method: 'PUT',
       headers: this.getHeaders(),
       body: JSON.stringify({ perguntas }),
@@ -187,7 +256,7 @@ class BBVisionApiClient {
   }
 
   // ----------------------------------------------------------------------------
-  // FOTOS E IA GEMINI
+  // FOTOS E IA
   // ----------------------------------------------------------------------------
   async avaliarFoto(formDataOrBase64, telemetriaVisual = null) {
     if (formDataOrBase64 instanceof FormData) {
@@ -213,22 +282,22 @@ class BBVisionApiClient {
     });
   }
 
-  async sugerirObservacao(categoria, imagemBase64 = null) {
+  async sugerirObservacao(categoria, imagemBase64 = null, contextoRespostas = null) {
     return this.request('/api/fotos/sugerir-observacao', {
       method: 'POST',
       headers: this.getHeaders(),
-      body: JSON.stringify({ categoria, imagemBase64 }),
+      body: JSON.stringify({ categoria, imagemBase64, contextoRespostas }),
     });
   }
 
   // ----------------------------------------------------------------------------
   // RELATÓRIOS
   // ----------------------------------------------------------------------------
-  async criarRelatorio(obra_id) {
+  async criarRelatorio(obra_id, extras = {}) {
     return this.request('/api/relatorios', {
       method: 'POST',
       headers: this.getHeaders(),
-      body: JSON.stringify({ obra_id }),
+      body: JSON.stringify({ obra_id, ...extras }),
     });
   }
 
@@ -241,15 +310,22 @@ class BBVisionApiClient {
     });
   }
 
+  async getPainelAuditoria() {
+    return this.request('/api/relatorios/painel/resumo', {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+  }
+
   async getRelatorio(id) {
-    return this.request(`/api/relatorios/${id}`, {
+    return this.request(`/api/relatorios/${encodeURIComponent(id)}`, {
       method: 'GET',
       headers: this.getHeaders(),
     });
   }
 
   async salvarRespostas(relatorioId, respostas) {
-    return this.request(`/api/relatorios/${relatorioId}/respostas`, {
+    return this.request(`/api/relatorios/${encodeURIComponent(relatorioId)}/respostas`, {
       method: 'PUT',
       headers: this.getHeaders(),
       body: JSON.stringify(respostas),
@@ -257,7 +333,7 @@ class BBVisionApiClient {
   }
 
   async anexarFoto(relatorioId, fotoData) {
-    return this.request(`/api/relatorios/${relatorioId}/fotos`, {
+    return this.request(`/api/relatorios/${encodeURIComponent(relatorioId)}/fotos`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify(fotoData),
@@ -265,15 +341,20 @@ class BBVisionApiClient {
   }
 
   async finalizarRelatorio(relatorioId, dadosExtras = {}) {
-    return this.request(`/api/relatorios/${relatorioId}/finalizar`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(dadosExtras || {}),
-    });
+    // skipAuthRedirect: true porque senha_confirmacao incorreta retorna 401 sem invalidar o JWT
+    return this.request(
+      `/api/relatorios/${encodeURIComponent(relatorioId)}/finalizar`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(dadosExtras || {}),
+      },
+      { skipAuthRedirect: true }
+    );
   }
 
   async atualizarStatusFiscal(relatorioId, status, justificativa) {
-    return this.request(`/api/relatorios/${relatorioId}/status`, {
+    return this.request(`/api/relatorios/${encodeURIComponent(relatorioId)}/status`, {
       method: 'PATCH',
       headers: this.getHeaders(),
       body: JSON.stringify({ status, justificativa }),
@@ -282,13 +363,15 @@ class BBVisionApiClient {
 
   async validarDocumento(codigoOuHash) {
     const termo = encodeURIComponent((codigoOuHash || '').trim());
-    return this.request(`/api/validador/${termo}`, {
-      method: 'GET',
-    });
+    return this.request(
+      `/api/validador/${termo}`,
+      { method: 'GET' },
+      { skipAuthRedirect: true }
+    );
   }
 
   getPdfUrl(relatorioId) {
-    return `${API_BASE_URL}/api/relatorios/${relatorioId}/pdf`;
+    return `${API_BASE_URL}/api/relatorios/${encodeURIComponent(relatorioId)}/pdf`;
   }
 }
 

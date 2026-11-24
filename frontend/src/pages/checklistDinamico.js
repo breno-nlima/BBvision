@@ -1,23 +1,21 @@
 /**
- * BVision - Tela de Checklist Dinâmico com Sugestões de IA
- * Fiel ao print de referência: WhatsApp Image 2026-10-08 at 11.43.19 (2).jpeg
- * Conforme Requisitos E3, HU04, P3 e Regras de Governança da IA do Documento Oficial TakeOff:
- * - Sugestão técnica gerada pelo Google Gemini 1.5 Flash (Prompt P3)
- * - Princípio Human-in-the-loop com aviso mandatória "Revise antes de enviar"
- * - Editabilidade total pelo operador de campo
+ * BBVision - Tela de Checklist Complementar com Sugestões de IA
+ * Princípio Human-in-the-loop com aviso "Revise antes de enviar" e editabilidade total.
  */
 
 import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { api } from '../services/api.js';
 import { toast } from '../components/toast.js';
+import { escapeHtml } from '../utils/formatters.js';
 import { getPerguntasChecklistAtual } from './checklistPergunta.js';
 
-const PLACEHOLDER_OBS_DINAMICO = 'Neste campo, preencher com observações complementares da vistoria ou clicar em "Gerar Resumo das Respostas com IA" acima...';
+const PLACEHOLDER_OBS_DINAMICO =
+  'Preencha com observações complementares da vistoria ou clique em "Gerar Resumo das Respostas com IA" acima...';
 
 export function renderChecklistDinamico() {
   const vistoria = state.currentVistoria;
-  const respostas = vistoria.respostas;
+  const respostas = (vistoria.respostas = vistoria.respostas || {});
 
   const sinalizacaoVal = respostas.sinalizacao || '';
   const precisaJustSinalizacao = sinalizacaoVal === 'Não' || sinalizacaoVal === 'Parcial';
@@ -33,9 +31,10 @@ export function renderChecklistDinamico() {
     camerasVal !== null &&
     camerasVal !== undefined;
 
+  const cameraOptions = [0, 1, 2, 3, 4, 5, 6, 8];
+
   return `
     <div class="page-container fade-in" id="checklistDinamicoPage">
-      <!-- Header Superior Azul Marinho BB com Logo e Título -->
       <header class="checklist-blue-topbar">
         <div class="topbar-left-brand">
           <button class="btn-back-white-icon" id="btnVoltarPerguntaAnterior" title="Voltar">
@@ -49,7 +48,7 @@ export function renderChecklistDinamico() {
             <span class="page-title-white">Checklist Complementar</span>
           </div>
         </div>
-        <button class="btn-dots-white" id="btnChecklistOpcoes" title="Opções">
+        <button class="btn-dots-white" id="btnChecklistOpcoes" title="Ajuda">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="#FFFFFF">
             <circle cx="5" cy="12" r="2"></circle>
             <circle cx="12" cy="12" r="2"></circle>
@@ -58,13 +57,10 @@ export function renderChecklistDinamico() {
         </button>
       </header>
 
-      <!-- Corpo do Checklist em Cartão Arredondado Branco -->
       <div class="checklist-sheet-container">
-        <!-- Item 1: Condição da sinalização (Sim / Não / Parcial) -->
         <div class="field-card-box">
           <div class="field-card-header">
             <label class="field-title">Condição da sinalização <span style="color:#DC2626;">*</span></label>
-            <span class="field-chevron">▼</span>
           </div>
           <div class="pill-segmented-control">
             <button type="button" class="seg-btn ${sinalizacaoVal === 'Sim' ? 'active' : ''}" data-val="Sim">Sim</button>
@@ -72,7 +68,6 @@ export function renderChecklistDinamico() {
             <button type="button" class="seg-btn ${sinalizacaoVal === 'Parcial' ? 'active' : ''}" data-val="Parcial">Parcial</button>
           </div>
 
-          <!-- Justificativa qualitativa quando selecionado Não ou Parcial -->
           <div class="justificativa-qualitativa-box ${precisaJustSinalizacao ? '' : 'hidden'}" id="boxJustificativaSinalizacao" style="margin-top: 10px;">
             <label class="justificativa-qualitativa-label" for="txtJustificativaSinalizacao">
               Justificativa obrigatória (Sinalização Parcial ou Não Conforme):
@@ -83,16 +78,14 @@ export function renderChecklistDinamico() {
               rows="2"
               maxlength="250"
               placeholder="Descreva qual placa ou sinalização está ausente ou parcial..."
-            >${justSinalizacaoTxt}</textarea>
+            >${escapeHtml(justSinalizacaoTxt)}</textarea>
           </div>
         </div>
 
-        <!-- Linha Dupla: Avaliação da Limpeza e Estrelas -->
         <div class="fields-dual-row">
           <div class="field-card-box half-card">
             <div class="field-card-header">
               <label class="field-title">Avaliação da</label>
-              <span class="field-chevron">▼</span>
             </div>
             <div class="badge-step-item">
               <span class="step-num-circle" id="lblNotaLimpezaNum">${limpezaVal > 0 ? limpezaVal : '-'}</span>
@@ -103,37 +96,31 @@ export function renderChecklistDinamico() {
           <div class="field-card-box half-card">
             <div class="field-card-header">
               <label class="field-title">limpeza (1 a 5) <span style="color:#DC2626;">*</span></label>
-              <span class="field-chevron">▼</span>
             </div>
             <div class="stars-rating-container" id="starsContainer">
-              <span class="star-gold ${limpezaVal >= 1 ? 'active' : ''}" data-star="1">★</span>
-              <span class="star-gold ${limpezaVal >= 2 ? 'active' : ''}" data-star="2">★</span>
-              <span class="star-gold ${limpezaVal >= 3 ? 'active' : ''}" data-star="3">★</span>
-              <span class="star-gold ${limpezaVal >= 4 ? 'active' : ''}" data-star="4">★</span>
-              <span class="star-gold ${limpezaVal >= 5 ? 'active' : ''}" data-star="5">★</span>
+              ${[1, 2, 3, 4, 5]
+                .map(n => `<span class="star-gold ${limpezaVal >= n ? 'active' : ''}" data-star="${n}">★</span>`)
+                .join('')}
             </div>
           </div>
         </div>
 
-        <!-- Item 3: Quantidade de Câmeras -->
         <div class="field-card-box">
           <div class="field-card-header">
             <label class="field-title">Quantidade de câmeras instaladas no local <span style="color:#DC2626;">*</span></label>
-            <span class="field-chevron">▼</span>
           </div>
           <div class="number-picker-bar">
             <div class="picker-check-badge">${camerasVal !== null && camerasVal !== undefined ? '✓' : '?'}</div>
-            <button type="button" class="num-chip ${camerasVal === 1 ? 'selected' : ''}" data-num="1">1</button>
-            <button type="button" class="num-chip ${camerasVal === 2 ? 'selected' : ''}" data-num="2">2</button>
-            <button type="button" class="num-chip ${camerasVal === 3 ? 'selected' : ''}" data-num="3">3</button>
-            <button type="button" class="num-chip ${camerasVal === 4 ? 'selected' : ''}" data-num="4">4</button>
-            <button type="button" class="num-chip ${camerasVal === 5 ? 'selected' : ''}" data-num="5">5</button>
-            <button type="button" class="num-chip ${camerasVal === 6 ? 'selected' : ''}" data-num="6">6</button>
-            <button type="button" class="num-chip ${camerasVal === 8 ? 'selected' : ''}" data-num="8">8</button>
+            ${cameraOptions
+              .map(
+                num => `
+              <button type="button" class="num-chip ${camerasVal === num ? 'selected' : ''}" data-num="${num}">${num}</button>
+            `
+              )
+              .join('')}
           </div>
         </div>
 
-        <!-- Item 4: Observações Adicionais com Assistente IA BBVision -->
         <div class="field-card-box">
           <div class="field-card-header" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
             <label class="field-title">Observações adicionais</label>
@@ -147,22 +134,22 @@ export function renderChecklistDinamico() {
               <span class="ai-warning-human">Revise antes de enviar</span>
             </div>
             <span style="font-size: 11px; color: #475569;">
-              Função do botão: consolida suas respostas marcadas acima em um texto técnico pronto no campo abaixo.
+              Consolida as respostas preenchidas acima em um parecer técnico editável.
             </span>
           </div>
           <div class="ia-saved-feedback-banner hidden" id="iaDinamicoFeedbackBanner" style="margin-bottom: 8px;">
-            <span><strong>Resumo gerado pela IA e inserido no campo abaixo.</strong></span>
+            <span><strong>Resumo gerado pela IA e inserido no campo abaixo.</strong> Revise antes de prosseguir.</span>
           </div>
           <textarea
             class="field-textarea"
             id="txtObservacoesChecklist"
             rows="3"
-            data-default-placeholder="${PLACEHOLDER_OBS_DINAMICO}"
-            placeholder="${PLACEHOLDER_OBS_DINAMICO}"
-          >${obsTxt}</textarea>
+            maxlength="800"
+            data-default-placeholder="${escapeHtml(PLACEHOLDER_OBS_DINAMICO)}"
+            placeholder="${escapeHtml(PLACEHOLDER_OBS_DINAMICO)}"
+          >${escapeHtml(obsTxt)}</textarea>
         </div>
 
-        <!-- Botão Amarelo de Salvamento -->
         <div class="checklist-action-footer">
           <button class="btn-primary-bb-yellow" id="btnSalvarRespostas" ${podeSalvar ? '' : 'disabled'}>
             Salvar Respostas e Avançar →
@@ -174,7 +161,7 @@ export function renderChecklistDinamico() {
 }
 
 export function bindChecklistDinamicoEvents() {
-  const respostas = state.currentVistoria.respostas;
+  const respostas = (state.currentVistoria.respostas = state.currentVistoria.respostas || {});
   const btnSalvar = document.getElementById('btnSalvarRespostas');
   const boxJustSin = document.getElementById('boxJustificativaSinalizacao');
   const txtJustSin = document.getElementById('txtJustificativaSinalizacao');
@@ -190,23 +177,19 @@ export function bindChecklistDinamicoEvents() {
     btnSalvar.disabled = !(Boolean(sin) && justOk && limpOk && camOk);
   }
 
-  const btnVoltar = document.getElementById('btnVoltarPerguntaAnterior');
-  if (btnVoltar) {
-    btnVoltar.addEventListener('click', () => {
-      const perguntas = getPerguntasChecklistAtual();
-      state.checklistQuestionIndex = Math.max(0, perguntas.length - 1);
-      state.navigate('checklist-pergunta');
-    });
-  }
+  document.getElementById('btnVoltarPerguntaAnterior')?.addEventListener('click', () => {
+    const perguntas = getPerguntasChecklistAtual();
+    state.checklistQuestionIndex = Math.max(0, perguntas.length - 1);
+    state.navigate('checklist-pergunta');
+  });
 
-  const btnOpcoes = document.getElementById('btnChecklistOpcoes');
-  if (btnOpcoes) {
-    btnOpcoes.addEventListener('click', () => {
-      toast.info('Checklist Complementar', 'Preencha sinalização, limpeza e câmeras. Você pode usar a IA para consolidar as observações e revisar antes de avançar.');
-    });
-  }
+  document.getElementById('btnChecklistOpcoes')?.addEventListener('click', () => {
+    toast.info(
+      'Checklist Complementar',
+      'Preencha sinalização, nota de limpeza e quantidade de câmeras. O assistente de IA consolida um parecer editável.'
+    );
+  });
 
-  // Segmented control sinalização
   const segBtns = document.querySelectorAll('.seg-btn');
   segBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -222,6 +205,7 @@ export function bindChecklistDinamicoEvents() {
         } else {
           boxJustSin.classList.add('hidden');
           respostas.justificativaSinalizacao = '';
+          if (txtJustSin) txtJustSin.value = '';
         }
       }
       atualizarBotaoSalvar();
@@ -229,13 +213,12 @@ export function bindChecklistDinamicoEvents() {
   });
 
   if (txtJustSin) {
-    txtJustSin.addEventListener('input', (e) => {
+    txtJustSin.addEventListener('input', e => {
       respostas.justificativaSinalizacao = e.target.value;
       atualizarBotaoSalvar();
     });
   }
 
-  // Estrelas
   const stars = document.querySelectorAll('.star-gold');
   stars.forEach(star => {
     star.addEventListener('click', () => {
@@ -244,17 +227,12 @@ export function bindChecklistDinamicoEvents() {
       if (lblNotaLimpezaNum) lblNotaLimpezaNum.innerText = String(val);
       stars.forEach(s => {
         const sVal = parseInt(s.getAttribute('data-star'), 10);
-        if (sVal <= val) {
-          s.classList.add('active');
-        } else {
-          s.classList.remove('active');
-        }
+        s.classList.toggle('active', sVal <= val);
       });
       atualizarBotaoSalvar();
     });
   });
 
-  // Câmeras picker
   const numChips = document.querySelectorAll('.num-chip');
   numChips.forEach(chip => {
     chip.addEventListener('click', () => {
@@ -267,7 +245,6 @@ export function bindChecklistDinamicoEvents() {
     });
   });
 
-  // Observações
   const txtObs = document.getElementById('txtObservacoesChecklist');
   const iaBanner = document.getElementById('iaDinamicoFeedbackBanner');
   if (txtObs) {
@@ -279,12 +256,11 @@ export function bindChecklistDinamicoEvents() {
         txtObs.setAttribute('placeholder', txtObs.getAttribute('data-default-placeholder') || PLACEHOLDER_OBS_DINAMICO);
       }
     });
-    txtObs.addEventListener('input', (e) => {
+    txtObs.addEventListener('input', e => {
       respostas.observacoes = e.target.value;
     });
   }
 
-  // Gerar Resumo das Respostas com IA BBVision (Item 11.1)
   const btnGerarIa = document.getElementById('btnGerarSugestaoIa');
   if (btnGerarIa && txtObs) {
     btnGerarIa.addEventListener('click', async () => {
@@ -292,37 +268,64 @@ export function bindChecklistDinamicoEvents() {
       btnGerarIa.innerText = 'Gerando resumo...';
       btnGerarIa.disabled = true;
 
+      const perguntas = getPerguntasChecklistAtual();
+      const contextoRespostas = {
+        obra: state.currentVistoria.obraNome,
+        tipoLocal: state.currentVistoria.tipoLocal,
+        sinalizacao: respostas.sinalizacao || 'Não informada',
+        justificativaSinalizacao: respostas.justificativaSinalizacao || null,
+        limpeza: respostas.limpeza ? `${respostas.limpeza}/5` : 'Não avaliada',
+        cameras: respostas.cameras !== null && respostas.cameras !== undefined ? respostas.cameras : 'Não informado',
+        itensChecklist: perguntas.map((q, idx) => {
+          const k = q.chaveResposta || q.id || `pergunta_${idx}`;
+          const val = respostas[k];
+          return {
+            pergunta: q.titulo,
+            resposta: Array.isArray(val) ? val.join('; ') : val || 'Não informado',
+            justificativa: respostas.justificativas?.[k] || null,
+          };
+        }),
+      };
+
       const sinStr = respostas.sinalizacao ? `Sinalização ${respostas.sinalizacao.toLowerCase()}` : 'Sinalização verificada';
-      const limpStr = respostas.limpeza ? `limpeza avaliada em ${respostas.limpeza}/5 estrelas` : 'limpeza inspecionada';
-      const camStr = respostas.cameras ? `${respostas.cameras} câmera(s) de monitoramento ativas` : 'monitoramento verificado';
-      const fachadaStr = respostas.fachadaLegivel ? `Fachada: ${respostas.fachadaLegivel}.` : '';
+      const limpStr = respostas.limpeza ? `limpeza avaliada em ${respostas.limpeza}/5` : 'limpeza inspecionada';
+      const camStr =
+        respostas.cameras !== null && respostas.cameras !== undefined
+          ? `${respostas.cameras} câmera(s) de monitoramento registradas`
+          : 'monitoramento verificado';
 
       try {
-        const res = await api.sugerirObservacao('geral');
-        const baseIa = (res && res.sugestao) ? res.sugestao : 'Serviço executado conforme especificações técnicas da medição física.';
-        const resumoConsolidado = `${ sinStr }, ${ limpStr } e ${ camStr }. ${ fachadaStr } ${ baseIa }`.replace(/\s+/g, ' ').trim();
-        txtObs.value = resumoConsolidado;
-        respostas.observacoes = resumoConsolidado;
+        const res = await api.sugerirObservacao('geral', null, contextoRespostas);
+        const sugestaoIa = res && res.sugestao ? res.sugestao.trim() : '';
+        const textoFinal =
+          sugestaoIa && sugestaoIa.length > 35
+            ? sugestaoIa
+            : `${sinStr}, ${limpStr} e ${camStr}. ${sugestaoIa || 'Serviço inspecionado conforme especificações técnicas.'}`.trim();
+        txtObs.value = textoFinal.slice(0, 800);
+        respostas.observacoes = txtObs.value;
+        toast.success('Resumo Gerado', 'A IA consolidou suas respostas no campo de Observações. Revise antes de avançar.');
       } catch (err) {
-        const resumoFallback = `${ sinStr }, ${ limpStr } e ${ camStr }. ${ fachadaStr } Instalações e acabamentos inspecionados in-loco conforme padrão técnico do Banco do Brasil.`.replace(/\s+/g, ' ').trim();
+        const resumoFallback = `${sinStr}, ${limpStr} e ${camStr}. Instalações e acabamentos inspecionados in-loco conforme padrão técnico de engenharia.`;
         txtObs.value = resumoFallback;
         respostas.observacoes = resumoFallback;
+        toast.warning('Resumo Offline', 'Sem conexão com a IA no momento. Resumo técnico consolidado localmente para revisão.');
       } finally {
         btnGerarIa.innerHTML = originalHtml;
         btnGerarIa.disabled = false;
         if (iaBanner) iaBanner.classList.remove('hidden');
         txtObs.classList.add('textarea-ia-highlight');
         setTimeout(() => txtObs.classList.remove('textarea-ia-highlight'), 2200);
-        toast.success('Resumo Gerado no Campo Abaixo', 'A IA consolidou suas respostas no campo de Observações adicionais.');
       }
     });
   }
 
-  // Avançar para a tela de Verificação Resumo
   if (btnSalvar) {
     btnSalvar.addEventListener('click', () => {
       if (btnSalvar.disabled) {
-        toast.warning('Campos Obrigatórios', 'Selecione a condição da sinalização, a nota de limpeza e a quantidade de câmeras antes de avançar.');
+        toast.warning(
+          'Campos Obrigatórios',
+          'Selecione a condição da sinalização, a nota de limpeza e a quantidade de câmeras antes de avançar.'
+        );
         return;
       }
       state.navigate('checklist-verificacao');
