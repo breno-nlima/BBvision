@@ -65,9 +65,19 @@
   /* Sombras (leves, sem peso excessivo) */
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
   --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
-  --shadow-card-hover: 0 8px 20px -6px rgba(0, 45, 98, 0.09);
+  --shadow-card-hover: 0 10px 24px -8px rgba(0, 45, 98, 0.12);
   --shadow-bottom-nav: 0 -2px 12px rgba(15, 23, 42, 0.06);
   --shadow-floating: 0 12px 32px -8px rgba(15, 23, 42, 0.16);
+  --shadow-soft: 0 2px 8px -2px rgba(15, 23, 42, 0.06);
+
+  /* Escala de Espaçamento (consistência entre componentes) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
 
   /* Transições Suaves */
   --transition-fast: 0.15s ease;

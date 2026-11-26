@@ -435,6 +435,7 @@
 
 .cl-textarea:focus {
   border-color: var(--bb-blue-navy);
+  box-shadow: 0 0 0 3px rgba(0, 45, 98, 0.08);
 }
 
 .finalizar-container {
@@ -571,6 +572,13 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.relatorio-card-item:hover {
+  box-shadow: var(--shadow-card-hover);
+  border-color: rgba(0, 45, 98, 0.15);
+  transform: translateY(-1px);
 }
 
 .rel-top-row {
@@ -1004,7 +1012,7 @@
   border-radius: var(--radius-xl);
   border: 1px solid var(--border-light);
   padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  box-shadow: var(--shadow-soft);
 }
 
 .detalhe-item-row {
@@ -3585,6 +3593,108 @@
   line-height: 1.2;
 }
 
+/* --------------------------------------------------------------------------
+   Ações Rápidas — Início da Empreiteira (grid horizontal de cartões)
+   -------------------------------------------------------------------------- */
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 0 18px 16px 18px;
+}
+
+.quick-action-card {
+  background: #FFFFFF;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 16px 8px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 45, 98, 0.04);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+  text-align: center;
+  min-width: 0;
+}
+
+.quick-action-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 45, 98, 0.08);
+  border-color: rgba(0, 45, 98, 0.18);
+}
+
+.quick-action-card:active {
+  transform: translateY(0);
+}
+
+.quick-action-card.highlight-card {
+  border-color: rgba(254, 211, 4, 0.75);
+  background: #FFFDF0;
+}
+
+.quick-action-card.highlight-card:hover {
+  border-color: #FED304;
+}
+
+.quick-action-icon-badge {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  color: #002D62;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.quick-action-card.highlight-card .quick-action-icon-badge {
+  background: #FEF9C3;
+  border-color: rgba(254, 211, 4, 0.75);
+  color: #002D62;
+}
+
+.quick-action-card:hover .quick-action-icon-badge {
+  background: #002D62;
+  border-color: #002D62;
+  color: #FED304;
+}
+
+.quick-action-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #002D62;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 420px) {
+  .quick-actions-grid {
+    gap: 8px;
+    margin: 0 14px 14px 14px;
+  }
+
+  .quick-action-card {
+    padding: 14px 6px 12px;
+    gap: 8px;
+  }
+
+  .quick-action-icon-badge {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+
+  .quick-action-label {
+    font-size: 11px;
+  }
+}
+
 /* Callout de Ação Imediata de Auditoria */
 .fiscal-action-callout {
   margin: 0 18px 16px 18px;
@@ -4403,11 +4513,12 @@
 /* 4. Dashboard Fiscal & Empreiteira (alinhamento total sem margens extras) */
 .hero-fiscal-card {
   margin: 0 0 18px 0;
-  background: var(--bb-blue-navy);
+  background: linear-gradient(135deg, #001B3D 0%, #002D62 60%, #004694 100%);
   border-radius: var(--radius-xl);
   padding: 24px 26px;
-  box-shadow: var(--shadow-card);
-  border: 1px solid rgba(0, 45, 98, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 27, 61, 0.18);
+  border: 1px solid rgba(0, 45, 98, 0.3);
+  border-bottom: 3px solid var(--bb-yellow);
 }
 
 .hero-fiscal-card::after {

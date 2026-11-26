@@ -19,6 +19,23 @@ html, body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+/* Foco visível para acessibilidade (navegação por teclado) */
+:focus-visible {
+  outline: 2px solid var(--bb-blue-navy);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--bb-blue-navy);
+  outline-offset: 2px;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -39,14 +56,14 @@ button, input, select, textarea {
   left: 0;
   width: 100%;
   height: 60px;
-  background-color: var(--bb-blue-navy);
+  background: linear-gradient(180deg, #002D62 0%, #001F47 100%);
   color: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
   z-index: 100;
-  box-shadow: 0 1px 4px rgba(0, 27, 61, 0.14);
+  box-shadow: 0 2px 8px rgba(0, 31, 71, 0.25);
   border-bottom: 2px solid var(--bb-yellow);
 }
 

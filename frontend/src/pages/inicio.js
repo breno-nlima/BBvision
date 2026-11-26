@@ -123,7 +123,6 @@ export function renderInicio() {
   }
 
   // Visão da Empreiteira
-  const totalRelatorios = state.relatorios.length;
   const obrasHtml =
     state.obras.length > 0
       ? state.obras
@@ -185,22 +184,25 @@ export function renderInicio() {
           <div class="hero-greeting">Olá, ${primeiroNome}</div>
           <div class="hero-role-tag">${userName} • Empreiteira de Campo</div>
         </div>
-        <div class="hero-cta-wrap">
-          <button type="button" class="btn-pill-yellow" id="btnNovaAnalise">
-            Iniciar Nova Vistoria
-          </button>
-        </div>
       </section>
 
-      <section class="fiscal-dashboard-metrics two-cols">
-        <div class="fiscal-metric-box interactive" id="kpiMinhasObras">
-          <span class="fmb-num">${state.obras.length}</span>
-          <span class="fmb-label">Obras atribuídas</span>
-        </div>
-        <div class="fiscal-metric-box success interactive" id="kpiMeusRelatorios">
-          <span class="fmb-num">${totalRelatorios}</span>
-          <span class="fmb-label">Relatórios emitidos</span>
-        </div>
+      <section class="quick-actions-grid" aria-label="Ações rápidas">
+        <button type="button" class="quick-action-card highlight-card" id="qaNovaVistoria" title="Iniciar nova vistoria de obra">
+          <span class="quick-action-icon-badge">${Icons.iconeAuditoria(22)}</span>
+          <span class="quick-action-label">Nova Vistoria</span>
+        </button>
+        <button type="button" class="quick-action-card" id="qaMinhasObras" title="Ver obras atribuídas">
+          <span class="quick-action-icon-badge">${Icons.iconeObras(22)}</span>
+          <span class="quick-action-label">Minhas Obras</span>
+        </button>
+        <button type="button" class="quick-action-card" id="qaRelatorios" title="Ver relatórios emitidos">
+          <span class="quick-action-icon-badge">${Icons.iconeRelatorio(22)}</span>
+          <span class="quick-action-label">Relatórios</span>
+        </button>
+        <button type="button" class="quick-action-card" id="qaValidarHash" title="Validar autenticidade e Fé Pública">
+          <span class="quick-action-icon-badge">${Icons.shieldFePublica(22)}</span>
+          <span class="quick-action-label">Validar Hash</span>
+        </button>
       </section>
 
       <section class="analyses-section">
@@ -269,7 +271,7 @@ export function bindInicioEvents() {
     return;
   }
 
-  document.getElementById('btnNovaAnalise')?.addEventListener('click', () => {
+  const iniciarNovaVistoria = () => {
     if (state.obras.length === 0) {
       toast.info(
         'Nenhuma Obra Atribuída',
@@ -283,14 +285,20 @@ export function bindInicioEvents() {
     } else {
       state.navigate('obras', 'obras');
     }
-  });
+  };
 
-  document.getElementById('kpiMinhasObras')?.addEventListener('click', () => {
+  document.getElementById('qaNovaVistoria')?.addEventListener('click', iniciarNovaVistoria);
+
+  document.getElementById('qaMinhasObras')?.addEventListener('click', () => {
     state.navigate('obras', 'obras');
   });
 
-  document.getElementById('kpiMeusRelatorios')?.addEventListener('click', () => {
+  document.getElementById('qaRelatorios')?.addEventListener('click', () => {
     state.navigate('relatorios', 'relatorios');
+  });
+
+  document.getElementById('qaValidarHash')?.addEventListener('click', () => {
+    state.navigate('validador-publico');
   });
 
   document.querySelectorAll('.analysis-item-card').forEach(card => {

@@ -505,8 +505,8 @@ function renderStaticLayout({
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..800;1,9..40,300..800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/src/styles/variables.css?v=2.4">
-  <link rel="stylesheet" href="/src/styles/base.css?v=2.4">
+  <link rel="stylesheet" href="/src/styles/variables.css?v=2.5">
+  <link rel="stylesheet" href="/src/styles/base.css?v=2.5">
   ${structuredData}
 </head>
 <body>
