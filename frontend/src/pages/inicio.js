@@ -3,12 +3,12 @@
  * Painel limpo e adaptativo para Empreiteiras (campo) e Fiscais de Obra (auditoria e gestão).
  */
 
-import { Icons } from '../assets/icons.js';
-import { state } from '../services/state.js';
-import { renderHeader, bindHeaderEvents } from '../components/header.js';
-import { modal } from '../components/modal.js';
-import { toast } from '../components/toast.js';
-import { escapeHtml } from '../utils/formatters.js';
+import { Icons } from '../assets/icons.js?v=2.5';
+import { state } from '../services/state.js?v=2.5';
+import { renderHeader, bindHeaderEvents } from '../components/header.js?v=2.5';
+import { modal } from '../components/modal.js?v=2.5';
+import { toast } from '../components/toast.js?v=2.5';
+import { escapeHtml } from '../utils/formatters.js?v=2.5';
 
 export function renderInicio() {
   const userName = escapeHtml(state.user?.nome || 'Usuário');

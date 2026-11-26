@@ -4,7 +4,7 @@
  * e sincroniza automaticamente ao restabelecer a conexão.
  */
 
-import { API_BASE_URL } from './api.js';
+import { API_BASE_URL } from './api.js?v=2.5';
 
 const QUEUE_STORAGE_KEY = 'bbvision_offline_queue';
 

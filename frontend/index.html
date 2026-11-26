@@ -274,18 +274,18 @@
   </footer>
 
   <!-- Registro de Ferramentas WebMCP para Agentes no Navegador -->
-  <script type="module" src="src/utils/webmcp.js"></script>
+  <script type="module" src="src/utils/webmcp.js?v=2.5"></script>
 
   <!-- Script Principal da Aplicação -->
-  <script type="module" src="src/app.js"></script>
+  <script type="module" src="src/app.js?v=2.5"></script>
 
   <!-- Sincronização da Navbar com o Estado de Autenticação -->
   <script type="module">
-    import { state } from './src/services/state.js';
-    import { modal } from './src/components/modal.js';
-    import { toast } from './src/components/toast.js';
-    import { Icons } from './src/assets/icons.js';
-    import { escapeHtml } from './src/utils/formatters.js';
+    import { state } from './src/services/state.js?v=2.5';
+    import { modal } from './src/components/modal.js?v=2.5';
+    import { toast } from './src/components/toast.js?v=2.5';
+    import { Icons } from './src/assets/icons.js?v=2.5';
+    import { escapeHtml } from './src/utils/formatters.js?v=2.5';
 
     function sincronizarNavbar(s) {
       const user = s.user;

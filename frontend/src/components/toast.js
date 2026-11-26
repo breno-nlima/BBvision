@@ -3,7 +3,7 @@
  * Padrão Banco do Brasil: Notificações elegantes, acessíveis e não intrusivas
  */
 
-import { escapeHtml } from '../utils/formatters.js';
+import { escapeHtml } from '../utils/formatters.js?v=2.5';
 
 class BBVisionToast {
   constructor() {

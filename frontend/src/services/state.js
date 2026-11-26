@@ -3,9 +3,9 @@
  * Gerencia estado reativo da aplicação sem quaisquer dados fictícios ou sementes hardcoded.
  */
 
-import { api } from './api.js';
-import { offlineSync } from './offlineSync.js';
-import { normalizeImageSrc, generateSecureHex16 } from '../utils/formatters.js';
+import { api } from './api.js?v=2.5';
+import { offlineSync } from './offlineSync.js?v=2.5';
+import { normalizeImageSrc, generateSecureHex16 } from '../utils/formatters.js?v=2.5';
 
 export const PERGUNTAS_PADRAO_BB = [
   {

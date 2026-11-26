@@ -8,12 +8,12 @@
  * - Cleanup automático de hardware (câmera, relógio e GPS) ao sair da tela
  */
 
-import { Icons } from '../assets/icons.js';
-import { state } from '../services/state.js';
-import { api } from '../services/api.js';
-import { toast } from '../components/toast.js';
-import { renderBackButton } from '../components/backButton.js';
-import { escapeHtml, computeSha256FromDataUrl } from '../utils/formatters.js';
+import { Icons } from '../assets/icons.js?v=2.5';
+import { state } from '../services/state.js?v=2.5';
+import { api } from '../services/api.js?v=2.5';
+import { toast } from '../components/toast.js?v=2.5';
+import { renderBackButton } from '../components/backButton.js?v=2.5';
+import { escapeHtml, computeSha256FromDataUrl } from '../utils/formatters.js?v=2.5';
 
 export function renderCameraIa() {
   const vistoria = state.currentVistoria;

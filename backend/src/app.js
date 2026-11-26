@@ -76,8 +76,9 @@ app.use(express.static(frontendPath, {
   maxAge: process.env.NODE_ENV === 'production' ? '1d' : '0',
   etag: true,
   setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-cache');
+    if (filePath.endsWith('.html') || filePath.endsWith('.js')) {
+      // HTML e JS devem ser sempre revalidados para evitar cache de versões antigas
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     }
   },
 }));

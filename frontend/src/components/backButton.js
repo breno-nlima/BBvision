@@ -4,7 +4,7 @@
  * em todas as telas internas do sistema.
  */
 
-import { escapeHtml } from '../utils/formatters.js';
+import { escapeHtml } from '../utils/formatters.js?v=2.5';
 
 /**
  * @param {object} opts

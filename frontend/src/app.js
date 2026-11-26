@@ -3,25 +3,25 @@
  * Coordena ciclo de vida, limpeza automática de hardware (câmera/GPS), RBAC e roteamento SPA.
  */
 
-import { state } from './services/state.js';
-import { renderLogin, bindLoginEvents } from './pages/login.js';
-import { renderInicio, bindInicioEvents } from './pages/inicio.js';
-import { renderObras, bindObrasEvents } from './pages/obras.js';
-import { renderRelatorios, bindRelatoriosEvents } from './pages/relatorios.js';
-import { renderPerfil, bindPerfilEvents } from './pages/perfil.js';
-import { renderBottomNav, bindBottomNavEvents } from './components/bottomNav.js';
-import { renderObraDetalhe, bindObraDetalheEvents } from './pages/obraDetalhe.js';
-import { renderTipoLocal, bindTipoLocalEvents } from './pages/tipoLocal.js';
-import { renderCameraIa, bindCameraIaEvents } from './pages/cameraIa.js';
-import { renderImagemProtegida, bindImagemProtegidaEvents } from './pages/imagemProtegida.js';
-import { renderChecklistPergunta, bindChecklistPerguntaEvents } from './pages/checklistPergunta.js';
-import { renderChecklistDinamico, bindChecklistDinamicoEvents } from './pages/checklistDinamico.js';
-import { renderChecklistVerificacao, bindChecklistVerificacaoEvents } from './pages/checklistVerificacao.js';
-import { renderAssinaturaResponsavel, bindAssinaturaResponsavelEvents } from './pages/assinaturaResponsavel.js';
-import { renderRelatorioBloqueado, bindRelatorioBloqueadoEvents } from './pages/relatorioBloqueado.js';
-import { renderFiscalAuditoria, bindFiscalAuditoriaEvents } from './pages/fiscalAuditoria.js';
-import { renderValidadorPublico, bindValidadorPublicoEvents } from './pages/validadorPublico.js';
-import { toast } from './components/toast.js';
+import { state } from './services/state.js?v=2.5';
+import { renderLogin, bindLoginEvents } from './pages/login.js?v=2.5';
+import { renderInicio, bindInicioEvents } from './pages/inicio.js?v=2.5';
+import { renderObras, bindObrasEvents } from './pages/obras.js?v=2.5';
+import { renderRelatorios, bindRelatoriosEvents } from './pages/relatorios.js?v=2.5';
+import { renderPerfil, bindPerfilEvents } from './pages/perfil.js?v=2.5';
+import { renderBottomNav, bindBottomNavEvents } from './components/bottomNav.js?v=2.5';
+import { renderObraDetalhe, bindObraDetalheEvents } from './pages/obraDetalhe.js?v=2.5';
+import { renderTipoLocal, bindTipoLocalEvents } from './pages/tipoLocal.js?v=2.5';
+import { renderCameraIa, bindCameraIaEvents } from './pages/cameraIa.js?v=2.5';
+import { renderImagemProtegida, bindImagemProtegidaEvents } from './pages/imagemProtegida.js?v=2.5';
+import { renderChecklistPergunta, bindChecklistPerguntaEvents } from './pages/checklistPergunta.js?v=2.5';
+import { renderChecklistDinamico, bindChecklistDinamicoEvents } from './pages/checklistDinamico.js?v=2.5';
+import { renderChecklistVerificacao, bindChecklistVerificacaoEvents } from './pages/checklistVerificacao.js?v=2.5';
+import { renderAssinaturaResponsavel, bindAssinaturaResponsavelEvents } from './pages/assinaturaResponsavel.js?v=2.5';
+import { renderRelatorioBloqueado, bindRelatorioBloqueadoEvents } from './pages/relatorioBloqueado.js?v=2.5';
+import { renderFiscalAuditoria, bindFiscalAuditoriaEvents } from './pages/fiscalAuditoria.js?v=2.5';
+import { renderValidadorPublico, bindValidadorPublicoEvents } from './pages/validadorPublico.js?v=2.5';
+import { toast } from './components/toast.js?v=2.5';
 
 class BVisionApp {
   constructor() {

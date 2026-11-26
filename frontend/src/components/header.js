@@ -2,11 +2,11 @@
  * BBVision App Header Component
  */
 
-import { Icons } from '../assets/icons.js';
-import { state } from '../services/state.js';
-import { modal } from './modal.js';
-import { toast } from './toast.js';
-import { escapeHtml } from '../utils/formatters.js';
+import { Icons } from '../assets/icons.js?v=2.5';
+import { state } from '../services/state.js?v=2.5';
+import { modal } from './modal.js?v=2.5';
+import { toast } from './toast.js?v=2.5';
+import { escapeHtml } from '../utils/formatters.js?v=2.5';
 
 export function renderHeader(type = 'default') {
   const isObrasPage = state.currentPage === 'obras';

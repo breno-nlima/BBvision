@@ -3,13 +3,13 @@
  * Princípio Human-in-the-loop com aviso "Revise antes de enviar" e editabilidade total.
  */
 
-import { Icons } from '../assets/icons.js';
-import { state } from '../services/state.js';
-import { api } from '../services/api.js';
-import { toast } from '../components/toast.js';
-import { renderBackButton } from '../components/backButton.js';
-import { escapeHtml } from '../utils/formatters.js';
-import { getPerguntasChecklistAtual } from './checklistPergunta.js';
+import { Icons } from '../assets/icons.js?v=2.5';
+import { state } from '../services/state.js?v=2.5';
+import { api } from '../services/api.js?v=2.5';
+import { toast } from '../components/toast.js?v=2.5';
+import { renderBackButton } from '../components/backButton.js?v=2.5';
+import { escapeHtml } from '../utils/formatters.js?v=2.5';
+import { getPerguntasChecklistAtual } from './checklistPergunta.js?v=2.5';
 
 const PLACEHOLDER_OBS_DINAMICO =
   'Preencha com observações complementares da vistoria ou clique em "Gerar Resumo das Respostas com IA" acima...';

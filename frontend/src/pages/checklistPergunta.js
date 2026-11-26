@@ -5,12 +5,12 @@
  * integração com Assistente de Parecer com IA e sincronização instantânea de estado.
  */
 
-import { Icons } from '../assets/icons.js';
-import { state, PERGUNTAS_PADRAO_BB } from '../services/state.js';
-import { api } from '../services/api.js';
-import { toast } from '../components/toast.js';
-import { renderBackButton } from '../components/backButton.js';
-import { escapeHtml, copyToClipboard } from '../utils/formatters.js';
+import { Icons } from '../assets/icons.js?v=2.5';
+import { state, PERGUNTAS_PADRAO_BB } from '../services/state.js?v=2.5';
+import { api } from '../services/api.js?v=2.5';
+import { toast } from '../components/toast.js?v=2.5';
+import { renderBackButton } from '../components/backButton.js?v=2.5';
+import { escapeHtml, copyToClipboard } from '../utils/formatters.js?v=2.5';
 
 const ORIENTACAO_TEXTO_PADRAO =
   'Neste campo, preencher com informações sobre a qualidade do serviço (alinhamento, prumo, eventuais fissuras ou conformidade de execução da obra).';

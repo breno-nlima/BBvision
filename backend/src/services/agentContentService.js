@@ -564,7 +564,7 @@ function renderStaticLayout({
     </div>
   </footer>
 
-  <script type="module" src="/src/utils/webmcp.js"></script>
+  <script type="module" src="/src/utils/webmcp.js?v=2.5"></script>
   ${extraScript}
 </body>
 </html>

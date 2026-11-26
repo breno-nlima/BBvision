@@ -3,8 +3,8 @@
  * Barra inferior adaptativa conforme o perfil de acesso (Empreiteira ou Fiscal)
  */
 
-import { Icons } from '../assets/icons.js';
-import { state } from '../services/state.js';
+import { Icons } from '../assets/icons.js?v=2.5';
+import { state } from '../services/state.js?v=2.5';
 
 export function renderBottomNav() {
   const current = state.activeNav;

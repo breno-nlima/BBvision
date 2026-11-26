@@ -3,11 +3,11 @@
  * Confirmação final de prontidão do local antes da captura fotográfica in-loco com IA.
  */
 
-import { Icons } from '../assets/icons.js';
-import { state } from '../services/state.js';
-import { toast } from '../components/toast.js';
-import { renderBackButton } from '../components/backButton.js';
-import { escapeHtml } from '../utils/formatters.js';
+import { Icons } from '../assets/icons.js?v=2.5';
+import { state } from '../services/state.js?v=2.5';
+import { toast } from '../components/toast.js?v=2.5';
+import { renderBackButton } from '../components/backButton.js?v=2.5';
+import { escapeHtml } from '../utils/formatters.js?v=2.5';
 
 export function renderChecklistVerificacao() {
   const vistoria = state.currentVistoria;

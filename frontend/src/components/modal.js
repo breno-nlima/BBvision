@@ -2,10 +2,10 @@
  * BBVision - Modais Corporativos, Visualizador de PDF, Gestão de Obras e Checklist
  */
 
-import { Icons } from '../assets/icons.js';
-import { state, PERGUNTAS_PADRAO_BB } from '../services/state.js';
-import { toast } from './toast.js';
-import { escapeHtml } from '../utils/formatters.js';
+import { Icons } from '../assets/icons.js?v=2.5';
+import { state, PERGUNTAS_PADRAO_BB } from '../services/state.js?v=2.5';
+import { toast } from './toast.js?v=2.5';
+import { escapeHtml } from '../utils/formatters.js?v=2.5';
 
 class BBVisionModal {
   constructor() {

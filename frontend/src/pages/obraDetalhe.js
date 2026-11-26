@@ -3,12 +3,12 @@
  * Exibe dados da unidade, gestão de cadastro/checklist/exclusão (Fiscal) e início de vistoria (Empreiteira).
  */
 
-import { Icons } from '../assets/icons.js';
-import { state } from '../services/state.js';
-import { modal } from '../components/modal.js';
-import { toast } from '../components/toast.js';
-import { renderBackButton } from '../components/backButton.js';
-import { escapeHtml, NEUTRAL_PHOTO_PLACEHOLDER } from '../utils/formatters.js';
+import { Icons } from '../assets/icons.js?v=2.5';
+import { state } from '../services/state.js?v=2.5';
+import { modal } from '../components/modal.js?v=2.5';
+import { toast } from '../components/toast.js?v=2.5';
+import { renderBackButton } from '../components/backButton.js?v=2.5';
+import { escapeHtml, NEUTRAL_PHOTO_PLACEHOLDER } from '../utils/formatters.js?v=2.5';
 
 export function renderObraDetalhe() {
   const vistoria = state.currentVistoria;

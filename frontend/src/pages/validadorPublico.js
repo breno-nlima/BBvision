@@ -4,13 +4,13 @@
  * criptográfica de um relatório através do Código Único ou Hash SHA-256.
  */
 
-import { Icons } from '../assets/icons.js';
-import { state } from '../services/state.js';
-import { api } from '../services/api.js';
-import { modal } from '../components/modal.js';
-import { toast } from '../components/toast.js';
-import { renderBackButton } from '../components/backButton.js';
-import { escapeHtml, copyToClipboard } from '../utils/formatters.js';
+import { Icons } from '../assets/icons.js?v=2.5';
+import { state } from '../services/state.js?v=2.5';
+import { api } from '../services/api.js?v=2.5';
+import { modal } from '../components/modal.js?v=2.5';
+import { toast } from '../components/toast.js?v=2.5';
+import { renderBackButton } from '../components/backButton.js?v=2.5';
+import { escapeHtml, copyToClipboard } from '../utils/formatters.js?v=2.5';
 
 let resultadoConsulta = null;
 let termoConsultadoAtual = '';
