@@ -636,7 +636,7 @@ class DataStore {
         const { data, error } = await supabase
           .from('usuarios')
           .select('*')
-          .eq('email', cleanEmail)
+          .ilike('email', cleanEmail)
           .maybeSingle();
         if (!error && data) return data;
       } catch (e) {
@@ -665,6 +665,10 @@ class DataStore {
 
   async listUsersByCargoAsync(cargo) {
     const cleanCargo = String(cargo || '').trim().toLowerCase();
+    const localUsers = this.usuarios
+      .filter(u => !cleanCargo || (u.cargo || '').toLowerCase() === cleanCargo)
+      .map(({ senha_hash, ...pub }) => ({ ...pub }));
+
     if (isConfigured && supabase) {
       try {
         let query = supabase
@@ -673,16 +677,23 @@ class DataStore {
           .order('nome', { ascending: true });
         if (cleanCargo) query = query.eq('cargo', cleanCargo);
         const { data, error } = await query;
-        if (!error && Array.isArray(data) && data.length > 0) return data;
+        if (!error && Array.isArray(data) && data.length > 0) {
+          const byKey = new Map();
+          for (const u of data) {
+            byKey.set(String(u.email || u.id).toLowerCase(), u);
+          }
+          for (const u of localUsers) {
+            const k = String(u.email || u.id).toLowerCase();
+            if (!byKey.has(k)) byKey.set(k, u);
+          }
+          return Array.from(byKey.values()).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        }
       } catch (e) {
         console.warn('[DataStore/Supabase] listUsersByCargoAsync:', e.message);
       }
     }
 
-    return this.usuarios
-      .filter(u => !cleanCargo || (u.cargo || '').toLowerCase() === cleanCargo)
-      .map(({ senha_hash, ...pub }) => ({ ...pub }))
-      .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+    return localUsers.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
   }
 
   async createUserAsync(dados) {
@@ -821,6 +832,7 @@ class DataStore {
   }
 
   async listObrasAsync(filtros = {}) {
+    const localObras = this.listObras(filtros);
     if (isConfigured && supabase) {
       try {
         let query = supabase.from('obras').select('*').order('created_at', { ascending: false });
@@ -832,12 +844,21 @@ class DataStore {
           query = query.eq('cadastrado_por_fiscal_id', filtros.cadastrado_por_fiscal_id);
         }
         const { data, error } = await query;
-        if (!error && Array.isArray(data) && data.length > 0) return data;
+        if (!error && Array.isArray(data)) {
+          const byId = new Map();
+          for (const o of data) byId.set(o.id, o);
+          for (const o of localObras) {
+            if (!byId.has(o.id)) byId.set(o.id, o);
+          }
+          if (byId.size > 0) {
+            return Array.from(byId.values()).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+          }
+        }
       } catch (e) {
         console.warn('[DataStore/Supabase] listObrasAsync:', e.message);
       }
     }
-    return this.listObras(filtros);
+    return localObras;
   }
 
   findObraById(id) {
@@ -963,6 +984,11 @@ class DataStore {
           if (allowed.empreiteira_id) {
             try { await supabase.from('obras_empreiteiras').upsert({ obra_id: data.id, empreiteira_id: allowed.empreiteira_id, ativo: true }); } catch (_) {}
           }
+          const localRef = this.obras.find(o => o.id === id);
+          if (localRef) {
+            Object.assign(localRef, allowed);
+            this._persistToDisk();
+          }
           return data;
         }
       } catch (e) {
@@ -985,20 +1011,23 @@ class DataStore {
       throw err;
     }
 
+    let deletedRemote = false;
     if (isConfigured && supabase) {
       try {
         const { data, error } = await supabase.from('obras').delete().eq('id', id).select('id');
-        if (!error && Array.isArray(data) && data.length > 0) return true;
+        if (!error && Array.isArray(data) && data.length > 0) deletedRemote = true;
       } catch (e) {
         console.warn('[DataStore/Supabase] deleteObraAsync:', e.message);
       }
     }
 
     const idx = this.obras.findIndex(o => o.id === id);
-    if (idx === -1) return false;
-    this.obras.splice(idx, 1);
-    this._persistToDisk();
-    return true;
+    if (idx !== -1) {
+      this.obras.splice(idx, 1);
+      this._persistToDisk();
+      return true;
+    }
+    return deletedRemote;
   }
 
   // ============================================================================

@@ -63,3 +63,4 @@ Thumbs.db
 # Build outputs
 dist/
 build/
+presentation-build/

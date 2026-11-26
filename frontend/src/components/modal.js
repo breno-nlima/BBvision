@@ -702,13 +702,23 @@ class BBVisionModal {
     overlay.className = 'bb-modal-overlay fade-in';
     overlay.id = 'bbNovaObraModalOverlay';
 
-    const opcoesEmpreiteirasHtml = [
-      `<option value="">A definir (vincular posteriormente)</option>`,
-      ...listaEmpreiteiras.map(emp => {
-        const labelEmpresa = emp.empresa ? ` — ${emp.empresa}` : '';
-        return `<option value="${escapeHtml(emp.id)}" data-nome="${escapeHtml(emp.nome)}">${escapeHtml(emp.nome)}${escapeHtml(labelEmpresa)}</option>`;
-      }),
-    ].join('');
+    const datalistEmpreiteirasHtml = listaEmpreiteiras
+      .map(emp => {
+        const labelExtra = [emp.nome, emp.empresa].filter(Boolean).join(' — ');
+        return `<option value="${escapeHtml(emp.email)}">${escapeHtml(labelExtra)}</option>`;
+      })
+      .join('');
+
+    const sugestoesEmpreiteirasHtml = listaEmpreiteiras.length > 0
+      ? `<div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px;">
+          ${listaEmpreiteiras
+            .slice(0, 5)
+            .map(
+              emp => `<button type="button" class="btn-pick-emp-email" data-email="${escapeHtml(emp.email)}" data-nome="${escapeHtml(emp.nome || '')}" style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #002D62; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; cursor: pointer;">${escapeHtml(emp.email)}</button>`
+            )
+            .join('')}
+        </div>`
+      : `<span style="font-size: 11px; color: #B45309;">Nenhuma empreiteira cadastrada ainda. Cadastre um perfil de empreiteira para atribuir a obra.</span>`;
 
     overlay.innerHTML = `
       <div class="bb-modal-dialog bb-nova-obra-dialog" style="max-width: 640px; width: 95%;">
@@ -780,17 +790,23 @@ class BBVisionModal {
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
               <div class="form-group-field" style="display: flex; flex-direction: column; gap: 6px;">
-                <label for="selEmpreiteira" style="font-size: 12.5px; font-weight: 700; color: #002D62;">
-                  Empreiteira Designada
+                <label for="txtEmailEmpreiteira" style="font-size: 12.5px; font-weight: 700; color: #002D62;">
+                  E-mail da Empreiteira Atribuída <span style="color: #DC2626;">*</span>
                 </label>
-                <select 
-                  id="selEmpreiteira" 
+                <input
+                  type="email"
+                  id="txtEmailEmpreiteira"
+                  list="datalistEmpreiteirasNovaObra"
                   class="form-control-input"
+                  placeholder="Ex.: rodrigo@empreiteira.com"
+                  required
+                  autocomplete="off"
                   style="padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13px; background: #FFFFFF; outline: none;"
-                >
-                  ${opcoesEmpreiteirasHtml}
-                </select>
-                ${listaEmpreiteiras.length === 0 ? `<span style="font-size: 11px; color: #64748B;">Nenhuma empreiteira cadastrada ainda. Você poderá vincular depois em Editar Obra.</span>` : ''}
+                />
+                <datalist id="datalistEmpreiteirasNovaObra">
+                  ${datalistEmpreiteirasHtml}
+                </datalist>
+                ${sugestoesEmpreiteirasHtml}
               </div>
 
               <div class="form-group-field" style="display: flex; flex-direction: column; gap: 6px;">
@@ -872,15 +888,27 @@ class BBVisionModal {
       if (e.target === overlay) this.close();
     });
 
-    const selEmpreiteira = overlay.querySelector('#selEmpreiteira');
+    const txtEmailEmpreiteira = overlay.querySelector('#txtEmailEmpreiteira');
     const txtResponsavel = overlay.querySelector('#txtResponsavelObra');
 
-    selEmpreiteira.addEventListener('change', () => {
-      const selectedOpt = selEmpreiteira.options[selEmpreiteira.selectedIndex];
-      const nomeEmp = selectedOpt?.getAttribute('data-nome') || '';
-      if (nomeEmp) {
-        txtResponsavel.value = nomeEmp;
+    const sincronizarResponsavelPorEmail = () => {
+      const emailDigitado = (txtEmailEmpreiteira?.value || '').trim().toLowerCase();
+      const match = listaEmpreiteiras.find(e => String(e.email || '').toLowerCase() === emailDigitado);
+      if (match && match.nome && !txtResponsavel.value.trim()) {
+        txtResponsavel.value = match.nome;
       }
+    };
+
+    txtEmailEmpreiteira?.addEventListener('change', sincronizarResponsavelPorEmail);
+    txtEmailEmpreiteira?.addEventListener('blur', sincronizarResponsavelPorEmail);
+
+    overlay.querySelectorAll('.btn-pick-emp-email').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const email = btn.getAttribute('data-email') || '';
+        const nomeEmp = btn.getAttribute('data-nome') || '';
+        if (txtEmailEmpreiteira) txtEmailEmpreiteira.value = email;
+        if (nomeEmp) txtResponsavel.value = nomeEmp;
+      });
     });
 
     const renderPerguntasList = () => {
@@ -979,11 +1007,19 @@ class BBVisionModal {
       const endereco = overlay.querySelector('#txtEnderecoObra').value.trim();
       const tipo = overlay.querySelector('#selTipoObra').value;
       const responsavel = txtResponsavel.value.trim();
-      const empreiteira_id = selEmpreiteira.value || null;
+      const empreiteira_email = (txtEmailEmpreiteira?.value || '').trim().toLowerCase();
+      const empMatch = listaEmpreiteiras.find(emp => String(emp.email || '').toLowerCase() === empreiteira_email);
+      const empreiteira_id = empMatch ? empMatch.id : null;
       const status = overlay.querySelector('#selStatusInicial').value;
 
       if (!nome || !endereco) {
         toast.warning('Campos Obrigatórios', 'Preencha o nome e o endereço completo da obra.');
+        return;
+      }
+
+      if (!empreiteira_email) {
+        toast.warning('Empreiteira Obrigatória', 'Informe o e-mail do perfil da empreiteira responsável por esta obra.');
+        txtEmailEmpreiteira?.focus();
         return;
       }
 
@@ -1004,6 +1040,7 @@ class BBVisionModal {
             tipo,
             responsavel,
             empreiteira_id,
+            empreiteira_email,
             status,
             perguntasChecklist: perguntasObra,
             checklist_perguntas: perguntasObra,
@@ -1026,14 +1063,26 @@ class BBVisionModal {
     if (!obra) return;
 
     const listaEmpreiteiras = Array.isArray(empreiteiras) ? empreiteiras : [];
-    const opcoesEmpreiteirasHtml = [
-      `<option value="" ${!obra.empreiteira_id ? 'selected' : ''}>A definir (sem vínculo imediato)</option>`,
-      ...listaEmpreiteiras.map(emp => {
-        const sel = obra.empreiteira_id === emp.id ? 'selected' : '';
-        const labelEmpresa = emp.empresa ? ` — ${emp.empresa}` : '';
-        return `<option value="${escapeHtml(emp.id)}" data-nome="${escapeHtml(emp.nome)}" ${sel}>${escapeHtml(emp.nome)}${escapeHtml(labelEmpresa)}</option>`;
-      }),
-    ].join('');
+    const empAtual = listaEmpreiteiras.find(emp => emp.id === obra.empreiteira_id);
+    const emailAtualEmpreiteira = obra.empreiteira_email || empAtual?.email || '';
+
+    const datalistEditarEmpreiteirasHtml = listaEmpreiteiras
+      .map(emp => {
+        const labelExtra = [emp.nome, emp.empresa].filter(Boolean).join(' — ');
+        return `<option value="${escapeHtml(emp.email)}">${escapeHtml(labelExtra)}</option>`;
+      })
+      .join('');
+
+    const sugestoesEditarEmpHtml = listaEmpreiteiras.length > 0
+      ? `<div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px;">
+          ${listaEmpreiteiras
+            .slice(0, 5)
+            .map(
+              emp => `<button type="button" class="btn-pick-edit-emp-email" data-email="${escapeHtml(emp.email)}" data-nome="${escapeHtml(emp.nome || '')}" style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #002D62; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; cursor: pointer;">${escapeHtml(emp.email)}</button>`
+            )
+            .join('')}
+        </div>`
+      : '';
 
     const overlay = document.createElement('div');
     overlay.className = 'bb-modal-overlay fade-in';
@@ -1073,10 +1122,21 @@ class BBVisionModal {
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
               <div class="form-group-field" style="display: flex; flex-direction: column; gap: 5px;">
-                <label for="editSelEmpreiteira" style="font-size: 12.5px; font-weight: 700; color: #002D62;">Empreiteira Vinculada</label>
-                <select id="editSelEmpreiteira" style="padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13px; background: #FFFFFF;">
-                  ${opcoesEmpreiteirasHtml}
-                </select>
+                <label for="editEmailEmpreiteira" style="font-size: 12.5px; font-weight: 700; color: #002D62;">E-mail da Empreiteira Vinculada <span style="color: #DC2626;">*</span></label>
+                <input
+                  type="email"
+                  id="editEmailEmpreiteira"
+                  list="datalistEmpreiteirasEditarObra"
+                  value="${escapeHtml(emailAtualEmpreiteira)}"
+                  placeholder="Ex.: rodrigo@empreiteira.com"
+                  required
+                  autocomplete="off"
+                  style="padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13px; background: #FFFFFF;"
+                />
+                <datalist id="datalistEmpreiteirasEditarObra">
+                  ${datalistEditarEmpreiteirasHtml}
+                </datalist>
+                ${sugestoesEditarEmpHtml}
               </div>
               <div class="form-group-field" style="display: flex; flex-direction: column; gap: 5px;">
                 <label for="editResponsavelObra" style="font-size: 12.5px; font-weight: 700; color: #002D62;">Responsável Técnico</label>
@@ -1113,16 +1173,40 @@ class BBVisionModal {
       if (e.target === overlay) this.close();
     });
 
-    const selEmp = overlay.querySelector('#editSelEmpreiteira');
+    const editEmailEmp = overlay.querySelector('#editEmailEmpreiteira');
     const txtResp = overlay.querySelector('#editResponsavelObra');
-    selEmp.addEventListener('change', () => {
-      const opt = selEmp.options[selEmp.selectedIndex];
-      const nomeEmp = opt?.getAttribute('data-nome') || '';
-      if (nomeEmp) txtResp.value = nomeEmp;
+
+    const sincronizarEditResp = () => {
+      const emailDigitado = (editEmailEmp?.value || '').trim().toLowerCase();
+      const match = listaEmpreiteiras.find(e => String(e.email || '').toLowerCase() === emailDigitado);
+      if (match && match.nome && (!txtResp.value.trim() || txtResp.value.trim() === 'A definir')) {
+        txtResp.value = match.nome;
+      }
+    };
+
+    editEmailEmp?.addEventListener('change', sincronizarEditResp);
+    editEmailEmp?.addEventListener('blur', sincronizarEditResp);
+
+    overlay.querySelectorAll('.btn-pick-edit-emp-email').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const email = btn.getAttribute('data-email') || '';
+        const nomeEmp = btn.getAttribute('data-nome') || '';
+        if (editEmailEmp) editEmailEmp.value = email;
+        if (nomeEmp) txtResp.value = nomeEmp;
+      });
     });
 
     overlay.querySelector('#formEditarObra').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const empreiteira_email = (editEmailEmp?.value || '').trim().toLowerCase();
+      if (!empreiteira_email) {
+        toast.warning('Empreiteira Obrigatória', 'Informe o e-mail do perfil da empreiteira vinculada.');
+        editEmailEmp?.focus();
+        return;
+      }
+      const empMatch = listaEmpreiteiras.find(emp => String(emp.email || '').toLowerCase() === empreiteira_email);
+      const empreiteira_id = empMatch ? empMatch.id : null;
+
       const btn = overlay.querySelector('#btnSalvarEditarObra');
       btn.disabled = true;
       btn.textContent = 'Salvando...';
@@ -1133,7 +1217,8 @@ class BBVisionModal {
             endereco: overlay.querySelector('#editEnderecoObra').value.trim(),
             tipo: overlay.querySelector('#editTipoObra').value.trim(),
             responsavel: txtResp.value.trim(),
-            empreiteira_id: selEmp.value || null,
+            empreiteira_id,
+            empreiteira_email,
             status: overlay.querySelector('#editStatusObra').value,
           });
         }

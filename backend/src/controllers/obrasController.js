@@ -4,13 +4,48 @@
  */
 
 const dataStore = require('../repositories/dataStore');
-const { sanitizeString } = require('../utils/securityUtils');
+const { sanitizeString, isValidEmail } = require('../utils/securityUtils');
 
 const CARGOS_FISCAL = ['fiscal', 'engenheiro', 'admin'];
 const STATUS_OBRA_VALIDOS = ['REGULAR', 'EM_ANDAMENTO', 'PENDENTE_AJUSTE', 'CONCLUIDO'];
 
 function isFiscalRole(user) {
   return Boolean(user && CARGOS_FISCAL.includes(String(user.cargo || '').toLowerCase()));
+}
+
+async function resolverEmpreiteiraAlvo({ empreiteira_id, empreiteira_email }) {
+  const rawEmail = empreiteira_email !== undefined && empreiteira_email !== null ? String(empreiteira_email).trim().toLowerCase() : '';
+  const rawId = empreiteira_id !== undefined && empreiteira_id !== null ? String(empreiteira_id).trim() : '';
+
+  if (rawEmail) {
+    if (!isValidEmail(rawEmail)) {
+      return { error: 'Informe um e-mail válido para a empreiteira.' };
+    }
+    const empByEmail = await dataStore.findUserByEmailAsync(rawEmail);
+    if (!empByEmail) {
+      return {
+        error: `Nenhuma empreiteira cadastrada com o e-mail "${rawEmail}". Verifique o endereço ou cadastre o perfil da empreiteira primeiro.`,
+      };
+    }
+    if (String(empByEmail.cargo || '').toLowerCase() !== 'empreiteira') {
+      return {
+        error: `O e-mail "${rawEmail}" não pertence a um perfil de empreiteira.`,
+      };
+    }
+    return { user: empByEmail };
+  }
+
+  if (rawId) {
+    const empById = await dataStore.findUserByIdAsync(rawId);
+    if (!empById || String(empById.cargo || '').toLowerCase() !== 'empreiteira') {
+      return {
+        error: 'A empreiteira selecionada não existe ou não possui perfil de empreiteira.',
+      };
+    }
+    return { user: empById };
+  }
+
+  return { user: null };
 }
 
 const obrasController = {
@@ -36,8 +71,22 @@ const obrasController = {
         }
       }
 
-      const obras = await dataStore.listObrasAsync(filtros);
-      return res.status(200).json(obras);
+      const [obras, empreiteiras] = await Promise.all([
+        dataStore.listObrasAsync(filtros),
+        dataStore.listUsersByCargoAsync('empreiteira'),
+      ]);
+
+      const empById = new Map((empreiteiras || []).map(u => [u.id, u]));
+      const obrasEnriquecidas = obras.map(o => {
+        const emp = o.empreiteira_id ? empById.get(o.empreiteira_id) : null;
+        return {
+          ...o,
+          empreiteira_email: emp?.email || o.empreiteira_email || null,
+          empreiteira_nome: emp?.nome || o.empreiteira_nome || null,
+        };
+      });
+
+      return res.status(200).json(obrasEnriquecidas);
     } catch (err) {
       next(err);
     }
@@ -122,7 +171,18 @@ const obrasController = {
         });
       }
 
-      const { nome, endereco, responsavel, status, tipo, empreiteira_id, fiscal_responsavel_id, checklist_perguntas, perguntasChecklist } = req.body || {};
+      const {
+        nome,
+        endereco,
+        responsavel,
+        status,
+        tipo,
+        empreiteira_id,
+        empreiteira_email,
+        fiscal_responsavel_id,
+        checklist_perguntas,
+        perguntasChecklist,
+      } = req.body || {};
 
       const nomeLimpo = sanitizeString(nome || '').slice(0, 200);
       const enderecoLimpo = sanitizeString(endereco || '').slice(0, 400);
@@ -134,18 +194,15 @@ const obrasController = {
         });
       }
 
-      let empreiteiraRespId = null;
-      let empreiteiraUser = null;
-      if (empreiteira_id && String(empreiteira_id).trim()) {
-        empreiteiraUser = await dataStore.findUserByIdAsync(String(empreiteira_id).trim());
-        if (!empreiteiraUser || empreiteiraUser.cargo !== 'empreiteira') {
-          return res.status(400).json({
-            status: 400,
-            erro: 'A empreiteira selecionada não existe ou não possui perfil de empreiteira.',
-          });
-        }
-        empreiteiraRespId = empreiteiraUser.id;
+      const resolucaoEmp = await resolverEmpreiteiraAlvo({ empreiteira_id, empreiteira_email });
+      if (resolucaoEmp.error) {
+        return res.status(400).json({
+          status: 400,
+          erro: resolucaoEmp.error,
+        });
       }
+      const empreiteiraUser = resolucaoEmp.user;
+      const empreiteiraRespId = empreiteiraUser ? empreiteiraUser.id : null;
 
       const cadastradoPorId = req.user.id;
       const fiscalRespId = fiscal_responsavel_id ? String(fiscal_responsavel_id).trim() : cadastradoPorId;
@@ -178,7 +235,11 @@ const obrasController = {
 
       return res.status(201).json({
         mensagem: 'Obra cadastrada com sucesso para fiscalização remota.',
-        obra: novaObra,
+        obra: {
+          ...novaObra,
+          empreiteira_email: empreiteiraUser ? empreiteiraUser.email : null,
+          empreiteira_nome: empreiteiraUser ? empreiteiraUser.nome : null,
+        },
       });
     } catch (err) {
       next(err);
@@ -204,7 +265,7 @@ const obrasController = {
         return res.status(404).json({ status: 404, erro: 'Obra não encontrada.' });
       }
 
-      const { nome, endereco, responsavel, status, tipo, empreiteira_id } = req.body || {};
+      const { nome, endereco, responsavel, status, tipo, empreiteira_id, empreiteira_email } = req.body || {};
       const updates = {};
 
       if (nome !== undefined) {
@@ -226,25 +287,41 @@ const obrasController = {
         }
         updates.status = s;
       }
-      if (empreiteira_id !== undefined) {
-        if (empreiteira_id === null || String(empreiteira_id).trim() === '') {
+
+      let empUserAtualizado = null;
+      if (empreiteira_email !== undefined || empreiteira_id !== undefined) {
+        const hasEmail = empreiteira_email !== null && String(empreiteira_email || '').trim() !== '';
+        const hasId = empreiteira_id !== null && String(empreiteira_id || '').trim() !== '';
+
+        if (!hasEmail && !hasId) {
           updates.empreiteira_id = null;
         } else {
-          const empUser = await dataStore.findUserByIdAsync(String(empreiteira_id).trim());
-          if (!empUser || empUser.cargo !== 'empreiteira') {
-            return res.status(400).json({ status: 400, erro: 'Empreiteira informada não encontrada.' });
+          const resolucaoEmp = await resolverEmpreiteiraAlvo({
+            empreiteira_id: hasId ? empreiteira_id : null,
+            empreiteira_email: hasEmail ? empreiteira_email : null,
+          });
+          if (resolucaoEmp.error) {
+            return res.status(400).json({ status: 400, erro: resolucaoEmp.error });
           }
-          updates.empreiteira_id = empUser.id;
+          empUserAtualizado = resolucaoEmp.user;
+          updates.empreiteira_id = empUserAtualizado.id;
           if (responsavel === undefined && (!obraAtual.responsavel || obraAtual.responsavel === 'A definir')) {
-            updates.responsavel = empUser.nome;
+            updates.responsavel = empUserAtualizado.nome;
           }
         }
       }
 
       const atualizada = await dataStore.updateObraAsync(id, updates);
+      if (!empUserAtualizado && atualizada?.empreiteira_id) {
+        empUserAtualizado = await dataStore.findUserByIdAsync(atualizada.empreiteira_id);
+      }
       return res.status(200).json({
         mensagem: 'Obra atualizada com sucesso.',
-        obra: atualizada,
+        obra: {
+          ...atualizada,
+          empreiteira_email: empUserAtualizado ? empUserAtualizado.email : null,
+          empreiteira_nome: empUserAtualizado ? empUserAtualizado.nome : null,
+        },
       });
     } catch (err) {
       next(err);

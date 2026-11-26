@@ -304,6 +304,8 @@ class AppState {
           destaque: idx === 0,
           imagemTipo: idx === 0 ? 'logo' : (idx % 2 === 0 ? 'cad1' : 'cad2'),
           empreiteira_id: o.empreiteira_id || null,
+          empreiteira_email: o.empreiteira_email || null,
+          empreiteira_nome: o.empreiteira_nome || null,
           cadastrado_por_fiscal_id: o.cadastrado_por_fiscal_id || null,
           fiscal_responsavel_id: o.fiscal_responsavel_id || null,
           checklist_perguntas: o.checklist_perguntas,
@@ -588,6 +590,7 @@ class AppState {
       tipo: dados.tipo || 'Reforma e Modernização de Agência',
       status: dados.status || 'REGULAR',
       empreiteira_id: dados.empreiteira_id || null,
+      empreiteira_email: dados.empreiteira_email || null,
       fiscal_responsavel_id: this.user.id,
       checklist_perguntas: perguntasParaSalvar,
     });

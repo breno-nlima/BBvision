@@ -345,6 +345,65 @@ async function runTests() {
     assert(criaObra3.status === 201, 'Fiscal cadastrou Obra 3 sem empreiteira definida');
     const obra3Id = criaObra3.body.obra.id;
 
+    // Atribuição por e-mail da empreiteira (validação e visibilidade para a empreiteira atribuída)
+    const criaObraEmailInvalido = await request(
+      'POST',
+      '/api/obras',
+      {
+        nome: 'Obra Email Inexistente',
+        endereco: 'Rua Teste, 100',
+        empreiteira_email: 'naoexiste@empreiteira.local',
+      },
+      { Authorization: `Bearer ${tokenFiscal}` }
+    );
+    assert(criaObraEmailInvalido.status === 400, 'E-mail de empreiteira inexistente rejeitado com HTTP 400');
+
+    const criaObraEmailFiscal = await request(
+      'POST',
+      '/api/obras',
+      {
+        nome: 'Obra Email De Fiscal',
+        endereco: 'Rua Teste, 101',
+        empreiteira_email: 'fiscal.auditor@bbvision.local',
+      },
+      { Authorization: `Bearer ${tokenFiscal}` }
+    );
+    assert(criaObraEmailFiscal.status === 400, 'E-mail de perfil fiscal rejeitado para atribuição de empreiteira (HTTP 400)');
+
+    const criaObraPorEmail = await request(
+      'POST',
+      '/api/obras',
+      {
+        nome: 'Agência Atribuída por E-mail',
+        endereco: 'Av. Boa Viagem, 900 - Recife/PE',
+        empreiteira_email: 'EMP2@CONSTRUTORA.LOCAL',
+      },
+      { Authorization: `Bearer ${tokenFiscal}` }
+    );
+    assert(
+      criaObraPorEmail.status === 201 &&
+        criaObraPorEmail.body.obra?.empreiteira_id === regEmp2.body.usuario.id &&
+        criaObraPorEmail.body.obra?.empreiteira_email === 'emp2@construtora.local',
+      'Fiscal cadastrou obra atribuindo por e-mail da Empreiteira 2 (case-insensitive)'
+    );
+    const obraEmailId = criaObraPorEmail.body.obra.id;
+
+    const obrasEmp2ComAtribuida = await request('GET', '/api/obras', null, { Authorization: `Bearer ${tokenEmp2}` });
+    assert(
+      obrasEmp2ComAtribuida.status === 200 &&
+        obrasEmp2ComAtribuida.body.length === 1 &&
+        obrasEmp2ComAtribuida.body[0].id === obraEmailId &&
+        obrasEmp2ComAtribuida.body[0].empreiteira_email === 'emp2@construtora.local',
+      'Empreiteira 2 visualiza imediatamente a obra atribuída pelo fiscal via e-mail'
+    );
+
+    const detalheObraEmailEmp2 = await request('GET', `/api/obras/${obraEmailId}`, null, { Authorization: `Bearer ${tokenEmp2}` });
+    assert(detalheObraEmailEmp2.status === 200 && detalheObraEmailEmp2.body.id === obraEmailId, 'Empreiteira 2 acessa os detalhes da obra atribuída por e-mail');
+
+    // Remove a obra de teste por e-mail para não alterar contagem das seções subsequentes
+    const delObraEmail = await request('DELETE', `/api/obras/${obraEmailId}`, null, { Authorization: `Bearer ${tokenFiscal}` });
+    assert(delObraEmail.status === 200 && delObraEmail.body.sucesso === true, 'Limpeza da obra de teste por e-mail concluída');
+
     const obrasEmp1 = await request('GET', '/api/obras', null, { Authorization: `Bearer ${tokenEmp1}` });
     assert(obrasEmp1.status === 200 && obrasEmp1.body.length === 2, 'Empreiteira 1 enxerga exatamente suas 2 obras (1:N)');
 
