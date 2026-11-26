@@ -9,6 +9,7 @@ import { Icons } from '../assets/icons.js';
 import { state, PERGUNTAS_PADRAO_BB } from '../services/state.js';
 import { api } from '../services/api.js';
 import { toast } from '../components/toast.js';
+import { renderBackButton } from '../components/backButton.js';
 import { escapeHtml, copyToClipboard } from '../utils/formatters.js';
 
 const ORIENTACAO_TEXTO_PADRAO =
@@ -249,52 +250,41 @@ export function renderChecklistPergunta() {
         <div class="ia-generate-block">
           <button type="button" class="btn-ia-gemini-checklist" id="btnIaGerarRelato">
             ${Icons.aiSparkle(16)}
-            <span>Assistente de Parecer com IA (Preenche o campo acima)</span>
+            <span>Sugerir parecer técnico com IA (editável)</span>
           </button>
-          <span class="ia-disclaimer-pill">
-            O parecer gerado é inserido na caixa de texto acima para sua revisão (Human-in-the-loop)
-          </span>
         </div>
       </div>
     `;
   }
 
-  const codigoLabel = vistoria.codigoUnico ? escapeHtml(vistoria.codigoUnico) : 'Protocolo gerado ao finalizar';
+  const temCodigoEmitido = Boolean(vistoria.codigoUnico);
 
   return `
-    <div class="page-container fade-in" id="checklistPerguntaPage">
-      <header class="pergunta-header-yellow">
-        <div class="pergunta-nav-row">
-          <button class="btn-back-bb" id="btnVoltarPerguntaHeader" title="Voltar">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#002D62" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="15 18 9 12 15 6"></polyline>
-            </svg>
-            <span class="bb-brand-name">BB</span>
-          </button>
-        </div>
-
-        <div class="agencia-info-block">
-          <div class="bvision-badge-row">
-            ${Icons.logoBVisionBadge(26)}
-          </div>
-          <div class="agencia-meta-text">
-            <strong>${escapeHtml(vistoria.obraNome || 'Obra Selecionada')}</strong>
-            <span>${escapeHtml(vistoria.endereco || vistoria.localizacaoFoto || 'Localização da unidade')}</span>
-            <span>Data: ${escapeHtml(vistoria.dataFoto)} | Hora: ${escapeHtml(vistoria.horaFoto)}</span>
+    <div class="page-container page-narrow fade-in" id="checklistPerguntaPage">
+      <header class="screen-topbar">
+        <div class="screen-topbar-left">
+          ${renderBackButton({
+            id: 'btnVoltarPerguntaHeader',
+            label: currentIndex > 0 ? 'Anterior' : 'Voltar',
+            variant: 'light',
+            title: currentIndex > 0 ? 'Voltar para a pergunta anterior' : 'Voltar para Tipo de Local',
+          })}
+          <div class="screen-topbar-titles">
+            <h1 class="screen-topbar-title">Checklist da Obra</h1>
+            <span class="screen-topbar-sub">${escapeHtml(vistoria.obraNome || 'Obra Selecionada')} • ${escapeHtml(vistoria.tipoLocal || 'Vistoria')}</span>
           </div>
         </div>
+        <span class="screen-step-pill">${currentIndex + 1} / ${totalPerguntas}</span>
       </header>
 
       <div class="pergunta-content-body">
-        <h2 class="pergunta-secao-title">Checklist da Obra</h2>
-
         <div class="pergunta-stepper-wrap">
           <div class="pergunta-progress-row">
             <span class="progress-label-main">
-              Pergunta ${currentIndex + 1} de ${totalPerguntas}
+              Questão ${currentIndex + 1} de ${totalPerguntas}
             </span>
             <span class="progress-pct-badge">
-              ${progressoPorcentagem}% Concluído
+              ${progressoPorcentagem}%
             </span>
           </div>
 
@@ -319,22 +309,26 @@ export function renderChecklistPergunta() {
 
         <div class="pergunta-card-container">
           <div class="pergunta-card-top-row">
-            <div class="codigo-chip-badge" id="btnCopiarCodigoChip" title="${vistoria.codigoUnico ? 'Toque para copiar código' : 'Código gerado na assinatura final'}">
-              <span>${codigoLabel}</span>
+            <div class="pergunta-type-pill">
+              <span>${escapeHtml(currentQ.tipoLabel || 'Questão Técnica')}</span>
             </div>
 
-            <div class="pergunta-type-pill">
-              <span>${escapeHtml(currentQ.tipoLabel || 'Pergunta Técnica')}</span>
-            </div>
+            ${
+              temCodigoEmitido
+                ? `
+              <div class="codigo-chip-badge" id="btnCopiarCodigoChip" title="Toque para copiar código">
+                <span>${escapeHtml(vistoria.codigoUnico)}</span>
+              </div>
+            `
+                : ''
+            }
           </div>
 
           <div class="pergunta-destaque-box">
-            <h3 class="pergunta-enunciado">
+            <h2 class="pergunta-enunciado">
               ${escapeHtml(currentQ.titulo)}
-            </h3>
-            <p class="pergunta-subtitulo">
-              ${escapeHtml(currentQ.subtitulo || '')}
-            </p>
+            </h2>
+            ${currentQ.subtitulo ? `<p class="pergunta-subtitulo">${escapeHtml(currentQ.subtitulo)}</p>` : ''}
             
             ${questionBodyHtml}
           </div>
@@ -386,7 +380,7 @@ export function bindChecklistPerguntaEvents() {
       state.checklistQuestionIndex = currentIndex - 1;
       state.notify();
     } else {
-      state.navigate('tipo-local');
+      state.navigate('tipo-local', null, { replace: true });
     }
   });
 

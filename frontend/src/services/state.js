@@ -184,6 +184,7 @@ class AppState {
 
     this.currentPage = this.user ? 'inicio' : 'login';
     this.activeNav = 'inicio';
+    this.historyStack = [];
     this.selectedObra = null;
     this.searchQuery = '';
     this.isOffline = !navigator.onLine;
@@ -224,6 +225,7 @@ class AppState {
   limparSessaoLocal() {
     this.user = null;
     this.selectedObra = null;
+    this.historyStack = [];
     this.searchQuery = '';
     this.obras = [];
     this.relatorios = [];
@@ -401,14 +403,66 @@ class AppState {
     this.listeners.forEach(fn => fn(this));
   }
 
-  navigate(page, navTab = null) {
+  navigate(page, navTab = null, options = {}) {
+    const { replace = false, fromPopstate = false, clearHistory = false } = options || {};
+    const prevPage = this.currentPage;
+    const prevNav = this.activeNav;
+
+    if (clearHistory || page === 'login') {
+      this.historyStack = [];
+    } else if (!replace && prevPage && prevPage !== page && prevPage !== 'login') {
+      const top = this.historyStack[this.historyStack.length - 1];
+      if (!top || top.page !== prevPage) {
+        this.historyStack.push({ page: prevPage, navTab: prevNav });
+        if (this.historyStack.length > 25) {
+          this.historyStack.shift();
+        }
+      }
+    }
+
     this.currentPage = page;
     if (navTab) {
       this.activeNav = navTab;
     } else if (['inicio', 'obras', 'relatorios', 'perfil', 'fiscal-auditoria'].includes(page)) {
       this.activeNav = page;
     }
+
+    if (!fromPopstate && typeof window !== 'undefined' && window.history && typeof window.history.pushState === 'function') {
+      try {
+        const histState = { bbvisionPage: this.currentPage, navTab: this.activeNav };
+        if (replace || clearHistory || prevPage === page) {
+          window.history.replaceState(histState, '');
+        } else {
+          window.history.pushState(histState, '');
+        }
+      } catch (_) {}
+    }
+
     this.notify();
+  }
+
+  goBack(fallbackPage = 'inicio', fallbackNavTab = null) {
+    const bloqueadasAposSelo = [
+      'tipo-local',
+      'checklist-pergunta',
+      'checklist-dinamico',
+      'checklist-verificacao',
+      'camera-ia',
+      'imagem-protegida',
+      'assinatura-responsavel',
+    ];
+
+    while (this.historyStack.length > 0) {
+      const prev = this.historyStack.pop();
+      if (!prev || !prev.page || prev.page === this.currentPage) continue;
+      if (this.user && prev.page === 'login') continue;
+      if (this.currentVistoria?.bloqueado && bloqueadasAposSelo.includes(prev.page)) continue;
+      this.navigate(prev.page, prev.navTab || null, { replace: true });
+      return;
+    }
+
+    const targetFallback = fallbackPage || (this.user ? 'inicio' : 'login');
+    this.navigate(targetFallback, fallbackNavTab || null, { replace: true });
   }
 
   setSearchQuery(q) {

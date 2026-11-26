@@ -1,8 +1,9 @@
 /**
  * BBVision - Tela de Relatórios & Auditoria
- * Listagem, busca, filtros por status e acesso direto ao PDF oficial e auditoria fiscal.
+ * Listagem limpa com busca, filtros por status, visualização de PDF oficial e acesso à auditoria fiscal.
  */
 
+import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { renderHeader, bindHeaderEvents } from '../components/header.js';
 import { modal } from '../components/modal.js';
@@ -52,154 +53,128 @@ export function renderRelatorios() {
       const statusChipLabel = isAprovado
         ? 'Homologado'
         : isPendenteAjuste
-        ? 'Pendente de Ajuste'
+        ? 'Pendente ajuste'
         : rel.status;
 
+      const metaAuditoria = rel.validacaoManual
+        ? 'Validação manual'
+        : rel.confiancaIA !== null && rel.confiancaIA !== undefined
+        ? `IA ${Math.round(rel.confiancaIA * 100)}%`
+        : '';
+
       return `
-      <div class="relatorio-card-item">
-        <div class="rel-top-row">
-          <div>
-            <h4 class="rel-title">${escapeHtml(rel.obraNome)}</h4>
-            <span class="rel-sub">${escapeHtml(rel.subtitulo ? rel.subtitulo + ' • ' : '')}Emitido em ${escapeHtml(rel.data)}</span>
-          </div>
-          <span class="status-badge-chip ${statusChipClass}">
-            ${escapeHtml(statusChipLabel)}
-          </span>
-        </div>
-
-        <div class="rel-photo-preview-box" style="margin: 10px 0; border-radius: 10px; overflow: hidden; border: 1px solid #E2E8F0; background: #F8FAFC; display: flex; align-items: center; gap: 12px; padding: 8px;">
-          <img
-            src="${escapeHtml(fotoSrc)}"
-            alt="Foto da vistoria - ${escapeHtml(rel.obraNome)}"
-            style="width: 96px; height: 68px; object-fit: cover; border-radius: 8px; border: 1px solid #CBD5E1; flex-shrink: 0; background: #F1F5F9;"
-          />
-          <div style="flex: 1; min-width: 0;">
-            <div style="font-size: 11.5px; font-weight: 700; color: #002D72; margin-bottom: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-              <span>Evidência da Vistoria</span>
-              ${
-                rel.validacaoManual
-                  ? '<span style="font-size: 10px; padding: 1px 6px; border-radius: 4px; background: #FEF3C7; color: #92400E; font-weight: 700;">Validação Manual</span>'
-                  : ''
-              }
+        <article class="relatorio-card-item">
+          <div class="rel-top-row">
+            <div>
+              <h3 class="rel-title">${escapeHtml(rel.obraNome)}</h3>
+              <span class="rel-sub">${escapeHtml(rel.data)}${rel.responsavel ? ` • ${escapeHtml(rel.responsavel)}` : ''}</span>
             </div>
-            <div style="font-size: 11px; color: #475569; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-              ${escapeHtml(motivoFoto)}
+            <span class="status-badge-chip ${statusChipClass}">
+              ${escapeHtml(statusChipLabel)}
+            </span>
+          </div>
+
+          <div class="rel-body-row">
+            <img
+              src="${escapeHtml(fotoSrc)}"
+              alt="Evidência - ${escapeHtml(rel.obraNome)}"
+              class="rel-thumb"
+            />
+            <div class="rel-meta-summary">
+              <div class="rel-meta-chips">
+                <span>Protocolo: <code>${escapeHtml(rel.codigoUnico)}</code></span>
+                ${metaAuditoria ? `<span>${escapeHtml(metaAuditoria)}</span>` : ''}
+                ${rel.hash ? `<span>SHA-256: <code>${escapeHtml(rel.hash.substring(0, 12))}…</code></span>` : ''}
+              </div>
+              <p class="rel-motivo-line">${escapeHtml(motivoFoto)}</p>
             </div>
           </div>
-        </div>
 
-        <div class="rel-audit-grid">
-          <div class="audit-field">
-            <span class="af-label">Código Único Oficial:</span>
-            <span class="af-code">${escapeHtml(rel.codigoUnico)}</span>
-          </div>
           ${
-            rel.confiancaIA !== null && rel.confiancaIA !== undefined
+            rel.justificativaFiscal
               ? `
-            <div class="audit-field">
-              <span class="af-label">Auditoria IA:</span>
-              <span class="af-val">${Math.round(rel.confiancaIA * 100)}% Confiança</span>
+            <div style="padding: 9px 12px; border-radius: 8px; background: ${
+              isPendenteAjuste ? '#FEF2F2' : '#ECFDF5'
+            }; border-left: 3px solid ${isPendenteAjuste ? '#DC2626' : '#059669'}; font-size: 12px; color: #1E293B;">
+              <strong>Parecer fiscal:</strong> ${escapeHtml(rel.justificativaFiscal)}
             </div>
           `
               : ''
           }
-        </div>
 
-        ${
-          rel.hash
-            ? `
-          <div class="rel-hash-row">
-            <span class="af-label">Hash SHA-256 Inviolável:</span>
-            <code class="af-hash">${escapeHtml(rel.hash.substring(0, 32))}...</code>
-          </div>
-        `
-            : ''
-        }
-
-        ${
-          rel.justificativaFiscal
-            ? `
-          <div style="margin: 8px 0; padding: 8px 10px; border-radius: 8px; background: ${
-            isPendenteAjuste ? '#FEF2F2' : '#ECFDF5'
-          }; border-left: 3px solid ${isPendenteAjuste ? '#DC2626' : '#059669'}; font-size: 11.5px; color: #1E293B;">
-            <strong>Parecer Fiscal:</strong> ${escapeHtml(rel.justificativaFiscal)}
-          </div>
-        `
-            : ''
-        }
-
-        <div class="rel-action-row" style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button
-            class="btn-ver-pdf"
-            data-rel-id="${escapeHtml(rel.id)}"
-            data-obra-nome="${escapeHtml(rel.obraNome)}"
-            data-codigo="${escapeHtml(rel.codigoUnico)}"
-            data-hash="${escapeHtml(rel.hash || '')}"
-            data-em-andamento="${isEmAndamento ? '1' : '0'}"
-            ${isEmAndamento ? 'disabled' : ''}
-            style="flex: 1.4; ${isEmAndamento ? 'opacity: 0.6; cursor: not-allowed;' : ''}"
-          >
-            ${isEmAndamento ? 'PDF após Conclusão' : 'Visualizar PDF Oficial'}
-          </button>
-
-          ${
-            isFiscal && !isEmAndamento
-              ? `
-            <button type="button" class="btn-secondary-white btn-auditar-rel" data-rel-id="${escapeHtml(rel.id)}" style="flex: 1; font-size: 12px; padding: 10px 12px; border-color: #002D62; color: #002D62; font-weight: 700;">
-              Auditar / Parecer
+          <div class="rel-action-row">
+            <button
+              type="button"
+              class="btn-ver-pdf"
+              data-rel-id="${escapeHtml(rel.id)}"
+              data-obra-nome="${escapeHtml(rel.obraNome)}"
+              data-codigo="${escapeHtml(rel.codigoUnico)}"
+              data-hash="${escapeHtml(rel.hash || '')}"
+              data-em-andamento="${isEmAndamento ? '1' : '0'}"
+              ${isEmAndamento ? 'disabled' : ''}
+              style="${isEmAndamento ? 'opacity: 0.55; cursor: not-allowed;' : ''}"
+            >
+              ${isEmAndamento ? 'PDF disponível após conclusão' : 'Visualizar PDF Oficial'}
             </button>
-          `
-              : ''
-          }
 
-          ${
-            rel.codigoUnico && rel.codigoUnico !== 'Pendente'
-              ? `
-            <button type="button" class="btn-secondary-white btn-validar-fe-rel" data-codigo="${escapeHtml(rel.codigoUnico)}" style="flex: 1; font-size: 12px; padding: 10px 12px;">
-              Validar Fé Pública
-            </button>
-          `
-              : ''
-          }
-        </div>
-      </div>
-    `;
+            ${
+              isFiscal && !isEmAndamento
+                ? `
+              <button type="button" class="btn-rel-secondary btn-auditar-rel" data-rel-id="${escapeHtml(rel.id)}">
+                Auditar / Parecer
+              </button>
+            `
+                : ''
+            }
+
+            ${
+              rel.codigoUnico && rel.codigoUnico !== 'Pendente'
+                ? `
+              <button type="button" class="btn-rel-secondary btn-validar-fe-rel" data-codigo="${escapeHtml(rel.codigoUnico)}">
+                Validar Fé Pública
+              </button>
+            `
+                : ''
+            }
+          </div>
+        </article>
+      `;
     })
     .join('');
 
   return `
-    <div class="page-container fade-in" id="relatoriosPage">
+    <div class="page-container page-medium fade-in" id="relatoriosPage">
       ${renderHeader('relatorios')}
 
-      <div class="relatorios-intro-header">
-        <h2 class="section-title">Relatórios & Auditoria</h2>
-        <p class="section-subtitle">Documentos oficiais com inviolabilidade matemática, carimbo temporal e fé pública.</p>
+      <div class="page-intro-bar">
+        <div>
+          <h1>Relatórios & Auditoria</h1>
+          <p>Laudos oficiais selados com código único, carimbo temporal e hash SHA-256.</p>
+        </div>
       </div>
 
       ${
         todos.length > 0
           ? `
-        <div style="margin-bottom: 14px; display: flex; flex-direction: column; gap: 8px;">
-          <input
-            type="search"
-            id="inputBuscaRelatorios"
-            placeholder="Buscar por obra, código único ou responsável..."
-            value="${escapeHtml(buscaRelatorio)}"
-            style="width: 100%; padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 13px; background: #FFFFFF; outline: none;"
-          />
-          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+        <div class="relatorios-toolbar">
+          <div class="search-input-wrapper">
+            <div class="search-icon">${Icons.search(16)}</div>
+            <input
+              type="search"
+              id="inputBuscaRelatorios"
+              class="search-input"
+              placeholder="Buscar por obra, código único ou responsável..."
+              value="${escapeHtml(buscaRelatorio)}"
+            />
+          </div>
+          <div class="relatorios-filters-row">
             ${filtros
               .map(
                 f => `
               <button
                 type="button"
-                class="btn-filtro-rel"
+                class="btn-filtro-rel ${filtroStatusRel === f.key ? 'active' : ''}"
                 data-filtro="${f.key}"
-                style="padding: 6px 11px; border-radius: 999px; font-size: 11.5px; font-weight: 700; cursor: pointer; border: 1px solid ${
-                  filtroStatusRel === f.key ? '#002D62' : '#CBD5E1'
-                }; background: ${filtroStatusRel === f.key ? '#002D62' : '#FFFFFF'}; color: ${
-                  filtroStatusRel === f.key ? '#FFFFFF' : '#334155'
-                };"
               >
                 ${escapeHtml(f.label)}
               </button>

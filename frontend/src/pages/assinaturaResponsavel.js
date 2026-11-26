@@ -9,6 +9,7 @@
 import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { toast } from '../components/toast.js';
+import { renderBackButton } from '../components/backButton.js';
 import { escapeHtml } from '../utils/formatters.js';
 
 export function renderAssinaturaResponsavel() {
@@ -17,39 +18,34 @@ export function renderAssinaturaResponsavel() {
   const nomeResponsavel = state.user?.nome || vistoria.responsavel || 'Assinatura Digital';
 
   return `
-    <div class="page-container fade-in" id="assinaturaResponsavelPage">
-      <header class="assinatura-topbar">
-        <button class="btn-icon-simple-sm" id="btnVoltarVerificacao" title="Voltar">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="15 18 9 12 15 6"></polyline>
-          </svg>
-        </button>
-        <div class="assinatura-brands-row">
-          <div class="brand-item">
-            ${Icons.logoBVisionBadge(26)}
-          </div>
-          <div class="brand-item bb-official-badge">
-            ${Icons.logoBBOficial(28)}
-            <span class="bb-name-bold">Banco do Brasil</span>
+    <div class="page-container page-narrow fade-in" id="assinaturaResponsavelPage">
+      <header class="screen-topbar">
+        <div class="screen-topbar-left">
+          ${renderBackButton({
+            id: 'btnVoltarVerificacao',
+            label: 'Voltar',
+            variant: 'light',
+            title: 'Voltar para Imagem Protegida',
+          })}
+          <div class="screen-topbar-titles">
+            <h1 class="screen-topbar-title">Assinatura do Responsável</h1>
+            <span class="screen-topbar-sub">${escapeHtml(vistoria.obraNome || 'Vistoria')} • Selagem e bloqueio do laudo</span>
           </div>
         </div>
+        <span class="screen-step-pill">Finalização</span>
       </header>
-
-      <div class="assinatura-header-title">
-        <h2>Assinatura do Responsável</h2>
-      </div>
 
       <div class="assinatura-pad-card">
         <div class="canvas-wrapper">
           <canvas id="signatureCanvas" class="signature-canvas" width="340" height="180" style="touch-action: none;"></canvas>
           <div class="canvas-pen-indicator" id="penIndicator">
-            <span class="pen-icon" style="display:inline-flex; align-items:center;">${Icons.penAssinatura(22)}</span>
+            <span class="pen-icon" style="display:inline-flex; align-items:center;">${Icons.penAssinatura(20)}</span>
             <span class="pen-sample-sig">${escapeHtml(nomeResponsavel)}</span>
           </div>
         </div>
         <div class="canvas-caption-row">
           <span class="canvas-caption-text">Assine com o dedo ou mouse no quadro acima</span>
-          <button type="button" class="btn-clear-sig" id="btnClearSignature" title="Limpar Assinatura">Limpar</button>
+          <button type="button" class="btn-clear-sig" id="btnClearSignature" title="Limpar Assinatura">Limpar traço</button>
         </div>
       </div>
 
@@ -68,12 +64,12 @@ export function renderAssinaturaResponsavel() {
             />
           </div>
 
-          <div class="declaracao-check-row" id="rowDeclaracao" style="cursor: pointer;">
+          <div class="declaracao-check-row" id="rowDeclaracao" style="cursor: pointer; border-top: 1px solid #F1F5F9; padding-top: 12px;">
             <label class="declaracao-label-text" style="cursor: pointer;">
-              Declaro que as informações acima são verdadeiras
+              Declaro que as informações e evidências registradas são verdadeiras
             </label>
             <div class="green-check-circle ${declaracaoAceita ? 'active' : ''}" id="chkDeclaracao">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3">
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
             </div>
@@ -110,7 +106,7 @@ export function renderAssinaturaResponsavel() {
 
 export function bindAssinaturaResponsavelEvents() {
   document.getElementById('btnVoltarVerificacao')?.addEventListener('click', () => {
-    state.navigate('imagem-protegida');
+    state.navigate('imagem-protegida', null, { replace: true });
   });
 
   const canvas = document.getElementById('signatureCanvas');
@@ -256,7 +252,7 @@ export function bindAssinaturaResponsavelEvents() {
         );
       }
 
-      state.navigate('relatorio-bloqueado');
+      state.navigate('relatorio-bloqueado', null, { clearHistory: true });
     } catch (err) {
       modalConfirmar?.classList.add('hidden');
       btnConfirmarModal.disabled = false;

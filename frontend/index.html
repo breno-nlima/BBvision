@@ -173,16 +173,16 @@
   <link rel="icon" type="image/png" href="src/assets/logo.png">
   <link rel="apple-touch-icon" href="src/assets/logo.png">
   
-  <!-- Tipografia Oficial: Plus Jakarta Sans (Google Fonts) -->
+  <!-- Tipografia Institucional Padrão BB: BancoDoBrasilTextos / Titulos + DM Sans (Google Fonts) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..800;1,9..40,300..800&display=swap" rel="stylesheet">
 
-  <!-- Folhas de Estilo do Design System BBVision (v2.2 Produção) -->
-  <link rel="stylesheet" href="src/styles/variables.css?v=2.2">
-  <link rel="stylesheet" href="src/styles/base.css?v=2.2">
-  <link rel="stylesheet" href="src/styles/components.css?v=2.2">
-  <link rel="stylesheet" href="src/styles/screens.css?v=2.2">
+  <!-- Folhas de Estilo do Design System BBVision (v2.4 Produção) -->
+  <link rel="stylesheet" href="src/styles/variables.css?v=2.4">
+  <link rel="stylesheet" href="src/styles/base.css?v=2.4">
+  <link rel="stylesheet" href="src/styles/components.css?v=2.4">
+  <link rel="stylesheet" href="src/styles/screens.css?v=2.4">
 </head>
 <body>
 
@@ -203,7 +203,7 @@
       <button class="bb-nav-link" id="navLinkInicio">Início</button>
       <button class="bb-nav-link" id="navLinkObras">Obras</button>
       <button class="bb-nav-link" id="navLinkRelatorios">Relatórios</button>
-      <button class="bb-nav-link highlight-gov" id="navLinkValidador">Validar Fé Pública</button>
+      <button class="bb-nav-link" id="navLinkValidador">Validar Fé Pública</button>
     </nav>
 
     <!-- Área de Usuário / Acesso à Direita -->
@@ -310,7 +310,7 @@
 
         userArea.innerHTML = `
           ${isFiscal ? `
-            <button class="bb-nav-link" id="btnNavNovaObra" style="background: rgba(254, 211, 4, 0.16); color: #FED304; border: 1px solid rgba(254, 211, 4, 0.42); border-radius: var(--radius-full); padding: 6px 13px; font-weight: 700; font-size: 12px;" title="Cadastrar Nova Obra">
+            <button class="bb-nav-cta" id="btnNavNovaObra" title="Cadastrar Nova Obra">
               + Nova Obra
             </button>
           ` : ''}
@@ -357,7 +357,7 @@
         // Deslogado
         if (navLinks) navLinks.style.display = page === 'validador-publico' ? 'flex' : 'none';
         userArea.innerHTML = page === 'validador-publico' ? `
-          <button class="bb-nav-link" id="btnNavAcessarLogin" style="background: rgba(254, 211, 4, 0.15); color: #FED304; border: 1px solid rgba(254, 211, 4, 0.4); border-radius: 9999px; padding: 6px 14px;">
+          <button class="bb-nav-cta" id="btnNavAcessarLogin">
             Acessar Sistema
           </button>
         ` : '';

@@ -21,6 +21,15 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-display);
+  letter-spacing: -0.015em;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+}
+
 /* ==========================================================================
    NAVBAR CORPORATIVA SUPERIOR (BANCO DO BRASIL)
    ========================================================================== */
@@ -29,7 +38,7 @@ html, body {
   top: 0;
   left: 0;
   width: 100%;
-  height: 64px;
+  height: 60px;
   background-color: var(--bb-blue-navy);
   color: #FFFFFF;
   display: flex;
@@ -37,27 +46,26 @@ html, body {
   justify-content: space-between;
   padding: 0 24px;
   z-index: 100;
-  box-shadow: 0 2px 10px rgba(0, 27, 61, 0.25);
-  border-bottom: 3px solid var(--bb-yellow);
+  box-shadow: 0 1px 4px rgba(0, 27, 61, 0.14);
+  border-bottom: 2px solid var(--bb-yellow);
 }
 
 .bb-navbar-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   cursor: pointer;
   text-decoration: none;
 }
 
 .bb-navbar-logo-wrap {
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   border-radius: 8px;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
   flex-shrink: 0;
 }
 
@@ -75,7 +83,7 @@ html, body {
 }
 
 .bb-navbar-title {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
   color: #FFFFFF;
   letter-spacing: -0.3px;
@@ -84,26 +92,26 @@ html, body {
 
 .bb-navbar-sub {
   font-size: 11px;
-  color: #CBD5E1;
+  color: rgba(226, 232, 240, 0.78);
   font-weight: 500;
 }
 
 .bb-navbar-nav {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
 .bb-nav-link {
   background: transparent;
   border: none;
-  color: #E2E8F0;
+  color: rgba(255, 255, 255, 0.82);
   font-size: 13px;
   font-weight: 600;
-  padding: 8px 14px;
+  padding: 7px 13px;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -116,33 +124,40 @@ html, body {
 }
 
 .bb-nav-link.active {
-  background: rgba(254, 211, 4, 0.18);
+  background: rgba(254, 211, 4, 0.16);
   color: var(--bb-yellow);
 }
 
-.bb-nav-link.highlight-gov {
-  background: rgba(16, 185, 129, 0.16);
-  color: #6EE7B7;
-  border: 1px solid rgba(16, 185, 129, 0.35);
+.bb-nav-cta {
+  background: var(--bb-yellow);
+  color: var(--bb-blue-navy);
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.12s ease;
+  white-space: nowrap;
 }
-.bb-nav-link.highlight-gov:hover {
-  background: rgba(16, 185, 129, 0.28);
-  color: #A7F3D0;
+
+.bb-nav-cta:hover {
+  background: var(--bb-yellow-hover);
 }
 
 .bb-navbar-user-area {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .bb-user-profile-badge {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 4px 10px 4px 4px;
   background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: var(--radius-full);
   cursor: pointer;
   transition: background 0.15s ease;
@@ -152,8 +167,8 @@ html, body {
 }
 
 .bb-user-avatar {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   object-fit: cover;
   border: 1.5px solid var(--bb-yellow);
@@ -169,15 +184,15 @@ html, body {
   font-size: 12px;
   font-weight: 700;
   color: #FFFFFF;
-  line-height: 1.1;
+  line-height: 1.15;
 }
 
 .bb-user-role {
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 500;
 }
 .bb-user-role.fiscal {
-  color: #93C5FD;
+  color: rgba(226, 232, 240, 0.85);
 }
 .bb-user-role.empreiteira {
   color: var(--bb-yellow);
@@ -186,27 +201,25 @@ html, body {
 .bb-btn-logout {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(239, 68, 68, 0.18);
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  color: #FECACA;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.86);
   font-size: 12px;
   font-weight: 600;
-  padding: 6px 14px;
+  padding: 6px 12px;
   border-radius: var(--radius-full);
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   white-space: nowrap;
 }
 .bb-btn-logout:hover {
   background: #DC2626;
   border-color: #DC2626;
   color: #FFFFFF;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
 }
 .bb-btn-logout:active {
-  transform: translateY(0) scale(0.97);
+  transform: scale(0.97);
 }
 
 /* ==========================================================================
@@ -214,7 +227,7 @@ html, body {
    ========================================================================== */
 .bb-app-main {
   width: 100%;
-  min-height: calc(100vh - 64px);
+  min-height: calc(100vh - 60px);
   display: flex;
   flex-direction: column;
 }
@@ -222,9 +235,9 @@ html, body {
 .app-screen-container {
   flex: 1;
   width: 100%;
-  max-width: 1240px;
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 24px 20px 40px 20px;
+  padding: 24px 20px 48px 20px;
   position: relative;
 }
 
@@ -263,141 +276,114 @@ html, body {
    TELA DE AUTENTICAÇÃO E CADASTRO PÚBLICO (AUTH CARD)
    ========================================================================== */
 .auth-page-wrapper {
-  min-height: calc(100vh - 120px);
+  min-height: calc(100vh - 150px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px 16px;
+  padding: 16px 8px;
 }
 
 .auth-card-container {
   background: #FFFFFF;
   width: 100%;
-  max-width: 520px;
-  border-radius: var(--radius-2xl);
-  box-shadow: 0 20px 50px -10px rgba(0, 45, 98, 0.15), 0 0 0 1px var(--border-light);
+  max-width: 460px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
+  border-top: 4px solid var(--bb-blue-navy);
+  box-shadow: 0 12px 32px -12px rgba(15, 23, 42, 0.09);
   overflow: hidden;
 }
 
 .auth-header-brand {
-  background: linear-gradient(135deg, var(--bb-blue-navy) 0%, var(--bb-blue-dark) 100%);
-  color: #FFFFFF;
-  padding: 32px 28px 24px 28px;
-  text-align: center;
+  background: #FFFFFF;
+  color: var(--text-primary);
+  padding: 28px 28px 18px 28px;
+  text-align: left;
   display: flex;
   flex-direction: column;
-  align-items: center;
-}
-
-.auth-logo-symbol {
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.auth-logo-img {
-  width: 60px;
-  height: 60px;
-  border-radius: 12px;
-  object-fit: cover;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-  display: block;
-}
-
-.auth-brand-text {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
 }
 
 .auth-title {
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 800;
-  letter-spacing: -0.5px;
-  color: #FFFFFF;
-}
-
-.auth-badge-gov {
-  background: var(--bb-yellow);
+  letter-spacing: -0.02em;
   color: var(--bb-blue-navy);
-  font-size: 11px;
-  font-weight: 800;
-  padding: 2px 8px;
-  border-radius: 4px;
+  margin: 0;
 }
 
 .auth-desc {
-  font-size: 13px;
-  color: #CBD5E1;
-  margin-top: 6px;
-  max-width: 380px;
-  line-height: 1.4;
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  line-height: 1.45;
 }
 
 .auth-nav-tabs {
   display: flex;
+  gap: 4px;
   background: #F1F5F9;
-  border-bottom: 1px solid var(--border-light);
+  margin: 0 28px;
+  padding: 4px;
+  border-radius: var(--radius-md);
 }
 
 .auth-tab-btn {
   flex: 1;
   background: transparent;
   border: none;
-  padding: 14px;
-  font-size: 14px;
+  padding: 9px 12px;
+  font-size: 13.5px;
   font-weight: 700;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.15s ease;
-  border-bottom: 3px solid transparent;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .auth-tab-btn:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.5);
 }
 
 .auth-tab-btn.active {
   color: var(--bb-blue-navy);
   background: #FFFFFF;
-  border-bottom-color: var(--bb-yellow);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
 }
 
 .auth-form-body {
-  padding: 28px;
+  padding: 22px 28px 26px 28px;
 }
 
 .auth-field-group {
-  margin-bottom: 18px;
+  margin-bottom: 16px;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
 .auth-field-label {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 12.5px;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
 .auth-input-field {
   width: 100%;
-  padding: 12px 14px;
+  padding: 11px 14px;
   font-size: 14px;
   font-family: inherit;
-  border: 1.5px solid var(--border-medium);
+  border: 1px solid var(--border-medium);
   border-radius: var(--radius-md);
   background: #FFFFFF;
   color: var(--text-primary);
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .auth-input-field:focus {
   outline: none;
   border-color: var(--bb-blue-navy);
-  box-shadow: 0 0 0 3px rgba(0, 45, 98, 0.12);
+  box-shadow: 0 0 0 3px rgba(0, 45, 98, 0.09);
 }
 
 .auth-row-dual {
@@ -407,6 +393,15 @@ html, body {
 }
 
 @media (max-width: 480px) {
+  .auth-header-brand {
+    padding: 22px 20px 14px;
+  }
+  .auth-nav-tabs {
+    margin: 0 20px;
+  }
+  .auth-form-body {
+    padding: 18px 20px 22px;
+  }
   .auth-row-dual {
     grid-template-columns: 1fr;
     gap: 0;
@@ -427,14 +422,14 @@ html, body {
 }
 
 .role-option-card {
-  border: 2px solid var(--border-light);
-  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-md);
   padding: 12px;
   cursor: pointer;
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
   background: #FFFFFF;
   position: relative;
 }
@@ -451,23 +446,15 @@ html, body {
 
 .role-option-card.selected {
   border-color: var(--bb-blue-navy);
-  background: rgba(0, 45, 98, 0.04);
+  background: #F8FAFF;
 }
 
 .role-icon {
-  font-size: 22px;
+  font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-
-.role-icon img {
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
-  border-radius: 50%;
-  display: block;
 }
 
 .role-meta {
@@ -483,7 +470,7 @@ html, body {
 .role-meta span {
   font-size: 11px;
   color: var(--text-secondary);
-  line-height: 1.3;
+  line-height: 1.35;
   margin-top: 2px;
 }
 
@@ -492,28 +479,23 @@ html, body {
   background: var(--bb-yellow);
   color: var(--bb-blue-navy);
   border: none;
-  padding: 14px;
+  padding: 13px 16px;
   border-radius: var(--radius-md);
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(254, 211, 4, 0.35);
-  transition: all 0.15s ease;
-  margin-top: 10px;
+  transition: background-color 0.15s ease, transform 0.12s ease;
+  margin-top: 6px;
 }
 
 .btn-auth-submit:hover {
   background: var(--bb-yellow-hover);
-  transform: translateY(-1px);
 }
 
 .btn-auth-submit:disabled {
-  opacity: 0.65;
+  opacity: 0.6;
   cursor: not-allowed;
-  transform: none;
 }
-
-
 
 .auth-card-footer {
   padding: 14px 28px;
@@ -526,15 +508,17 @@ html, body {
   background: none;
   border: none;
   color: var(--bb-blue-navy);
-  font-size: 12.5px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  text-decoration: none;
+  transition: color 0.15s ease;
 }
 
 .btn-link-public-doc:hover {
   color: var(--bb-blue-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* Utilitários Visuais */
@@ -1046,41 +1030,41 @@ html, body {
 }
 
 .bb-site-footer {
-  background-color: var(--bb-blue-dark);
-  color: #CBD5E1;
-  border-top: 2px solid var(--bb-yellow);
-  padding: 18px 20px;
-  font-size: 12.5px;
+  background-color: #FFFFFF;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-light);
+  padding: 16px 20px;
+  font-size: 12px;
 }
 
 .bb-site-footer-inner {
-  max-width: 1240px;
+  max-width: 1120px;
   margin: 0 auto;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px 20px;
+  gap: 10px 20px;
 }
 
 .bb-footer-brand {
-  color: #E2E8F0;
+  color: var(--text-secondary);
 }
 
 .bb-footer-brand strong {
-  color: var(--bb-yellow);
+  color: var(--bb-blue-navy);
 }
 
 .bb-footer-links {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
 
 .bb-footer-links a,
 .bb-footer-contact a {
-  color: #E2E8F0;
+  color: var(--text-secondary);
   text-decoration: none;
   font-weight: 500;
   transition: color var(--transition-fast);
@@ -1088,7 +1072,7 @@ html, body {
 
 .bb-footer-links a:hover,
 .bb-footer-contact a:hover {
-  color: var(--bb-yellow);
+  color: var(--bb-blue-navy);
   text-decoration: underline;
 }
 
@@ -1097,7 +1081,7 @@ html, body {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  color: #94A3B8;
+  color: var(--text-muted);
 }
 
 .bb-static-page {

@@ -1,11 +1,12 @@
 /**
- * BBVision - Tela de Checklist de Verificação (Etapa 2 de 3)
+ * BBVision - Tela de Checklist de Verificação
  * Confirmação final de prontidão do local antes da captura fotográfica in-loco com IA.
  */
 
 import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { toast } from '../components/toast.js';
+import { renderBackButton } from '../components/backButton.js';
 import { escapeHtml } from '../utils/formatters.js';
 
 export function renderChecklistVerificacao() {
@@ -13,8 +14,7 @@ export function renderChecklistVerificacao() {
   const respostas = (vistoria.respostas = vistoria.respostas || {});
   const userEmail = state.user?.email || 'Não informado';
   const responsavelNome = state.user?.nome || vistoria.responsavel || 'Responsável Técnico';
-  const responsavelDoc = state.user?.registro_profissional || vistoria.matricula || 'Registro não informado';
-  const codigoExibicao = vistoria.codigoUnico || 'Emitido na Assinatura Digital';
+  const responsavelDoc = state.user?.registro_profissional || vistoria.matricula || '';
 
   const itensVerificacao = [
     { key: 'check1', num: 1, texto: 'A estrutura está conforme o projeto?' },
@@ -28,39 +28,27 @@ export function renderChecklistVerificacao() {
   const podeAvancar = totalMarcados >= 1;
 
   return `
-    <div class="page-container fade-in" id="checklistVerificacaoPage">
-      <header class="verificacao-topbar">
-        <div class="verificacao-header-row">
-          <div class="verificacao-title-group">
-            <button class="btn-icon-simple-sm" id="btnVoltarChecklistDinamico" title="Voltar">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="15 18 9 12 15 6"></polyline>
-              </svg>
-            </button>
-            <h1 class="verificacao-title">Checklist de Verificação</h1>
+    <div class="page-container page-narrow fade-in" id="checklistVerificacaoPage">
+      <header class="screen-topbar">
+        <div class="screen-topbar-left">
+          ${renderBackButton({
+            id: 'btnVoltarChecklistDinamico',
+            label: 'Voltar',
+            variant: 'light',
+            title: 'Voltar para Checklist Complementar',
+          })}
+          <div class="screen-topbar-titles">
+            <h1 class="screen-topbar-title">Verificação Pré-Captura</h1>
+            <span class="screen-topbar-sub">Confirme a prontidão do canteiro antes de abrir a câmera</span>
           </div>
-          <span class="etapa-indicator-text">etapa 2 de 3</span>
         </div>
-
-        <div class="progress-bar-track">
-          <div class="progress-bar-fill-yellow" style="width: 66%;"></div>
-        </div>
+        <span class="screen-step-pill">Pré-Câmera</span>
       </header>
 
-      <div class="verificacao-codigo-card">
-        <span class="card-mini-label">Código Único de Fé Pública</span>
-        <div class="codigo-pill-highlight">
-          ${escapeHtml(codigoExibicao)}
-        </div>
-        <p class="codigo-email-notice">
-          Protocolo vinculado a: ${escapeHtml(userEmail)}
-        </p>
-      </div>
-
       <div class="verificacao-checklist-card">
-        <div class="checkbox-toolbar" style="margin-bottom: 10px;">
+        <div class="checkbox-toolbar" style="margin-bottom: 12px;">
           <div class="toolbar-buttons-cluster">
-            <button type="button" class="btn-quick-check" id="btnMarcarTodosVerificacao">Marcar Todos</button>
+            <button type="button" class="btn-quick-check" id="btnMarcarTodosVerificacao">Marcar todos</button>
             <button type="button" class="btn-quick-check" id="btnLimparVerificacao">Limpar</button>
           </div>
           <span class="badge-selection-count" id="badgeVerificacaoCount">
@@ -88,16 +76,13 @@ export function renderChecklistVerificacao() {
         </div>
       </div>
 
-      <div class="responsavel-info-card" style="display: flex; align-items: center;">
-        <div class="resp-avatar-badge" style="margin-right: 12px; display: flex; align-items: center;">
-          ${Icons.perfilObras(42)}
-        </div>
-        <div class="resp-text-group" style="flex: 1;">
-          <span class="resp-card-title">Responsável Técnico</span>
-          <strong class="resp-nome">Nome: ${escapeHtml(responsavelNome)}</strong>
-          <span class="resp-matricula">
-            Registro/Doc: ${escapeHtml(responsavelDoc)}
-          </span>
+      <div class="responsavel-info-card">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          ${Icons.perfilObras(38)}
+          <div class="resp-text-group">
+            <strong class="resp-nome">${escapeHtml(responsavelNome)}</strong>
+            <span class="resp-matricula">${escapeHtml(userEmail)}${responsavelDoc ? ` • ${escapeHtml(responsavelDoc)}` : ''}</span>
+          </div>
         </div>
       </div>
 
@@ -128,7 +113,7 @@ export function bindChecklistVerificacaoEvents() {
   }
 
   document.getElementById('btnVoltarChecklistDinamico')?.addEventListener('click', () => {
-    state.navigate('checklist-dinamico');
+    state.navigate('checklist-dinamico', null, { replace: true });
   });
 
   checkRows.forEach(row => {

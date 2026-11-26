@@ -83,7 +83,7 @@ export function bindBottomNavEvents() {
     btn.addEventListener('click', () => {
       const targetNav = btn.getAttribute('data-nav');
       if (targetNav) {
-        state.navigate(targetNav, targetNav);
+        state.navigate(targetNav, targetNav, { clearHistory: true });
       }
     });
   });

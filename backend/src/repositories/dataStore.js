@@ -11,6 +11,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { supabase, isConfigured } = require('../config/supabase');
+const { ensureDemoEvidenceFiles, generateSignatureDataUrl } = require('../utils/demoEvidenceGenerator');
 
 const DEFAULT_STORE_PATH = process.env.DATA_STORE_PATH
   ? path.resolve(process.env.DATA_STORE_PATH)
@@ -123,8 +124,299 @@ function getInitialAccounts() {
   ];
 }
 
+function getInitialPresentationDataset() {
+  const evidences = ensureDemoEvidenceFiles();
+  const sigPng = generateSignatureDataUrl();
+  const empId = '11111111-1111-4111-8111-111111111111';
+  const fiscalId = '22222222-2222-4222-8222-222222222222';
+  const template = clone(defaultChecklistQuestions);
+
+  const obra1Id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1';
+  const obra2Id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2';
+  const obra3Id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3';
+  const obra4Id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4';
+
+  const rel1Id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1';
+  const rel2Id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2';
+  const rel3Id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb3';
+
+  const obras = [
+    {
+      id: obra1Id,
+      nome: 'Agência Recife Centro (0008)',
+      endereco: 'Av. Rio Branco, 240 - Bairro do Recife, Recife/PE',
+      responsavel: 'Rodrigo',
+      status: 'REGULAR',
+      tipo: 'Reforma e Modernização de Agência',
+      empreiteira_id: empId,
+      cadastrado_por_fiscal_id: fiscalId,
+      fiscal_responsavel_id: fiscalId,
+      checklist_perguntas: clone(template),
+      created_at: '2026-11-22T12:00:00.000Z',
+      updated_at: '2026-11-23T15:30:00.000Z',
+    },
+    {
+      id: obra2Id,
+      nome: 'Agência Boa Viagem (1842)',
+      endereco: 'Av. Conselheiro Aguiar, 1842 - Boa Viagem, Recife/PE',
+      responsavel: 'Rodrigo',
+      status: 'REGULAR',
+      tipo: 'Manutenção Predial e Fachada Corporativa',
+      empreiteira_id: empId,
+      cadastrado_por_fiscal_id: fiscalId,
+      fiscal_responsavel_id: fiscalId,
+      checklist_perguntas: clone(template),
+      created_at: '2026-11-23T09:00:00.000Z',
+      updated_at: '2026-11-24T14:20:00.000Z',
+    },
+    {
+      id: obra3Id,
+      nome: 'Agência Olinda Histórico (3105)',
+      endereco: 'Av. Getúlio Vargas, 610 - Bairro Novo, Olinda/PE',
+      responsavel: 'Rodrigo',
+      status: 'PENDENTE_AJUSTE',
+      tipo: 'Adequação de Acessibilidade (NBR 9050)',
+      empreiteira_id: empId,
+      cadastrado_por_fiscal_id: fiscalId,
+      fiscal_responsavel_id: fiscalId,
+      checklist_perguntas: clone(template),
+      created_at: '2026-11-23T11:30:00.000Z',
+      updated_at: '2026-11-24T16:45:00.000Z',
+    },
+    {
+      id: obra4Id,
+      nome: 'Posto de Atendimento Porto Digital (PAE)',
+      endereco: 'Rua do Apolo, 181 - Bairro do Recife, Recife/PE',
+      responsavel: 'Rodrigo',
+      status: 'REGULAR',
+      tipo: 'Instalação de Posto de Atendimento Eletrônico (PAE/ATM)',
+      empreiteira_id: empId,
+      cadastrado_por_fiscal_id: fiscalId,
+      fiscal_responsavel_id: fiscalId,
+      checklist_perguntas: clone(template),
+      created_at: '2026-11-25T10:00:00.000Z',
+      updated_at: '2026-11-25T10:00:00.000Z',
+    },
+  ];
+
+  const hashRel1 = crypto.createHash('sha256').update(`${rel1Id}|BB26A1F90C4E7D12|${evidences.centro.hash_integridade}`).digest('hex');
+  const hashRel2 = crypto.createHash('sha256').update(`${rel2Id}|BB26F4C81A9D3E55|${evidences.boaviagem.hash_integridade}`).digest('hex');
+  const hashRel3 = crypto.createHash('sha256').update(`${rel3Id}|BB26C7E20B5A8941|${evidences.olinda.hash_integridade}`).digest('hex');
+
+  const relatorios = [
+    {
+      id: rel1Id,
+      obra_id: obra1Id,
+      usuario_id: empId,
+      status: 'APROVADO',
+      codigo_unico: 'BB26A1F90C4E7D12',
+      hash_integridade: hashRel1,
+      arquivo_pdf_url: null,
+      tipo_local: 'Agência Bancária',
+      localizacao_texto: 'Av. Rio Branco, 240 - Bairro do Recife, Recife/PE (-8.06316, -34.87113)',
+      latitude: -8.06316,
+      longitude: -34.87113,
+      precisao_gps: 9,
+      assinatura_base64: sigPng,
+      validacao_manual: false,
+      motivo_validacao_manual: null,
+      justificativa_fiscal: 'Fachada, acessibilidade e alvenaria conformes ao padrão técnico do Banco do Brasil. Vistoria homologada.',
+      created_at: '2026-11-23T13:15:00.000Z',
+      finalizado_em: '2026-11-23T13:30:00.000Z',
+      julgado_em: '2026-11-23T15:30:00.000Z',
+      julgado_por_fiscal_id: fiscalId,
+    },
+    {
+      id: rel2Id,
+      obra_id: obra2Id,
+      usuario_id: empId,
+      status: 'FINALIZADO',
+      codigo_unico: 'BB26F4C81A9D3E55',
+      hash_integridade: hashRel2,
+      arquivo_pdf_url: null,
+      tipo_local: 'Fachada Externa',
+      localizacao_texto: 'Av. Conselheiro Aguiar, 1842 - Boa Viagem, Recife/PE (-8.11826, -34.89640)',
+      latitude: -8.11826,
+      longitude: -34.89640,
+      precisao_gps: 11,
+      assinatura_base64: sigPng,
+      validacao_manual: false,
+      motivo_validacao_manual: null,
+      justificativa_fiscal: null,
+      created_at: '2026-11-24T14:00:00.000Z',
+      finalizado_em: '2026-11-24T14:20:00.000Z',
+      julgado_em: null,
+      julgado_por_fiscal_id: null,
+    },
+    {
+      id: rel3Id,
+      obra_id: obra3Id,
+      usuario_id: empId,
+      status: 'PENDENTE_AJUSTE',
+      codigo_unico: 'BB26C7E20B5A8941',
+      hash_integridade: hashRel3,
+      arquivo_pdf_url: null,
+      tipo_local: 'Área de Acessibilidade',
+      localizacao_texto: 'Av. Getúlio Vargas, 610 - Bairro Novo, Olinda/PE (-7.99852, -34.84190)',
+      latitude: -7.99852,
+      longitude: -34.84190,
+      precisao_gps: 14,
+      assinatura_base64: sigPng,
+      validacao_manual: true,
+      motivo_validacao_manual: 'Validação manual assistida acionada por oscilação de sinal 4G no canteiro.',
+      justificativa_fiscal: 'Regularizar alinhamento do piso tátil direcional na rampa principal e reenviar nova vistoria conforme NBR 9050.',
+      created_at: '2026-11-24T15:10:00.000Z',
+      finalizado_em: '2026-11-24T15:25:00.000Z',
+      julgado_em: '2026-11-24T16:45:00.000Z',
+      julgado_por_fiscal_id: fiscalId,
+    },
+  ];
+
+  const fotos = [
+    {
+      id: 'cccccccc-cccc-4ccc-8ccc-ccccccccccc1',
+      relatorio_id: rel1Id,
+      caminho_arquivo: evidences.centro.caminho_arquivo,
+      hash_integridade: evidences.centro.hash_integridade,
+      avaliacao_gemini: 'APROVADO',
+      confianca: 0.96,
+      motivo: 'Fachada institucional nítida, iluminação adequada e área central livre de obstruções.',
+      created_at: '2026-11-23T13:22:00.000Z',
+    },
+    {
+      id: 'cccccccc-cccc-4ccc-8ccc-ccccccccccc2',
+      relatorio_id: rel2Id,
+      caminho_arquivo: evidences.boaviagem.caminho_arquivo,
+      hash_integridade: evidences.boaviagem.hash_integridade,
+      avaliacao_gemini: 'APROVADO',
+      confianca: 0.93,
+      motivo: 'Edificação enquadrada com boa nitidez; tapume lateral identificado sem obstruir o eixo principal.',
+      created_at: '2026-11-24T14:12:00.000Z',
+    },
+    {
+      id: 'cccccccc-cccc-4ccc-8ccc-ccccccccccc3',
+      relatorio_id: rel3Id,
+      caminho_arquivo: evidences.olinda.caminho_arquivo,
+      hash_integridade: evidences.olinda.hash_integridade,
+      avaliacao_gemini: 'VALIDACAO_MANUAL',
+      confianca: null,
+      motivo: 'Validação manual assistida acionada por oscilação de sinal 4G no canteiro. Sujeita à auditoria humana.',
+      created_at: '2026-11-24T15:18:00.000Z',
+    },
+  ];
+
+  const respostas = [
+    // Relatório 1 (Homologado)
+    {
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddd01',
+      relatorio_id: rel1Id,
+      pergunta: '1. Fachada da agência está legível e conforme padrão BB?',
+      valor: 'Sim',
+      justificativa: null,
+      sugestao_ia: null,
+      tipo: 'multipla_escolha',
+      created_at: '2026-11-23T13:20:00.000Z',
+    },
+    {
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddd02',
+      relatorio_id: rel1Id,
+      pergunta: '2. Quais itens de segurança, proteção coletiva (EPC) e sinalização estão ativos no local?',
+      valor: 'Isolamento perimetral e tapumes íntegros; Sinalização visual de perigo e rotas de pedestres; Uso obrigatório de EPIs completos pela equipe',
+      justificativa: null,
+      sugestao_ia: null,
+      tipo: 'texto',
+      created_at: '2026-11-23T13:20:00.000Z',
+    },
+    {
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddd03',
+      relatorio_id: rel1Id,
+      pergunta: '3. Relato técnico sobre alvenaria, acabamentos e anomalias estruturais:',
+      valor: 'Alvenaria aprumada e nivelada. Emboço e revestimento homogêneos, sem fissuras estruturais.',
+      justificativa: null,
+      sugestao_ia: null,
+      tipo: 'texto',
+      created_at: '2026-11-23T13:20:00.000Z',
+    },
+    {
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddd04',
+      relatorio_id: rel1Id,
+      pergunta: '4. Condição da calçada externa e acessibilidade da entrada principal:',
+      valor: 'Totalmente acessível (Piso tátil e rampa nivelada sem degraus)',
+      justificativa: null,
+      sugestao_ia: null,
+      tipo: 'multipla_escolha',
+      created_at: '2026-11-23T13:20:00.000Z',
+    },
+    // Relatório 2 (Aguardando Auditoria — com justificativa em item Parcial)
+    {
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddd05',
+      relatorio_id: rel2Id,
+      pergunta: '1. Fachada da agência está legível e conforme padrão BB?',
+      valor: 'Parcial',
+      justificativa: 'Tapume lateral em desmontagem programada para amanhã, sem obstruir a marca principal nem o acesso.',
+      sugestao_ia: null,
+      tipo: 'multipla_escolha',
+      created_at: '2026-11-24T14:10:00.000Z',
+    },
+    {
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddd06',
+      relatorio_id: rel2Id,
+      pergunta: '2. Quais itens de segurança, proteção coletiva (EPC) e sinalização estão ativos no local?',
+      valor: 'Isolamento perimetral e tapumes íntegros; Sinalização visual de perigo e rotas de pedestres; Uso obrigatório de EPIs completos pela equipe; Extintores de incêndio vistoriados e desobstruídos',
+      justificativa: null,
+      sugestao_ia: null,
+      tipo: 'texto',
+      created_at: '2026-11-24T14:10:00.000Z',
+    },
+    {
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddd07',
+      relatorio_id: rel2Id,
+      pergunta: '3. Relato técnico sobre alvenaria, acabamentos e anomalias estruturais:',
+      valor: 'Pintura externa e revestimento frontal concluídos conforme especificação técnica.',
+      justificativa: null,
+      sugestao_ia: null,
+      tipo: 'texto',
+      created_at: '2026-11-24T14:10:00.000Z',
+    },
+    {
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddd08',
+      relatorio_id: rel2Id,
+      pergunta: '4. Condição da calçada externa e acessibilidade da entrada principal:',
+      valor: 'Totalmente acessível (Piso tátil e rampa nivelada sem degraus)',
+      justificativa: null,
+      sugestao_ia: null,
+      tipo: 'multipla_escolha',
+      created_at: '2026-11-24T14:10:00.000Z',
+    },
+    // Relatório 3 (Pendente de Ajuste + Validação Manual)
+    {
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddd09',
+      relatorio_id: rel3Id,
+      pergunta: '1. Fachada da agência está legível e conforme padrão BB?',
+      valor: 'Sim',
+      justificativa: null,
+      sugestao_ia: null,
+      tipo: 'multipla_escolha',
+      created_at: '2026-11-24T15:15:00.000Z',
+    },
+    {
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddd10',
+      relatorio_id: rel3Id,
+      pergunta: '4. Condição da calçada externa e acessibilidade da entrada principal:',
+      valor: 'Parcialmente acessível (Pequeno desnível ou adequação em andamento)',
+      justificativa: 'Piso tátil direcional aguardando rejuntamento final próximo à entrada.',
+      sugestao_ia: null,
+      tipo: 'multipla_escolha',
+      created_at: '2026-11-24T15:15:00.000Z',
+    },
+  ];
+
+  return { obras, relatorios, fotos, respostas };
+}
+
 function createEmptyState() {
   return {
+    presentation_initialized: false,
     checklist_template: clone(defaultChecklistQuestions),
     usuarios: getInitialAccounts(),
     obras: [],
@@ -138,6 +430,7 @@ class DataStore {
   constructor(storePath = DEFAULT_STORE_PATH) {
     this.storePath = storePath;
     const initial = this._loadFromDisk();
+    this.presentation_initialized = Boolean(initial.presentation_initialized);
     this.checklist_template = initial.checklist_template;
     this.usuarios = initial.usuarios;
     this.obras = initial.obras;
@@ -145,15 +438,26 @@ class DataStore {
     this.fotos = initial.fotos;
     this.respostas = initial.respostas;
 
-    const added = this._ensureInitialAccountsLocal();
-    if (added || !fs.existsSync(this.storePath)) {
+    let dirty = this._ensureInitialAccountsLocal();
+
+    // Em execução normal (local/produção), provisiona 1 exemplo real de cada estado/funcionalidade
+    // na primeira inicialização (sem interferir na suite de testes automatizados NODE_ENV=test)
+    if (process.env.NODE_ENV !== 'test') {
+      if (this._ensurePresentationDataLocal()) {
+        dirty = true;
+      }
+    }
+
+    if (dirty || !fs.existsSync(this.storePath)) {
       this._persistToDisk();
     }
 
     if (isConfigured && supabase && process.env.NODE_ENV !== 'test') {
-      this._ensureInitialAccountsSupabase().catch(err => {
-        console.warn('[DataStore/Supabase] Aviso ao sincronizar perfis iniciais:', err.message);
-      });
+      this._ensureInitialAccountsSupabase()
+        .then(() => this._ensurePresentationDataSupabase())
+        .catch(err => {
+          console.warn('[DataStore/Supabase] Aviso ao sincronizar dados iniciais:', err.message);
+        });
     }
   }
 
@@ -167,6 +471,39 @@ class DataStore {
       }
     }
     return added;
+  }
+
+  _ensurePresentationDataLocal() {
+    if (this.presentation_initialized || this.obras.length > 0 || this.relatorios.length > 0) {
+      // Ainda garante que os arquivos PNG das evidências iniciais existam se algum relatório os referenciar
+      const usaEvidenciaInicial = this.fotos.some(f => String(f.caminho_arquivo || '').includes('vistoria_agencia_'));
+      if (usaEvidenciaInicial) {
+        try { ensureDemoEvidenceFiles(); } catch (_) {}
+      }
+      return false;
+    }
+    const dataset = getInitialPresentationDataset();
+    this.obras.push(...dataset.obras);
+    this.relatorios.push(...dataset.relatorios);
+    this.fotos.push(...dataset.fotos);
+    this.respostas.push(...dataset.respostas);
+    this.presentation_initialized = true;
+    return true;
+  }
+
+  async _ensurePresentationDataSupabase() {
+    if (!isConfigured || !supabase) return;
+    try {
+      const { data: existingObras, error } = await supabase.from('obras').select('id').limit(1);
+      if (error || (Array.isArray(existingObras) && existingObras.length > 0)) return;
+      const dataset = getInitialPresentationDataset();
+      await supabase.from('obras').insert(dataset.obras);
+      await supabase.from('relatorios').insert(dataset.relatorios);
+      await supabase.from('fotos').insert(dataset.fotos);
+      await supabase.from('respostas').insert(dataset.respostas);
+    } catch (e) {
+      console.warn('[DataStore/Supabase] Aviso ao sincronizar obras de apresentação:', e.message);
+    }
   }
 
   async _ensureInitialAccountsSupabase() {
@@ -193,6 +530,7 @@ class DataStore {
         if (raw && raw.trim()) {
           const parsed = JSON.parse(raw);
           return {
+            presentation_initialized: Boolean(parsed.presentation_initialized),
             checklist_template: Array.isArray(parsed.checklist_template) && parsed.checklist_template.length > 0
               ? parsed.checklist_template
               : clone(defaultChecklistQuestions),
@@ -217,6 +555,7 @@ class DataStore {
         fs.mkdirSync(dir, { recursive: true });
       }
       const snapshot = JSON.stringify({
+        presentation_initialized: this.presentation_initialized,
         checklist_template: this.checklist_template,
         usuarios: this.usuarios,
         obras: this.obras,
@@ -242,6 +581,7 @@ class DataStore {
 
   reloadFromDisk() {
     const loaded = this._loadFromDisk();
+    this.presentation_initialized = Boolean(loaded.presentation_initialized);
     this.checklist_template = loaded.checklist_template;
     this.usuarios = loaded.usuarios;
     this.obras = loaded.obras;
@@ -258,6 +598,7 @@ class DataStore {
       throw new Error('resetForTesting só pode ser executado com NODE_ENV=test.');
     }
     const empty = createEmptyState();
+    this.presentation_initialized = false;
     this.checklist_template = empty.checklist_template;
     this.usuarios = empty.usuarios;
     this.obras = empty.obras;
@@ -332,7 +673,7 @@ class DataStore {
           .order('nome', { ascending: true });
         if (cleanCargo) query = query.eq('cargo', cleanCargo);
         const { data, error } = await query;
-        if (!error && Array.isArray(data)) return data;
+        if (!error && Array.isArray(data) && data.length > 0) return data;
       } catch (e) {
         console.warn('[DataStore/Supabase] listUsersByCargoAsync:', e.message);
       }
@@ -491,7 +832,7 @@ class DataStore {
           query = query.eq('cadastrado_por_fiscal_id', filtros.cadastrado_por_fiscal_id);
         }
         const { data, error } = await query;
-        if (!error && Array.isArray(data)) return data;
+        if (!error && Array.isArray(data) && data.length > 0) return data;
       } catch (e) {
         console.warn('[DataStore/Supabase] listObrasAsync:', e.message);
       }
@@ -509,7 +850,7 @@ class DataStore {
     if (isConfigured && supabase) {
       try {
         const { data, error } = await supabase.from('obras').select('*').eq('id', id).maybeSingle();
-        if (!error) return data || null;
+        if (!error && data) return data;
       } catch (e) {
         console.warn('[DataStore/Supabase] findObraByIdAsync:', e.message);
       }
@@ -646,8 +987,8 @@ class DataStore {
 
     if (isConfigured && supabase) {
       try {
-        const { error } = await supabase.from('obras').delete().eq('id', id);
-        if (!error) return true;
+        const { data, error } = await supabase.from('obras').delete().eq('id', id).select('id');
+        if (!error && Array.isArray(data) && data.length > 0) return true;
       } catch (e) {
         console.warn('[DataStore/Supabase] deleteObraAsync:', e.message);
       }
@@ -797,7 +1138,7 @@ class DataStore {
         if (filtros.status) query = query.eq('status', filtros.status);
         if (filtros.usuario_id) query = query.eq('usuario_id', filtros.usuario_id);
         const { data, error } = await query;
-        if (!error && Array.isArray(data)) {
+        if (!error && Array.isArray(data) && data.length > 0) {
           return Promise.all(data.map(r => this._hydrateRelatorioAsync(r)));
         }
       } catch (e) {
@@ -821,7 +1162,6 @@ class DataStore {
         if (!error && data) {
           return this._hydrateRelatorioAsync(data);
         }
-        if (!error && !data) return null;
       } catch (e) {
         console.warn('[DataStore/Supabase] findRelatorioByIdAsync:', e.message);
       }
@@ -858,7 +1198,6 @@ class DataStore {
         if (byHash) {
           return this._hydrateRelatorioAsync(byHash);
         }
-        return null;
       } catch (e) {
         console.warn('[DataStore/Supabase] findRelatorioByCodigoOuHashAsync:', e.message);
       }

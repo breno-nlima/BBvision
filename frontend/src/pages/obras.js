@@ -1,6 +1,6 @@
 /**
  * BBVision Obras Screen
- * Grid de obras reais com busca instantânea, badges de status e ações por perfil (RBAC).
+ * Listagem limpa e responsiva de obras com busca instantânea, status e ações por perfil (RBAC).
  */
 
 import { Icons } from '../assets/icons.js';
@@ -12,11 +12,12 @@ import { escapeHtml } from '../utils/formatters.js';
 
 function renderObrasCardsHtml(query, isFiscal) {
   const q = (query || '').trim().toLowerCase();
-  const filteredObras = state.obras.filter(o =>
-    (o.nome || '').toLowerCase().includes(q) ||
-    (o.responsavel || '').toLowerCase().includes(q) ||
-    (o.endereco || '').toLowerCase().includes(q) ||
-    (o.tipo || '').toLowerCase().includes(q)
+  const filteredObras = state.obras.filter(
+    o =>
+      (o.nome || '').toLowerCase().includes(q) ||
+      (o.responsavel || '').toLowerCase().includes(q) ||
+      (o.endereco || '').toLowerCase().includes(q) ||
+      (o.tipo || '').toLowerCase().includes(q)
   );
 
   if (state.obras.length === 0) {
@@ -25,10 +26,12 @@ function renderObrasCardsHtml(query, isFiscal) {
         <p style="font-weight: 700; color: #002D62; margin-bottom: 6px;">
           ${isFiscal ? 'Nenhuma obra cadastrada no sistema' : 'Nenhuma obra atribuída à sua conta'}
         </p>
-        <p style="font-size: 12.5px; color: #64748B;">
-          ${isFiscal
-            ? 'Clique em "+ Nova Obra" acima para cadastrar a primeira unidade e atribuí-la a uma empreiteira.'
-            : 'Aguarde o credenciamento e a vinculação de obras por um Fiscal de Obra.'}
+        <p style="font-size: 13px; color: #64748B;">
+          ${
+            isFiscal
+              ? 'Clique em "+ Nova Obra" acima para cadastrar a primeira unidade e atribuí-la a uma empreiteira.'
+              : 'Aguarde o credenciamento e a vinculação de obras por um Fiscal de Obra.'
+          }
         </p>
       </div>
     `;
@@ -42,57 +45,50 @@ function renderObrasCardsHtml(query, isFiscal) {
     `;
   }
 
-  return filteredObras.map(obra => {
-    let mediaHtml = '';
-    if (obra.imagemTipo === 'logo') {
-      mediaHtml = `<div class="obra-card-media yellow-media">${Icons.logoBVision(86)}</div>`;
-    } else if (obra.imagemTipo === 'cad1') {
-      mediaHtml = `<div class="obra-card-media">${Icons.cadHouse1('100%', 88)}</div>`;
-    } else {
-      mediaHtml = `<div class="obra-card-media">${Icons.cadHouse2('100%', 88)}</div>`;
-    }
+  return filteredObras
+    .map(obra => {
+      const statusBadgeClass =
+        obra.status === 'REGULAR' || obra.status === 'CONCLUIDO'
+          ? 'concluido'
+          : obra.status === 'PENDENTE_AJUSTE'
+          ? 'pendente'
+          : 'andamento';
+      const statusText =
+        obra.status === 'REGULAR'
+          ? 'Regular'
+          : obra.status === 'PENDENTE_AJUSTE'
+          ? 'Pendente ajuste'
+          : obra.status === 'CONCLUIDO'
+          ? 'Concluída'
+          : 'Em andamento';
 
-    const statusBadgeClass =
-      obra.status === 'REGULAR' || obra.status === 'CONCLUIDO'
-        ? 'concluido'
-        : obra.status === 'PENDENTE_AJUSTE'
-        ? 'pendente'
-        : 'andamento';
-    const statusText =
-      obra.status === 'REGULAR'
-        ? 'Regular'
-        : obra.status === 'PENDENTE_AJUSTE'
-        ? 'Pendente Ajuste'
-        : obra.status === 'CONCLUIDO'
-        ? 'Concluída'
-        : 'Em andamento';
+      const actionLabel = isFiscal ? 'Abrir gestão e auditoria' : 'Iniciar vistoria';
 
-    const actionLabel = isFiscal ? 'Gerenciar / Auditar' : 'Registrar vistoria';
+      return `
+        <article class="obra-card" data-id="${escapeHtml(obra.id)}">
+          <div class="obra-card-top">
+            <div class="obra-card-icon-pill">
+              ${Icons.iconeObras(20)}
+            </div>
+            <span class="status-badge-chip ${statusBadgeClass}">${statusText}</span>
+          </div>
 
-    return `
-      <div class="obra-card ${obra.destaque ? 'destaque' : ''}" data-id="${escapeHtml(obra.id)}">
-        ${mediaHtml}
-        
-        <div class="obra-card-body">
-          <div class="obra-card-header-row">
+          <div class="obra-card-body">
             <h3 class="obra-card-title">${escapeHtml(obra.nome)}</h3>
-            <button class="obra-card-eye-btn" data-view-id="${escapeHtml(obra.id)}" title="Ver Detalhes">
-              ${Icons.eye(16)}
-            </button>
+            <p class="obra-card-subtitle">${escapeHtml(obra.endereco || obra.tipo || 'Unidade Banco do Brasil')}</p>
+            <div class="obra-card-meta-line">
+              <span>${escapeHtml(obra.responsavel || 'Responsável a definir')}</span>
+              <span>${escapeHtml(obra.tipo || 'Obra')}</span>
+            </div>
           </div>
-          <span class="obra-card-subtitle">${escapeHtml(obra.tipo)}</span>
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:10px; font-size:11px; color:#64748B;">
-            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(obra.responsavel || 'A definir')}</span>
-            <span class="status-badge-chip ${statusBadgeClass}" style="flex-shrink:0;">${statusText}</span>
-          </div>
-          
-          <button class="btn-registrar-vistoria" data-action-id="${escapeHtml(obra.id)}">
+
+          <button type="button" class="btn-registrar-vistoria" data-action-id="${escapeHtml(obra.id)}">
             ${actionLabel}
           </button>
-        </div>
-      </div>
-    `;
-  }).join('');
+        </article>
+      `;
+    })
+    .join('');
 }
 
 export function renderObras() {
@@ -103,24 +99,39 @@ export function renderObras() {
     <div class="page-container fade-in" id="obrasPage">
       ${renderHeader('obras')}
 
+      <div class="page-intro-bar">
+        <div>
+          <h1>${isFiscal ? 'Obras & Unidades' : 'Minhas Obras'}</h1>
+          <p>${
+            isFiscal
+              ? 'Gerencie unidades cadastradas, checklists técnicos e auditorias.'
+              : 'Selecione uma unidade para registrar vistoria fotográfica in-loco.'
+          }</p>
+        </div>
+        ${
+          isFiscal
+            ? `
+          <button type="button" class="btn-pill-yellow" id="btnNovaObraBar" title="Cadastrar Nova Obra">
+            + Nova Obra
+          </button>
+        `
+            : ''
+        }
+      </div>
+
       <section class="search-bar-row">
         <div class="search-input-wrapper">
           <div class="search-icon">
             ${Icons.search(16)}
           </div>
-          <input 
-            type="text" 
-            id="inputBuscarObra" 
-            class="search-input" 
-            placeholder="Buscar obra por nome, endereço ou responsável" 
+          <input
+            type="text"
+            id="inputBuscarObra"
+            class="search-input"
+            placeholder="Buscar por unidade, endereço ou responsável..."
             value="${escapeHtml(state.searchQuery || '')}"
           />
         </div>
-        ${isFiscal ? `
-          <button class="btn-pill-yellow" id="btnNovaObraBar" title="Cadastrar Nova Obra">
-            + Nova Obra
-          </button>
-        ` : ''}
       </section>
 
       <section class="obras-grid-container" id="obrasGrid">
@@ -131,21 +142,20 @@ export function renderObras() {
 }
 
 function bindObrasCardClicks() {
-  document.querySelectorAll('.btn-registrar-vistoria').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const obraId = btn.getAttribute('data-action-id');
-      if (state.selectObra(obraId)) {
+  document.querySelectorAll('.obra-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const obraId = card.getAttribute('data-id');
+      if (obraId && state.selectObra(obraId)) {
         state.navigate('obra-detalhe');
       }
     });
   });
 
-  document.querySelectorAll('.obra-card-eye-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+  document.querySelectorAll('.btn-registrar-vistoria').forEach(btn => {
+    btn.addEventListener('click', e => {
       e.stopPropagation();
-      const obraId = btn.getAttribute('data-view-id');
-      if (state.selectObra(obraId)) {
+      const obraId = btn.getAttribute('data-action-id');
+      if (obraId && state.selectObra(obraId)) {
         state.navigate('obra-detalhe');
       }
     });
@@ -159,7 +169,7 @@ export function bindObrasEvents() {
   const inputBusca = document.getElementById('inputBuscarObra');
   const obrasGrid = document.getElementById('obrasGrid');
   if (inputBusca && obrasGrid) {
-    inputBusca.addEventListener('input', (e) => {
+    inputBusca.addEventListener('input', e => {
       state.searchQuery = e.target.value;
       obrasGrid.innerHTML = renderObrasCardsHtml(state.searchQuery, isFiscal);
       bindObrasCardClicks();
@@ -177,7 +187,7 @@ export function bindObrasEvents() {
       modal.openNovaObraModal({
         fiscalUser: state.user,
         empreiteiras,
-        onSave: async (dados) => {
+        onSave: async dados => {
           await state.criarNovaObra(dados);
           toast.success('Obra Cadastrada', `A unidade "${dados.nome}" foi cadastrada com sucesso.`);
         },

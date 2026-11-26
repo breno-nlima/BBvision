@@ -133,8 +133,8 @@
 .search-bar-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 18px 14px 18px;
+  gap: 10px;
+  padding: 0 0 18px 0;
 }
 
 .search-input-wrapper {
@@ -151,18 +151,20 @@
   height: 16px;
   color: var(--text-muted);
   pointer-events: none;
+  display: flex;
+  align-items: center;
 }
 
 .search-input {
   width: 100%;
-  height: 42px;
-  padding: 0 14px 0 38px;
-  font-size: 13px;
+  height: 44px;
+  padding: 0 16px 0 40px;
+  font-size: 13.5px;
   font-family: inherit;
   color: var(--text-primary);
   background-color: var(--bg-card);
   border: 1px solid var(--border-light);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   outline: none;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
@@ -176,354 +178,326 @@
   color: var(--text-muted);
 }
 
+.btn-pill-yellow {
+  background-color: var(--bb-yellow);
+  color: var(--bb-blue-navy);
+  border: none;
+  font-size: 13px;
+  font-weight: var(--font-weight-bold);
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.btn-pill-yellow:hover {
+  background-color: var(--bb-yellow-hover);
+}
+
 .btn-pill-navy {
   background-color: var(--bb-blue-navy);
   color: #FFFFFF;
   border: none;
-  font-size: 12px;
-  font-weight: var(--font-weight-bold);
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold);
   padding: 10px 16px;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0, 45, 98, 0.25);
-  transition: transform var(--transition-fast), background-color var(--transition-fast);
+  transition: background-color var(--transition-fast);
 }
 
 .btn-pill-navy:hover {
-  background-color: var(--bb-blue-accent);
+  background-color: var(--bb-blue-dark);
 }
 
 /* --------------------------------------------------------------------------
-   3. Card Amarelo Hero / Banner de Boas-Vindas
+   3. Card Hero / Banner de Boas-Vindas (Limpo e Contemporâneo)
    -------------------------------------------------------------------------- */
 .hero-banner-card {
-  margin: 6px 18px 16px 18px;
-  background-color: var(--bb-yellow);
+  margin: 0 0 20px 0;
+  background-color: #FFFFFF;
+  border: 1px solid var(--border-light);
+  border-left: 4px solid var(--bb-blue-navy);
   border-radius: var(--radius-xl);
-  padding: 22px 20px;
+  padding: 24px 26px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 8px 20px -4px rgba(254, 211, 4, 0.4);
+  gap: 20px;
+  box-shadow: var(--shadow-card);
 }
 
 .hero-text-content {
   flex: 1;
-  z-index: 2;
 }
 
 .hero-greeting {
-  font-size: 13px;
-  font-weight: var(--font-weight-semibold);
-  color: rgba(0, 45, 98, 0.85);
-  margin-bottom: 12px;
+  font-size: 22px;
+  font-weight: var(--font-weight-extrabold);
+  color: var(--bb-blue-navy);
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
 }
 
-.hero-accent-line {
-  width: 90px;
-  height: 4px;
-  background-color: #FFFFFF;
-  border-radius: 4px;
+.hero-role-tag {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-regular);
 }
 
-.hero-illustration {
-  width: 110px;
-  height: 100px;
+.hero-cta-wrap {
   display: flex;
   align-items: center;
-  justify-content: center;
-  position: relative;
-  z-index: 2;
-}
-
-.hero-illustration svg {
-  width: 100%;
-  height: 100%;
-}
-
-/* --------------------------------------------------------------------------
-   4. Atalhos Rápidos (Quick Actions 3 Colunas)
-   -------------------------------------------------------------------------- */
-.quick-actions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 12px;
-  padding: 0 18px 12px 18px;
-}
-
-.quick-action-card {
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  padding: 16px 8px 12px 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
   gap: 10px;
-  cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+  flex-shrink: 0;
 }
 
-.quick-action-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--bb-yellow);
-  box-shadow: var(--shadow-card-hover);
-}
-
-.quick-action-card.highlight-card {
-  background: linear-gradient(135deg, #FFFFFF 0%, #FFFDF0 100%);
-  border-color: rgba(254, 211, 4, 0.6);
-  box-shadow: 0 3px 10px rgba(254, 211, 4, 0.15);
-}
-
-.quick-action-card.highlight-card:hover {
-  background: #FEF9D9;
-  border-color: var(--bb-yellow);
-  box-shadow: 0 6px 16px rgba(254, 211, 4, 0.25);
-  transform: translateY(-2px);
-}
-
-.quick-action-icon-badge {
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-.quick-action-label {
-  font-size: 11px;
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-  line-height: 1.25;
-}
-
-/* Indicador de Carrossel */
-.carousel-dots {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 18px;
-}
-
-.dot {
-  width: 16px;
-  height: 4px;
-  border-radius: 4px;
-  background-color: var(--border-medium);
-  transition: all var(--transition-normal);
-}
-
-.dot.active {
-  background-color: var(--bb-blue-navy);
-  width: 24px;
+@media (max-width: 640px) {
+  .hero-banner-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px;
+  }
+  .hero-cta-wrap {
+    width: 100%;
+  }
+  .hero-cta-wrap .btn-pill-yellow {
+    width: 100%;
+    text-align: center;
+  }
 }
 
 /* --------------------------------------------------------------------------
-   5. Seção Últimas Análises (Lista de Vistorias Recentes)
+   5. Seção de Listas (Vistorias e Obras no Dashboard)
    -------------------------------------------------------------------------- */
+.analyses-section {
+  margin-top: 22px;
+}
+
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 18px 12px 18px;
-  cursor: pointer;
+  padding: 0 0 12px 0;
+  gap: 12px;
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: var(--font-weight-bold);
-  color: var(--text-primary);
+  color: var(--bb-blue-navy);
 }
 
-.section-chevron {
-  width: 18px;
-  height: 18px;
-  color: var(--text-secondary);
-  transition: transform var(--transition-fast);
+.section-count-meta {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-weight: 500;
 }
 
 .analyses-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 0 18px;
+  padding: 0;
 }
 
 .analysis-item-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
-  padding: 14px 16px;
+  padding: 15px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 14px;
   box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-fast), border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
   cursor: pointer;
 }
 
 .analysis-item-card:hover {
   border-color: var(--border-medium);
-  transform: translateX(2px);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
 }
 
 .analysis-left {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 
-.analysis-icon {
-  width: 26px;
-  height: 26px;
-  color: var(--bb-blue-navy);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.analysis-info {
+  min-width: 0;
 }
 
 .analysis-info h4 {
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: var(--font-weight-bold);
   color: var(--text-primary);
   margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .analysis-info p {
-  font-size: 12px;
+  font-size: 12.5px;
   color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.analysis-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .analysis-status-pill {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
-  font-weight: var(--font-weight-medium);
+  font-size: 11.5px;
+  font-weight: var(--font-weight-bold);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: #F1F5F9;
   color: var(--text-secondary);
 }
 
 .analysis-status-pill.concluido {
-  color: var(--text-primary);
+  background: var(--status-concluido-bg);
+  color: var(--status-concluido-text);
+}
+
+.analysis-status-pill.pendente {
+  background: var(--status-pendente-bg);
+  color: var(--status-pendente-text);
+}
+
+.analysis-status-pill.andamento {
+  background: var(--status-andamento-bg);
+  color: var(--status-andamento-text);
+}
+
+.analysis-row-chevron {
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
 }
 
 /* --------------------------------------------------------------------------
-   6. Grid de Obras (2 Colunas com Ilustrações CAD / Arquitetônicas)
+   6. Grid de Obras (Responsivo, Limpo e Arejado)
    -------------------------------------------------------------------------- */
 .obras-grid-container {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  padding: 0 18px 20px 18px;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 16px;
+  padding: 0 0 24px 0;
 }
 
 .obra-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-xl);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
+  padding: 20px;
+  box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
+  gap: 12px;
+  cursor: pointer;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 
 .obra-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
+  border-color: var(--border-medium);
   box-shadow: var(--shadow-card-hover);
 }
 
-/* Card Destacado (com borda amarela como na Imagem 3) */
-.obra-card.destaque {
-  border: 1.5px solid var(--bb-yellow);
+.obra-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-.obra-card-media {
-  height: 124px;
-  background-color: var(--bg-blueprint);
+.obra-card-icon-pill {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #F1F5F9;
+  color: var(--bb-blue-navy);
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  overflow: hidden;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-}
-
-.obra-card-media.yellow-media {
-  background-color: var(--bb-yellow);
-}
-
-.obra-card-media svg {
-  width: 90%;
-  height: 90%;
+  flex-shrink: 0;
 }
 
 .obra-card-body {
-  padding: 12px 10px 14px 10px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   flex: 1;
-}
-
-.obra-card-header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 3px;
+  gap: 4px;
 }
 
 .obra-card-title {
-  font-size: 13px;
+  font-size: 15.5px;
   font-weight: var(--font-weight-bold);
-  color: var(--text-primary);
-  line-height: 1.2;
-}
-
-.obra-card-eye-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-secondary);
-  padding: 0;
-  display: flex;
-  align-items: center;
-}
-
-.obra-card-eye-btn:hover {
   color: var(--bb-blue-navy);
+  line-height: 1.3;
+  margin: 0;
 }
 
 .obra-card-subtitle {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-secondary);
-  margin-bottom: 12px;
+  margin: 0;
+  line-height: 1.4;
 }
 
-/* Botão 'Registrar vistoria' no card */
+.obra-card-meta-line {
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #F1F5F9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.obra-card-meta-line span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Botão de ação no card */
 .btn-registrar-vistoria {
   margin-top: auto;
   width: 100%;
   background-color: #F8FAFC;
-  color: var(--text-primary);
+  color: var(--bb-blue-navy);
   border: 1px solid var(--border-light);
-  font-size: 11px;
-  font-weight: var(--font-weight-semibold);
-  padding: 7px 8px;
-  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: var(--font-weight-bold);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   text-align: center;
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
+.obra-card:hover .btn-registrar-vistoria,
 .btn-registrar-vistoria:hover {
   background-color: var(--bb-yellow);
   color: var(--bb-blue-navy);
@@ -981,65 +955,44 @@
    ========================================================================== */
 @media (min-width: 769px) {
   .page-container {
-    max-width: 1140px;
+    max-width: 1060px;
     margin: 0 auto;
-    padding: 16px 20px;
+    padding: 0;
+  }
+
+  .page-container.page-narrow {
+    max-width: 700px;
+  }
+
+  .page-container.page-medium {
+    max-width: 860px;
   }
 
   .fiscal-dashboard-metrics {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-  }
-
-  .quick-actions-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-  }
-
-  .quick-action-card {
-    padding: 20px 16px;
+    gap: 14px;
   }
 
   .fiscal-photos-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
+    gap: 14px;
   }
 
   .analyses-list {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
-  }
-
-  .obras-list-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-  }
-
-  .pergunta-card-container {
-    max-width: 720px;
-    margin: 0 auto;
-  }
-
-  .bloqueado-hero-section,
-  .bloqueado-protocolo-card,
-  .bloqueado-status-rules-card {
-    max-width: 680px;
-    margin-left: auto;
-    margin-right: auto;
+    gap: 12px;
   }
 
   .camera-screen-wrapper {
-    max-width: 860px;
+    max-width: 760px;
     margin: 0 auto;
   }
 
   .camera-lens-container {
-    height: 480px;
+    height: 460px;
   }
 }
 
@@ -1126,6 +1079,94 @@
 .analysis-status-dot.andamento {
   background: #0284C7;
 }
+
+/* ==========================================================================
+   Botão Voltar Padronizado BBVision (Consistência & Área de Toque)
+   ========================================================================== */
+.bb-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 13px 7px 10px;
+  border-radius: 9999px;
+  font-family: var(--font-family-sans);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background-color 0.16s ease, border-color 0.16s ease, transform 0.12s ease, box-shadow 0.16s ease;
+}
+
+.bb-back-btn:active {
+  transform: scale(0.97);
+}
+
+.bb-back-btn__icon {
+  flex-shrink: 0;
+  transition: transform 0.16s ease;
+}
+
+.bb-back-btn:hover .bb-back-btn__icon {
+  transform: translateX(-2px);
+}
+
+/* Variante Clara (cabeçalhos brancos) */
+.bb-back-btn--light {
+  background-color: #FFFFFF;
+  color: #002D62;
+  border: 1.5px solid #CBD5E1;
+  box-shadow: 0 1px 3px rgba(0, 45, 98, 0.06);
+}
+
+.bb-back-btn--light:hover {
+  background-color: #F1F5F9;
+  border-color: #002D62;
+}
+
+/* Variante Amarela (cabeçalho Amarelo BB no Checklist) */
+.bb-back-btn--yellow {
+  background-color: rgba(0, 45, 98, 0.1);
+  color: #002D62;
+  border: 1.5px solid rgba(0, 45, 98, 0.28);
+}
+
+.bb-back-btn--yellow:hover {
+  background-color: rgba(0, 45, 98, 0.18);
+  border-color: #002D62;
+}
+
+/* Variante Azul Marinho (cabeçalho escuro no Checklist Complementar) */
+.bb-back-btn--navy {
+  background-color: rgba(255, 255, 255, 0.14);
+  color: #FFFFFF;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+}
+
+.bb-back-btn--navy:hover {
+  background-color: rgba(255, 255, 255, 0.24);
+  border-color: #FED304;
+  color: #FED304;
+}
+
+/* Variante Câmera (overlay sobre vídeo ao vivo) */
+.bb-back-btn--camera {
+  background-color: rgba(0, 27, 61, 0.72);
+  backdrop-filter: blur(8px);
+  color: #FFFFFF;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+.bb-back-btn--camera:hover {
+  background-color: rgba(0, 27, 61, 0.9);
+  border-color: #FED304;
+  color: #FED304;
+}
+
 
 
 

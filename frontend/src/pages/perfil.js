@@ -1,6 +1,6 @@
 /**
  * BBVision - Tela de Perfil e Gestão de Conta do Usuário
- * Permite edição real dos dados cadastrais, alteração segura de senha e encerramento de sessão.
+ * Layout limpo em 2 colunas com edição cadastral, segurança de senha e informações recolhíveis.
  */
 
 import { Icons } from '../assets/icons.js';
@@ -13,149 +13,114 @@ import { escapeHtml } from '../utils/formatters.js';
 export function renderPerfil() {
   const user = state.user;
   const isEmpreiteira = user?.cargo === 'empreiteira';
-  const roleLabel = isEmpreiteira
-    ? 'Empreiteira (Campo & Vistorias)'
-    : 'Fiscal de Obra (Banco do Brasil)';
-  const dataCadastro = user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : 'Recente';
+  const roleLabel = isEmpreiteira ? 'Empreiteira de Campo' : 'Fiscal de Obra • Banco do Brasil';
+  const dataCadastro = user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : 'Ativo';
 
   return `
-    <div class="page-container fade-in" id="perfilPage">
+    <div class="page-container page-medium fade-in" id="perfilPage">
       ${renderHeader('perfil')}
 
-      <div class="profile-card-top">
-        <div class="profile-avatar-large" style="display:flex; align-items:center; justify-content:center; background:transparent; border:none; box-shadow:none;">
-          ${isEmpreiteira ? Icons.perfilObras(72) : Icons.perfilBb(72)}
+      <section class="profile-header-card">
+        <div style="display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+          ${isEmpreiteira ? Icons.perfilObras(64) : Icons.perfilBb(64)}
         </div>
-        <h2 class="profile-name">${escapeHtml(user?.nome || 'Usuário')}</h2>
-        <span class="profile-role-badge ${isEmpreiteira ? 'empreiteira' : 'fiscal'}">
-          ${escapeHtml(roleLabel)}
-        </span>
-        <span class="profile-email">${escapeHtml(user?.email || '')}</span>
+        <div style="flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;">
+            <h1 class="profile-name" style="margin: 0; font-size: 19px;">${escapeHtml(user?.nome || 'Usuário')}</h1>
+            <span class="profile-role-badge ${isEmpreiteira ? 'empreiteira' : 'fiscal'}" style="margin: 0;">
+              ${escapeHtml(roleLabel)}
+            </span>
+          </div>
+          <div class="profile-email" style="margin-bottom: 6px;">${escapeHtml(user?.email || '')}</div>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: #64748B;">
+            ${user?.empresa ? `<span>${escapeHtml(user.empresa)}</span>` : ''}
+            ${user?.registro_profissional ? `<span>• ${escapeHtml(user.registro_profissional)}</span>` : ''}
+            <span>• Desde ${escapeHtml(dataCadastro)}</span>
+          </div>
+        </div>
+      </section>
 
-        <div class="profile-meta-tags-row" style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
+      <div class="profile-forms-grid">
+        <section class="profile-card-panel">
+          <h3>Dados Cadastrais</h3>
+          <form id="formEditarPerfil" style="display: flex; flex-direction: column; gap: 12px;">
+            <div>
+              <label for="perfilNome" style="display:block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Nome completo</label>
+              <input type="text" id="perfilNome" class="profile-input" value="${escapeHtml(user?.nome || '')}" required minlength="2" />
+            </div>
+            <div>
+              <label for="perfilEmpresa" style="display:block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Empresa / Unidade</label>
+              <input type="text" id="perfilEmpresa" class="profile-input" value="${escapeHtml(user?.empresa || '')}" placeholder="Construtora ou superintendência" />
+            </div>
+            <div>
+              <label for="perfilRegistro" style="display:block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">CREA / CAU / Matrícula</label>
+              <input type="text" id="perfilRegistro" class="profile-input" value="${escapeHtml(user?.registro_profissional || '')}" placeholder="Opcional" />
+            </div>
+            <button type="submit" id="btnSalvarPerfil" class="btn-primary-bb-yellow" style="height: 42px; font-size: 13.5px; margin-top: 4px;">
+              Salvar Alterações
+            </button>
+          </form>
+        </section>
+
+        <section class="profile-card-panel">
+          <h3>Alterar Senha</h3>
+          <form id="formAlterarSenha" style="display: flex; flex-direction: column; gap: 12px;">
+            <div>
+              <label for="perfilSenhaAtual" style="display:block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Senha atual</label>
+              <input type="password" id="perfilSenhaAtual" class="profile-input" autocomplete="current-password" required />
+            </div>
+            <div>
+              <label for="perfilNovaSenha" style="display:block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Nova senha (mín. 6 caracteres)</label>
+              <input type="password" id="perfilNovaSenha" class="profile-input" autocomplete="new-password" minlength="6" required />
+            </div>
+            <div>
+              <label for="perfilConfirmaSenha" style="display:block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Confirmar nova senha</label>
+              <input type="password" id="perfilConfirmaSenha" class="profile-input" autocomplete="new-password" minlength="6" required />
+            </div>
+            <button type="submit" id="btnAlterarSenha" class="btn-secondary-white" style="height: 42px; font-size: 13.5px; margin-top: 4px; color: #002D62; border-color: #CBD5E1;">
+              Atualizar Senha
+            </button>
+          </form>
+        </section>
+      </div>
+
+      <details class="bb-details-accordion">
+        <summary>Escopo de permissões e especificações técnicas</summary>
+        <div class="bb-details-body">
           ${
-            user?.empresa
-              ? `<span style="background: #F1F5F9; border: 1px solid #E2E8F0; padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #475569; font-weight: 500;">
-                  ${escapeHtml(user.empresa)}
-                </span>`
-              : ''
+            isEmpreiteira
+              ? `
+            <ul class="perm-list" style="margin-bottom: 12px;">
+              <li>✓ Captura fotográfica exclusivamente in-loco com validação via IA</li>
+              <li>✓ Preenchimento de checklists técnicos e assinatura digital</li>
+              <li>✓ Emissão de código único e bloqueio permanente do relatório</li>
+              <li class="restricted">✕ Cadastro de obras e homologação restritos ao Fiscal de Obra</li>
+            </ul>
+          `
+              : `
+            <ul class="perm-list" style="margin-bottom: 12px;">
+              <li>✓ Cadastro, edição e gestão de obras e checklists técnicos</li>
+              <li>✓ Auditoria de evidências, PDFs certificados e hashes SHA-256</li>
+              <li>✓ Homologação técnica com Fé Pública (Regular ou Pendente de Ajuste)</li>
+              <li class="restricted">✕ Captura in-loco restrita às empreiteiras atribuídas</li>
+            </ul>
+          `
           }
-          ${
-            user?.registro_profissional
-              ? `<span style="background: #F1F5F9; border: 1px solid #E2E8F0; padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #475569; font-weight: 500;">
-                  ${escapeHtml(user.registro_profissional)}
-                </span>`
-              : ''
-          }
-          <span style="background: #F1F5F9; border: 1px solid #E2E8F0; padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #475569; font-weight: 500;">
-            Cadastro: ${escapeHtml(dataCadastro)}
-          </span>
+          <div style="border-top: 1px solid #F1F5F9; padding-top: 10px; display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; color: #64748B;">
+            <span><strong>Motor IA:</strong> SLA &le; 15s • Confiança &ge; 75%</span>
+            <span><strong>Criptografia:</strong> SHA-256 + Hex 16 dígitos</span>
+          </div>
         </div>
-      </div>
+      </details>
 
-      <!-- Edição de Dados Cadastrais -->
-      <div class="profile-permissions-card" style="margin-top: 14px;">
-        <h4 class="perm-card-title">Meus Dados Cadastrais</h4>
-        <form id="formEditarPerfil" style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
-          <div>
-            <label for="perfilNome" style="display:block; font-size: 12px; font-weight: 700; color: #002D62; margin-bottom: 4px;">Nome Completo</label>
-            <input type="text" id="perfilNome" value="${escapeHtml(user?.nome || '')}" required minlength="2" style="width:100%; padding: 9px 11px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13px;" />
-          </div>
-          <div>
-            <label for="perfilEmpresa" style="display:block; font-size: 12px; font-weight: 700; color: #002D62; margin-bottom: 4px;">Empresa / Unidade</label>
-            <input type="text" id="perfilEmpresa" value="${escapeHtml(user?.empresa || '')}" placeholder="Ex.: Nome da construtora ou superintendência" style="width:100%; padding: 9px 11px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13px;" />
-          </div>
-          <div>
-            <label for="perfilRegistro" style="display:block; font-size: 12px; font-weight: 700; color: #002D62; margin-bottom: 4px;">Registro Profissional (CREA / CAU / Matrícula)</label>
-            <input type="text" id="perfilRegistro" value="${escapeHtml(user?.registro_profissional || '')}" placeholder="Opcional" style="width:100%; padding: 9px 11px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13px;" />
-          </div>
-          <button type="submit" id="btnSalvarPerfil" class="btn-primary-bb-yellow" style="padding: 10px 14px; font-size: 13px;">
-            Salvar Alterações do Perfil
-          </button>
-        </form>
-      </div>
-
-      <!-- Alteração de Senha -->
-      <div class="profile-permissions-card" style="margin-top: 14px;">
-        <h4 class="perm-card-title">Segurança e Alteração de Senha</h4>
-        <form id="formAlterarSenha" style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
-          <div>
-            <label for="perfilSenhaAtual" style="display:block; font-size: 12px; font-weight: 700; color: #002D62; margin-bottom: 4px;">Senha Atual</label>
-            <input type="password" id="perfilSenhaAtual" autocomplete="current-password" required style="width:100%; padding: 9px 11px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13px;" />
-          </div>
-          <div>
-            <label for="perfilNovaSenha" style="display:block; font-size: 12px; font-weight: 700; color: #002D62; margin-bottom: 4px;">Nova Senha (mínimo 6 caracteres)</label>
-            <input type="password" id="perfilNovaSenha" autocomplete="new-password" minlength="6" required style="width:100%; padding: 9px 11px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13px;" />
-          </div>
-          <div>
-            <label for="perfilConfirmaSenha" style="display:block; font-size: 12px; font-weight: 700; color: #002D62; margin-bottom: 4px;">Confirmar Nova Senha</label>
-            <input type="password" id="perfilConfirmaSenha" autocomplete="new-password" minlength="6" required style="width:100%; padding: 9px 11px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13px;" />
-          </div>
-          <button type="submit" id="btnAlterarSenha" class="btn-secondary-white" style="padding: 10px 14px; font-size: 13px; border-color: #002D62; color: #002D62; font-weight: 700;">
-            Atualizar Senha de Acesso
-          </button>
-        </form>
-      </div>
-
-      <div class="profile-permissions-card">
-        <h4 class="perm-card-title">Privilégios e Escopo Operacional:</h4>
-        ${
-          isEmpreiteira
-            ? `
-          <ul class="perm-list">
-            <li>✓ Acesso ao fluxo de captura e câmera in-loco (inviolável)</li>
-            <li>✓ Avaliação instantânea por Visão Computacional IA (SLA &le; 15s)</li>
-            <li>✓ Preenchimento guiado de checklists normativos</li>
-            <li>✓ Assinatura digital com fé pública e responsabilidade técnica</li>
-            <li>✓ Geração de código único e bloqueio permanente do relatório</li>
-            <li class="restricted">✕ Cadastro de novas obras restrito a Fiscais de Obra</li>
-            <li class="restricted">✕ Homologação e julgamento técnico restritos a Fiscais de Obra</li>
-          </ul>
-        `
-            : `
-          <ul class="perm-list">
-            <li>✓ Acesso ao Centro de Controle e Governança</li>
-            <li>✓ Cadastro, edição e gestão de obras e checklists técnicos</li>
-            <li>✓ Auditoria de evidências com verificação de hashes SHA-256</li>
-            <li>✓ Inspeção e download de PDFs oficiais certificados</li>
-            <li>✓ Julgamento técnico com Fé Pública: Aprovação (Regular) ou Reprovação (Pendente de Ajuste)</li>
-            <li class="restricted">✕ Captura in-loco restrita às empreiteiras de campo</li>
-          </ul>
-        `
-        }
-      </div>
-
-      <div class="system-info-box">
-        <div class="info-row">
-          <span>Instituição:</span>
-          <strong>Banco do Brasil S.A.</strong>
+      <div class="profile-logout-bar">
+        <div>
+          <strong style="font-size: 13.5px; color: #0F172A; display: block;">Sessão ativa neste dispositivo</strong>
+          <span style="font-size: 12px; color: #64748B;">Encerre sua sessão com segurança ao concluir suas atividades.</span>
         </div>
-        <div class="info-row">
-          <span>Sistema:</span>
-          <strong>BBVision — Plataforma de Fiscalização Remota</strong>
-        </div>
-        <div class="info-row">
-          <span>Motor de IA:</span>
-          <strong>Visão Computacional IA (SLA &le; 15s • Confiança &ge; 75%)</strong>
-        </div>
-        <div class="info-row">
-          <span>Padrão Criptográfico:</span>
-          <strong>SHA-256 + Código Hexadecimal Único 16 Dígitos</strong>
-        </div>
-        <div class="info-row">
-          <span>Emissão de Documentos:</span>
-          <strong>PDF Certificado com Carimbo e Hash de Fé Pública</strong>
-        </div>
-      </div>
-
-      <div class="profile-logout-section">
-        <div class="logout-notice-text">
-          <h4>Encerrar Sessão do Usuário</h4>
-          <p>Desconecte com segurança após finalizar suas vistorias e relatórios no sistema.</p>
-        </div>
-        <button class="btn-logout-full" id="btnLogout" title="Sair da Conta">
-          ${Icons.logOut(16, '#FFFFFF')}
-          <span>Sair da Conta (Encerrar Sessão)</span>
+        <button type="button" class="btn-logout-outline" id="btnLogout" title="Sair da Conta">
+          ${Icons.logOut(15)}
+          <span>Encerrar Sessão</span>
         </button>
       </div>
     </div>
@@ -191,7 +156,7 @@ export function bindPerfilEvents() {
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.innerText = 'Salvar Alterações do Perfil';
+          btn.innerText = 'Salvar Alterações';
         }
       }
     });
@@ -228,7 +193,7 @@ export function bindPerfilEvents() {
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.innerText = 'Atualizar Senha de Acesso';
+          btn.innerText = 'Atualizar Senha';
         }
       }
     });

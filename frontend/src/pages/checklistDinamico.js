@@ -7,6 +7,7 @@ import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { api } from '../services/api.js';
 import { toast } from '../components/toast.js';
+import { renderBackButton } from '../components/backButton.js';
 import { escapeHtml } from '../utils/formatters.js';
 import { getPerguntasChecklistAtual } from './checklistPergunta.js';
 
@@ -34,27 +35,21 @@ export function renderChecklistDinamico() {
   const cameraOptions = [0, 1, 2, 3, 4, 5, 6, 8];
 
   return `
-    <div class="page-container fade-in" id="checklistDinamicoPage">
-      <header class="checklist-blue-topbar">
-        <div class="topbar-left-brand">
-          <button class="btn-back-white-icon" id="btnVoltarPerguntaAnterior" title="Voltar">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="15 18 9 12 15 6"></polyline>
-            </svg>
-          </button>
-          <div class="bvision-white-title">
-            <span class="bb-eye-badge">${Icons.logoBVision(24)}</span>
-            <span class="brand-name-white">BBVision</span>
-            <span class="page-title-white">Checklist Complementar</span>
+    <div class="page-container page-narrow fade-in" id="checklistDinamicoPage">
+      <header class="screen-topbar">
+        <div class="screen-topbar-left">
+          ${renderBackButton({
+            id: 'btnVoltarPerguntaAnterior',
+            label: 'Voltar',
+            variant: 'light',
+            title: 'Voltar para o Checklist da Obra',
+          })}
+          <div class="screen-topbar-titles">
+            <h1 class="screen-topbar-title">Checklist Complementar</h1>
+            <span class="screen-topbar-sub">${escapeHtml(vistoria.obraNome || 'Vistoria')} • Sinalização, limpeza e segurança</span>
           </div>
         </div>
-        <button class="btn-dots-white" id="btnChecklistOpcoes" title="Ajuda">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="#FFFFFF">
-            <circle cx="5" cy="12" r="2"></circle>
-            <circle cx="12" cy="12" r="2"></circle>
-            <circle cx="19" cy="12" r="2"></circle>
-          </svg>
-        </button>
+        <span class="screen-step-pill">Complementar</span>
       </header>
 
       <div class="checklist-sheet-container">
@@ -64,11 +59,11 @@ export function renderChecklistDinamico() {
           </div>
           <div class="pill-segmented-control">
             <button type="button" class="seg-btn ${sinalizacaoVal === 'Sim' ? 'active' : ''}" data-val="Sim">Sim</button>
-            <button type="button" class="seg-btn ${sinalizacaoVal === 'Não' ? 'active' : ''}" data-val="Não">Não</button>
             <button type="button" class="seg-btn ${sinalizacaoVal === 'Parcial' ? 'active' : ''}" data-val="Parcial">Parcial</button>
+            <button type="button" class="seg-btn ${sinalizacaoVal === 'Não' ? 'active' : ''}" data-val="Não">Não</button>
           </div>
 
-          <div class="justificativa-qualitativa-box ${precisaJustSinalizacao ? '' : 'hidden'}" id="boxJustificativaSinalizacao" style="margin-top: 10px;">
+          <div class="justificativa-qualitativa-box ${precisaJustSinalizacao ? '' : 'hidden'}" id="boxJustificativaSinalizacao" style="margin-top: 12px;">
             <label class="justificativa-qualitativa-label" for="txtJustificativaSinalizacao">
               Justificativa obrigatória (Sinalização Parcial ou Não Conforme):
             </label>
@@ -82,35 +77,27 @@ export function renderChecklistDinamico() {
           </div>
         </div>
 
-        <div class="fields-dual-row">
-          <div class="field-card-box half-card">
-            <div class="field-card-header">
-              <label class="field-title">Avaliação da</label>
-            </div>
-            <div class="badge-step-item">
-              <span class="step-num-circle" id="lblNotaLimpezaNum">${limpezaVal > 0 ? limpezaVal : '-'}</span>
-              <span class="step-label">da limpeza</span>
-            </div>
+        <div class="field-card-box">
+          <div class="field-card-header" style="margin-bottom: 8px;">
+            <label class="field-title">Avaliação da limpeza do local (1 a 5) <span style="color:#DC2626;">*</span></label>
+            <span class="rating-score-pill"><span id="lblNotaLimpezaNum">${limpezaVal > 0 ? limpezaVal : '—'}</span> / 5</span>
           </div>
-
-          <div class="field-card-box half-card">
-            <div class="field-card-header">
-              <label class="field-title">limpeza (1 a 5) <span style="color:#DC2626;">*</span></label>
-            </div>
+          <div class="rating-inline-row">
             <div class="stars-rating-container" id="starsContainer">
               ${[1, 2, 3, 4, 5]
                 .map(n => `<span class="star-gold ${limpezaVal >= n ? 'active' : ''}" data-star="${n}">★</span>`)
                 .join('')}
             </div>
+            <span style="font-size: 12px; color: #64748B;">Toque nas estrelas para avaliar</span>
           </div>
         </div>
 
         <div class="field-card-box">
           <div class="field-card-header">
-            <label class="field-title">Quantidade de câmeras instaladas no local <span style="color:#DC2626;">*</span></label>
+            <label class="field-title">Câmeras de monitoramento instaladas <span style="color:#DC2626;">*</span></label>
           </div>
           <div class="number-picker-bar">
-            <div class="picker-check-badge">${camerasVal !== null && camerasVal !== undefined ? '✓' : '?'}</div>
+            <div class="picker-check-badge">${camerasVal !== null && camerasVal !== undefined ? '✓' : '—'}</div>
             ${cameraOptions
               .map(
                 num => `
@@ -123,22 +110,16 @@ export function renderChecklistDinamico() {
 
         <div class="field-card-box">
           <div class="field-card-header" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <label class="field-title">Observações adicionais</label>
-            <button type="button" class="btn-ia-suggest-action" id="btnGerarSugestaoIa" title="Preenche automaticamente o campo abaixo com um resumo técnico das respostas" style="display:inline-flex; align-items:center; gap:6px;">
-              ${Icons.aiSparkle(15)} Gerar Resumo das Respostas com IA
+            <div>
+              <label class="field-title" style="display:block;">Observações adicionais</label>
+              <span style="font-size: 11.5px; color: #64748B;">Opcional • Revise qualquer sugestão gerada antes de enviar</span>
+            </div>
+            <button type="button" class="btn-ia-suggest-action" id="btnGerarSugestaoIa" title="Consolida as respostas preenchidas em um resumo técnico editável" style="display:inline-flex; align-items:center; gap:6px;">
+              ${Icons.aiSparkle(14)} Gerar resumo com IA
             </button>
           </div>
-          <div class="ai-assistant-banner" style="flex-direction: column; align-items: flex-start; gap: 2px;">
-            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-              <span class="ai-robot-icon">Assistente de Parecer IA BBVision</span>
-              <span class="ai-warning-human">Revise antes de enviar</span>
-            </div>
-            <span style="font-size: 11px; color: #475569;">
-              Consolida as respostas preenchidas acima em um parecer técnico editável.
-            </span>
-          </div>
           <div class="ia-saved-feedback-banner hidden" id="iaDinamicoFeedbackBanner" style="margin-bottom: 8px;">
-            <span><strong>Resumo gerado pela IA e inserido no campo abaixo.</strong> Revise antes de prosseguir.</span>
+            <span><strong>Resumo inserido abaixo.</strong> Revise ou edite antes de avançar.</span>
           </div>
           <textarea
             class="field-textarea"
@@ -180,7 +161,7 @@ export function bindChecklistDinamicoEvents() {
   document.getElementById('btnVoltarPerguntaAnterior')?.addEventListener('click', () => {
     const perguntas = getPerguntasChecklistAtual();
     state.checklistQuestionIndex = Math.max(0, perguntas.length - 1);
-    state.navigate('checklist-pergunta');
+    state.navigate('checklist-pergunta', null, { replace: true });
   });
 
   document.getElementById('btnChecklistOpcoes')?.addEventListener('click', () => {

@@ -35,7 +35,41 @@ class BVisionApp {
   init() {
     this.handleInitialRouting();
 
-    window.addEventListener('popstate', () => this.handleInitialRouting());
+    try {
+      window.history.replaceState(
+        { bbvisionPage: state.currentPage, navTab: state.activeNav },
+        ''
+      );
+    } catch (_) {}
+
+    window.addEventListener('popstate', (event) => {
+      const target = event?.state?.bbvisionPage;
+      const bloqueadasAposSelo = [
+        'tipo-local',
+        'checklist-pergunta',
+        'checklist-dinamico',
+        'checklist-verificacao',
+        'camera-ia',
+        'imagem-protegida',
+        'assinatura-responsavel',
+      ];
+
+      if (target && target !== state.currentPage) {
+        if (state.currentVistoria?.bloqueado && bloqueadasAposSelo.includes(target)) {
+          state.navigate('inicio', 'inicio', { fromPopstate: true, clearHistory: true });
+          return;
+        }
+        state.navigate(target, event?.state?.navTab || null, { fromPopstate: true, replace: true });
+        return;
+      }
+
+      if (state.historyStack.length > 0) {
+        state.goBack(state.user ? 'inicio' : 'login');
+        return;
+      }
+
+      this.handleInitialRouting();
+    });
     window.addEventListener('hashchange', () => this.handleInitialRouting());
     window.addEventListener('pagehide', () => this.runCleanup());
 

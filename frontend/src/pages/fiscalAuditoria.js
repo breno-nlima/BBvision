@@ -10,6 +10,7 @@ import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { modal } from '../components/modal.js';
 import { toast } from '../components/toast.js';
+import { renderBackButton } from '../components/backButton.js';
 import { escapeHtml, normalizeImageSrc, NEUTRAL_PHOTO_PLACEHOLDER } from '../utils/formatters.js';
 
 function obterRelatorioAtivoParaAuditoria() {
@@ -101,34 +102,47 @@ export function renderFiscalAuditoria() {
     `;
 
   return `
-    <div class="page-container fade-in" id="fiscalAuditoriaPage">
-      <header class="fiscal-topbar">
-        <div class="fiscal-title-group">
-          <div class="fiscal-title-row">
-            <button class="btn-icon-simple-sm" id="btnVoltarInicioFiscal" title="Voltar ao Início">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="15 18 9 12 15 6"></polyline>
-              </svg>
-            </button>
-            <h1 class="fiscal-main-title">Auditoria e Julgamento Técnico</h1>
+    <div class="page-container page-medium fade-in" id="fiscalAuditoriaPage">
+      <header class="screen-topbar">
+        <div class="screen-topbar-left">
+          ${renderBackButton({
+            id: 'btnVoltarInicioFiscal',
+            label: 'Voltar',
+            variant: 'light',
+            title: 'Voltar para a tela anterior',
+          })}
+          <div class="screen-topbar-titles">
+            <h1 class="screen-topbar-title">Auditoria Técnica</h1>
+            <span class="screen-topbar-sub">${escapeHtml(selectedRel?.obraNome || 'Aguardando relatórios para homologação')}</span>
           </div>
-          <span class="fiscal-sub-location">Centro de Governança BB • ${escapeHtml(selectedRel?.obraNome || 'Aguardando relatórios')}</span>
         </div>
-        <div class="fiscal-topbar-actions">
-          <span class="badge-role-tag">
-            ${escapeHtml(state.user?.nome || 'Fiscal de Obra')}
-          </span>
-        </div>
+        ${
+          selectedRel
+            ? `<span class="status-badge-chip ${
+                selectedRel.statusRaw === 'APROVADO'
+                  ? 'concluido'
+                  : selectedRel.statusRaw === 'PENDENTE_AJUSTE'
+                  ? 'pendente'
+                  : 'andamento'
+              }">${
+                selectedRel.statusRaw === 'APROVADO'
+                  ? 'Homologado'
+                  : selectedRel.statusRaw === 'PENDENTE_AJUSTE'
+                  ? 'Ajuste pendente'
+                  : 'Para auditar'
+              }</span>`
+            : ''
+        }
       </header>
 
       ${
         relatorios.length > 0
           ? `
-        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px;">
-          <label for="selectRelatorioAuditoria" style="font-size: 11.5px; font-weight: 700; color: #002D62; text-transform: uppercase; letter-spacing: 0.4px;">
-            Relatório em Auditoria (${relatorios.length} ${relatorios.length === 1 ? 'disponível' : 'disponíveis'})
+        <div class="fiscal-selector-card">
+          <label for="selectRelatorioAuditoria">
+            Selecionar relatório (${relatorios.length} ${relatorios.length === 1 ? 'disponível' : 'disponíveis'})
           </label>
-          <select id="selectRelatorioAuditoria" style="width: 100%; padding: 9px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13px; color: #0F172A; background: #F8FAFC; font-weight: 600; outline: none;">
+          <select id="selectRelatorioAuditoria">
             ${relatorios
               .map(r => {
                 const sel = selectedRel && r.id === selectedRel.id ? 'selected' : '';
@@ -145,48 +159,46 @@ export function renderFiscalAuditoria() {
       <div class="fiscal-metrics-row">
         <div class="metric-summary-card">
           <div class="metric-card-top">
-            <span class="metric-label">Evidências no Relatório</span>
+            <span class="metric-label">Evidências</span>
           </div>
           <div class="metric-large-number">${fotosRelatorio.length}</div>
           <span class="metric-bottom-hint">${
-            selectedRel?.validacaoManual ? 'Sinalizado: Validação Manual' : 'Carimbo SHA-256'
+            selectedRel?.validacaoManual ? 'Validação manual assistida' : 'Carimbo SHA-256'
           }</span>
         </div>
 
         <div class="metric-summary-card">
           <div class="metric-card-top">
-            <span class="metric-label">Envio de Campo</span>
+            <span class="metric-label">Envio de campo</span>
           </div>
           <div class="metric-large-number timestamp">${escapeHtml(selectedRel ? selectedRel.dataHora || selectedRel.data : '—')}</div>
-          <span class="metric-bottom-hint">Responsável: ${escapeHtml(selectedRel?.responsavel || '—')}</span>
+          <span class="metric-bottom-hint">${escapeHtml(selectedRel?.responsavel || '—')}</span>
         </div>
 
-        <div class="metric-summary-card success">
+        <div class="metric-summary-card">
           <div class="metric-card-top">
-            <span class="metric-label">Protocolo & Integridade</span>
+            <span class="metric-label">Protocolo único</span>
           </div>
-          <div class="metric-large-number" style="font-size: 15px; font-family: monospace;">${escapeHtml(selectedRel?.codigoUnico || '—')}</div>
-          <span class="metric-bottom-hint">${selectedRel?.hash ? 'Hash SHA-256 verificado' : 'Aguardando selo'}</span>
+          <div class="metric-large-number" style="font-size: 14px; font-family: ui-monospace, Consolas, monospace;">${escapeHtml(selectedRel?.codigoUnico || '—')}</div>
+          <span class="metric-bottom-hint">${selectedRel?.hash ? 'Integridade verificada' : 'Aguardando selo'}</span>
         </div>
       </div>
 
       ${
         respostasRel.length > 0
           ? `
-        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
-          <h4 style="font-size: 13px; font-weight: 700; color: #002D62; margin: 0 0 8px 0;">
-            Resumo das Respostas do Checklist (${respostasRel.length} ${respostasRel.length === 1 ? 'item' : 'itens'})
-          </h4>
-          <div style="display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto;">
+        <details class="bb-details-accordion" ${respostasRel.length <= 4 ? 'open' : ''}>
+          <summary>Respostas do checklist (${respostasRel.length} ${respostasRel.length === 1 ? 'item' : 'itens'})</summary>
+          <div class="bb-details-body" style="display: flex; flex-direction: column; gap: 8px;">
             ${respostasRel
               .map(
                 resp => `
-              <div style="font-size: 12px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 8px 10px;">
-                <div style="font-weight: 700; color: #1E293B; margin-bottom: 2px;">${escapeHtml(resp.pergunta || 'Item')}</div>
-                <div style="color: #334155;">${escapeHtml(resp.valor || resp.resposta || 'Não informado')}</div>
+              <div style="font-size: 12.5px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 9px 12px;">
+                <div style="font-weight: 700; color: #0F172A; margin-bottom: 2px;">${escapeHtml(resp.pergunta || 'Item')}</div>
+                <div style="color: #475569;">${escapeHtml(resp.valor || resp.resposta || 'Não informado')}</div>
                 ${
                   resp.justificativa
-                    ? `<div style="color: #B45309; font-size: 11px; margin-top: 3px;"><strong>Justificativa:</strong> ${escapeHtml(resp.justificativa)}</div>`
+                    ? `<div style="color: #B45309; font-size: 11.5px; margin-top: 4px;"><strong>Justificativa:</strong> ${escapeHtml(resp.justificativa)}</div>`
                     : ''
                 }
               </div>
@@ -194,17 +206,14 @@ export function renderFiscalAuditoria() {
               )
               .join('')}
           </div>
-        </div>
+        </details>
       `
           : ''
       }
 
       <div class="status-grid-header">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="status-pulse-dot" style="background: #3B82F6;"></span>
-          <span class="grid-status-label">Evidências Fotográficas Coletadas no Canteiro</span>
-        </div>
-        <span style="font-size: 11px; color: var(--text-secondary);">Clique na foto para inspecionar</span>
+        <span class="grid-status-label">Evidências fotográficas</span>
+        <span style="font-size: 12px; color: var(--text-muted);">Clique na imagem para ampliar</span>
       </div>
 
       <div class="fiscal-photos-grid">
@@ -212,21 +221,19 @@ export function renderFiscalAuditoria() {
       </div>
 
       <div class="fiscal-analysis-decision-card">
-        <div class="analysis-question-title">
-          <h3>Julgamento da Fiscalização</h3>
-          <span style="font-size: 11px; color: var(--text-secondary);">Homologação de Fé Pública</span>
-        </div>
-
         <div class="decision-action-box">
-          <span class="decision-prompt-text">
-            ${
-              !selectedRel
-                ? 'Nenhum relatório disponível para julgamento no momento.'
-                : !podeJulgar
-                ? 'Este relatório ainda está em andamento pela empreiteira.'
-                : 'Emitir Parecer Técnico Oficial:'
-            }
-          </span>
+          <div>
+            <strong class="decision-prompt-text" style="display:block;">
+              ${
+                !selectedRel
+                  ? 'Nenhum relatório disponível'
+                  : !podeJulgar
+                  ? 'Relatório ainda em andamento'
+                  : 'Emitir parecer técnico oficial'
+              }
+            </strong>
+            <span style="font-size: 12px; color: var(--text-secondary);">Atualiza o status da obra e registra o carimbo de homologação</span>
+          </div>
 
           <div class="decision-buttons-row">
             <button class="btn-decision-reprovar" id="btnReprovarObra" title="Solicitar correções técnicas na obra" ${podeJulgar ? '' : 'disabled'}>
@@ -244,10 +251,10 @@ export function renderFiscalAuditoria() {
           <div class="status-obra-badge-banner ${obraStatusAtual === 'REGULAR' ? 'status-regular' : 'status-pendente'}">
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
               <div>
-                <strong>Status da Obra:</strong>
+                <strong>Status da obra:</strong>
                 <span id="lblStatusObraAtual" style="font-weight: 800; margin-left: 4px;">${escapeHtml(obraStatusAtual)}</span>
               </div>
-              <span class="stamp-chip">${
+              <span style="font-size: 11px; font-weight: 700;">${
                 selectedRel.statusRaw === 'APROVADO'
                   ? 'HOMOLOGADO'
                   : selectedRel.statusRaw === 'PENDENTE_AJUSTE'
@@ -264,7 +271,7 @@ export function renderFiscalAuditoria() {
 
       <div class="fiscal-action-footer">
         <button class="btn-primary-bb-yellow" id="btnVerDetalhesCompletos" ${temPdfOficial ? '' : 'disabled'}>
-          Visualizar Relatório Oficial (PDF com Carimbo BB)
+          Visualizar Relatório Oficial (PDF)
         </button>
       </div>
 
@@ -297,7 +304,7 @@ export function renderFiscalAuditoria() {
 
 export function bindFiscalAuditoriaEvents() {
   document.getElementById('btnVoltarInicioFiscal')?.addEventListener('click', () => {
-    state.navigate('inicio', 'inicio');
+    state.goBack('inicio', 'inicio');
   });
 
   const selectRel = document.getElementById('selectRelatorioAuditoria');

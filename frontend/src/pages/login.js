@@ -15,14 +15,8 @@ export function renderLogin() {
       <div class="auth-card-container">
         
         <div class="auth-header-brand">
-          <div class="auth-logo-symbol">
-            <img src="src/assets/logo.png" alt="BBVision" class="auth-logo-img">
-          </div>
-          <div class="auth-brand-text">
-            <h1 class="auth-title">BBVision</h1>
-            <span class="auth-badge-gov">Banco do Brasil S.A.</span>
-          </div>
-          <p class="auth-desc">Plataforma Oficial de Fiscalização Remota de Obras e Fé Pública</p>
+          <h1 class="auth-title">Acesse o BBVision</h1>
+          <p class="auth-desc">Fiscalização remota de obras e validação criptográfica com Fé Pública.</p>
         </div>
 
         <div class="auth-nav-tabs">

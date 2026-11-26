@@ -4,65 +4,65 @@
 
 import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
-import { toast } from '../components/toast.js';
+import { renderBackButton } from '../components/backButton.js';
 import { escapeHtml } from '../utils/formatters.js';
 
 export function renderTipoLocal() {
   const currentTipo = state.currentVistoria.tipoLocal || 'Agência Bancária';
+  const obraNome = state.currentVistoria.obraNome || 'Obra Selecionada';
 
   const locais = [
-    { id: 'agencia', titulo: 'Agência Bancária', descricao: 'Fachada, interior, atendimento' },
-    { id: 'caixa', titulo: 'Caixa Eletrônico', descricao: 'Atendimento, câmeras, acesso' },
-    { id: 'externa', titulo: 'Área Externa', descricao: 'Estacionamento, entorno, segurança' },
-    { id: 'predio', titulo: 'Prédio Administrativo', descricao: 'Entrada, corredores, salas' },
+    { id: 'agencia', titulo: 'Agência Bancária', descricao: 'Fachada, interior e salão de atendimento' },
+    { id: 'caixa', titulo: 'Caixa Eletrônico', descricao: 'Terminais TAA, câmeras e acessibilidade' },
+    { id: 'externa', titulo: 'Área Externa', descricao: 'Estacionamento, calçada e entorno' },
+    { id: 'predio', titulo: 'Prédio Administrativo', descricao: 'Recepção, corredores e salas técnicas' },
   ];
 
-  const cardsHtml = locais.map(loc => {
-    const isSelected = loc.titulo === currentTipo;
-    const cardClass = isSelected ? 'tipo-card-amarelo' : 'tipo-card-azul';
+  const cardsHtml = locais
+    .map(loc => {
+      const isSelected = loc.titulo === currentTipo;
+      const cardClass = isSelected ? 'tipo-card-amarelo selected' : 'tipo-card-azul';
 
-    let iconSvg = '';
-    if (loc.id === 'agencia') iconSvg = Icons.iconAgencia(30, 'currentColor');
-    else if (loc.id === 'caixa') iconSvg = Icons.iconAtm(30, 'currentColor');
-    else if (loc.id === 'externa') iconSvg = Icons.iconAreaExterna(30, 'currentColor');
-    else iconSvg = Icons.iconPredioAdmin(30, 'currentColor');
+      let iconSvg = '';
+      if (loc.id === 'agencia') iconSvg = Icons.iconAgencia(24, 'currentColor');
+      else if (loc.id === 'caixa') iconSvg = Icons.iconAtm(24, 'currentColor');
+      else if (loc.id === 'externa') iconSvg = Icons.iconAreaExterna(24, 'currentColor');
+      else iconSvg = Icons.iconPredioAdmin(24, 'currentColor');
 
-    return `
-      <div class="tipo-local-card ${cardClass} ${isSelected ? 'selected' : ''}" data-tipo="${escapeHtml(loc.titulo)}" data-desc="${escapeHtml(loc.descricao)}">
-        <div class="tipo-card-header">
-          <div class="tipo-card-icon-area">${iconSvg}</div>
-          <div class="tipo-card-arrow">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
+      return `
+        <div class="tipo-local-card ${cardClass}" data-tipo="${escapeHtml(loc.titulo)}" data-desc="${escapeHtml(loc.descricao)}">
+          <div class="tipo-card-header">
+            <div class="tipo-card-icon-area">${iconSvg}</div>
+            <div class="tipo-card-arrow" style="color: ${isSelected ? '#002D62' : '#94A3B8'};">
+              ${Icons.chevronRight(18)}
+            </div>
+          </div>
+
+          <div class="tipo-card-body">
+            <h3 class="tipo-card-title">${escapeHtml(loc.titulo)}</h3>
+            <p class="tipo-card-desc">${escapeHtml(loc.descricao)}</p>
           </div>
         </div>
-
-        <div class="tipo-card-body">
-          <h3 class="tipo-card-title">${escapeHtml(loc.titulo)}</h3>
-          <p class="tipo-card-desc">${escapeHtml(loc.descricao)}</p>
-        </div>
-      </div>
-    `;
-  }).join('');
+      `;
+    })
+    .join('');
 
   return `
-    <div class="page-container fade-in" id="tipoLocalPage">
-      <header class="tipo-local-topbar">
-        <button class="btn-icon-simple" id="btnVoltarDetalheObra" title="Voltar">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12"></line>
-            <polyline points="12 19 5 12 12 5"></polyline>
-          </svg>
-        </button>
-        <h1 class="tipo-local-header-title">Tipo de Local</h1>
-        <button class="btn-icon-simple" id="btnOpcoesTipo" title="Ajuda">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="5" cy="12" r="2"></circle>
-            <circle cx="12" cy="12" r="2"></circle>
-            <circle cx="19" cy="12" r="2"></circle>
-          </svg>
-        </button>
+    <div class="page-container page-narrow fade-in" id="tipoLocalPage">
+      <header class="screen-topbar">
+        <div class="screen-topbar-left">
+          ${renderBackButton({
+            id: 'btnVoltarDetalheObra',
+            label: 'Voltar',
+            variant: 'light',
+            title: 'Voltar para Detalhes da Obra',
+          })}
+          <div class="screen-topbar-titles">
+            <h1 class="screen-topbar-title">Tipo de Local</h1>
+            <span class="screen-topbar-sub">${escapeHtml(obraNome)} • Selecione o ambiente da vistoria</span>
+          </div>
+        </div>
+        <span class="screen-step-pill">Etapa 1</span>
       </header>
 
       <div class="tipo-local-grid">
@@ -71,7 +71,7 @@ export function renderTipoLocal() {
 
       <div class="tipo-local-footer">
         <button class="btn-primary-bb-yellow" id="btnConfirmarTipo">
-          Confirmar Tipo
+          Continuar para o Checklist →
         </button>
       </div>
     </div>
@@ -80,11 +80,7 @@ export function renderTipoLocal() {
 
 export function bindTipoLocalEvents() {
   document.getElementById('btnVoltarDetalheObra')?.addEventListener('click', () => {
-    state.navigate('obra-detalhe');
-  });
-
-  document.getElementById('btnOpcoesTipo')?.addEventListener('click', () => {
-    toast.info('Seleção de Local', 'Escolha o ambiente principal da vistoria para direcionar o checklist técnico da obra.');
+    state.goBack('obra-detalhe');
   });
 
   const cards = document.querySelectorAll('.tipo-local-card');

@@ -74,6 +74,12 @@ export const Icons = {
     </svg>
   `,
 
+  chevronRight: (size = 16, color = 'currentColor') => `
+    <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="bbv-icon" aria-hidden="true">
+      <path d="M9 6L15 12L9 18"/>
+    </svg>
+  `,
+
   logOut: (size = 16, color = 'currentColor') => `
     <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" class="bbv-icon" aria-hidden="true">
       <path d="M9 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9"/>

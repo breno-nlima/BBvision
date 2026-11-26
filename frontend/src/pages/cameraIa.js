@@ -12,6 +12,7 @@ import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { api } from '../services/api.js';
 import { toast } from '../components/toast.js';
+import { renderBackButton } from '../components/backButton.js';
 import { escapeHtml, computeSha256FromDataUrl } from '../utils/formatters.js';
 
 export function renderCameraIa() {
@@ -35,11 +36,12 @@ export function renderCameraIa() {
     <div class="page-container fade-in camera-screen-wrapper" id="cameraIaPage">
       <div class="camera-fullview">
         <div class="camera-topbar-overlay">
-          <button class="cam-top-btn" id="btnVoltarTipoLocal" title="Voltar para o Checklist">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="15 18 9 12 15 6"></polyline>
-            </svg>
-          </button>
+          ${renderBackButton({
+            id: 'btnVoltarTipoLocal',
+            label: 'Voltar',
+            variant: 'camera',
+            title: 'Voltar para o Checklist de Verificação',
+          })}
 
           <div class="cam-status-pill">
             <span class="ai-status-pulse" id="aiStatusPulse" style="${
@@ -122,17 +124,17 @@ export function renderCameraIa() {
         </div>
 
         <div class="camera-bottom-controls">
-          <div class="controls-aux-bar">
+          <div class="controls-aux-bar" style="flex-wrap: wrap; gap: 6px;">
             <span class="cam-step-hint" id="camStepHint">
               ${
                 fotoValidaExistente
                   ? isManualExistente
-                    ? 'Foto registrada em Validação Manual Assistida. Confirme abaixo ou tire outra foto.'
-                    : 'Foto capturada e validada! Confirme abaixo ou tire outra foto.'
-                  : 'Enquadre a obra, prédio, casa ou construção no centro (selfie/pessoas permitidas nas laterais)'
+                    ? 'Evidência registrada em validação manual.'
+                    : 'Evidência validada pela IA.'
+                  : 'Enquadre a obra no centro do visor'
               }
             </span>
-            <span class="cam-security-note" style="display:inline-flex; align-items:center; gap:5px;">${Icons.lockInviolavel(14)} Galeria bloqueada (Inviolabilidade)</span>
+            <span class="cam-security-note" style="display:inline-flex; align-items:center; gap:5px;">${Icons.lockInviolavel(13)} Somente câmera ao vivo</span>
           </div>
 
           <div class="cam-verified-banner ${fotoValidaExistente ? '' : 'hidden'}" id="camVerifiedBanner" style="${
@@ -1047,7 +1049,7 @@ export function bindCameraIaEvents() {
 
   document.getElementById('btnVoltarTipoLocal')?.addEventListener('click', () => {
     pararCamera();
-    state.navigate('checklist-verificacao');
+    state.navigate('checklist-verificacao', null, { replace: true });
   });
 
   btnReativarCamera?.addEventListener('click', () => {

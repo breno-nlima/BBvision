@@ -9,6 +9,7 @@ import { Icons } from '../assets/icons.js';
 import { state } from '../services/state.js';
 import { modal } from '../components/modal.js';
 import { toast } from '../components/toast.js';
+import { renderBackButton } from '../components/backButton.js';
 import { escapeHtml, normalizeImageSrc, NEUTRAL_PHOTO_PLACEHOLDER, copyToClipboard } from '../utils/formatters.js';
 
 export function renderRelatorioBloqueado() {
@@ -19,33 +20,32 @@ export function renderRelatorioBloqueado() {
   const fotoSrc = normalizeImageSrc(rawImg, NEUTRAL_PHOTO_PLACEHOLDER);
 
   return `
-    <div class="page-container fade-in" id="relatorioBloqueadoPage">
-      <header class="bloqueado-topbar">
-        <button class="btn-icon-simple-sm" id="btnVoltarInicioBloqueado" title="Voltar ao Início">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12"></line>
-            <polyline points="12 19 5 12 12 5"></polyline>
-          </svg>
-        </button>
-        <div class="topbar-logo-center">
-          ${Icons.logoBVisionBadge(28)}
+    <div class="page-container page-narrow fade-in" id="relatorioBloqueadoPage">
+      <header class="screen-topbar">
+        <div class="screen-topbar-left">
+          ${renderBackButton({
+            id: 'btnVoltarInicioBloqueado',
+            label: 'Início',
+            variant: 'light',
+            title: 'Voltar para a tela inicial',
+          })}
+          <div class="screen-topbar-titles">
+            <h1 class="screen-topbar-title">${isOfflineQueue ? 'Relatório em Fila Offline' : 'Relatório Concluído'}</h1>
+            <span class="screen-topbar-sub">${escapeHtml(vistoria.obraNome || 'Vistoria selada com Fé Pública')}</span>
+          </div>
         </div>
-        <div style="width: 28px;"></div>
+        <span class="status-badge-chip concluido">${isOfflineQueue ? 'Fila local' : 'Selado'}</span>
       </header>
 
-      <div class="bloqueado-header-title">
-        <h2>${isOfflineQueue ? 'Relatório Enfileirado (Offline)' : 'Relatório Concluído'}</h2>
-      </div>
-
       <div class="bloqueado-hero-section">
-        <div class="box-locked-visual">
-          ${Icons.boxLocked3D(90)}
+        <div class="box-locked-visual" style="margin-bottom: 8px;">
+          ${Icons.boxLocked3D(56)}
         </div>
         <p class="bloqueado-warning-text">
           ${
             isOfflineQueue
-              ? 'Vistoria assinada e salva localmente.<br/>O PDF e o selo definitivo serão emitidos automaticamente ao reconectar.'
-              : 'Este relatório foi formalmente concluído<br/>e possui fé pública inviolável'
+              ? 'Vistoria assinada e salva localmente. O PDF definitivo será emitido automaticamente ao reconectar.'
+              : 'Relatório formalmente concluído e protegido contra edições ou reenvios.'
           }
         </p>
         ${
@@ -57,30 +57,11 @@ export function renderRelatorioBloqueado() {
         }
       </div>
 
-      <div class="bloqueado-status-rules-card" style="margin-bottom: 12px; padding: 12px;">
-        <div style="font-size: 12px; font-weight: 700; color: #002D72; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-          <span>Evidência Fotográfica Registrada na Vistoria</span>
-          <span style="font-size: 11px; color: #059669; font-weight: 700;">${
-            isOfflineQueue ? 'Armazenada para Envio' : 'Registrada no Relatório & PDF'
-          }</span>
-        </div>
-        <div style="border-radius: 10px; overflow: hidden; border: 1px solid #CBD5E1; background: #F1F5F9;">
-          <img
-            src="${escapeHtml(fotoSrc)}"
-            alt="Foto capturada na vistoria"
-            style="width: 100%; max-height: 190px; object-fit: cover; display: block;"
-          />
-        </div>
-        <div style="font-size: 11px; color: #475569; margin-top: 6px; line-height: 1.35;">
-          ${escapeHtml(vistoria.motivoIA || 'Evidência fotográfica capturada in-loco pela empreiteira.')}
-        </div>
-      </div>
-
       <div class="bloqueado-protocolo-card">
         <div class="proto-card-top-row">
-          <span class="proto-card-label">${isOfflineQueue ? 'Código Provisório (Offline):' : 'Código Oficial:'}</span>
+          <span class="proto-card-label">${isOfflineQueue ? 'Código provisório (Offline)' : 'Código Oficial de Fé Pública'}</span>
           <button type="button" class="proto-dots-btn" id="btnCopiarCodigoBloqueado" title="Copiar Código">
-            Copiar
+            Copiar código
           </button>
         </div>
 
@@ -89,68 +70,61 @@ export function renderRelatorioBloqueado() {
         </div>
 
         <div class="proto-meta-data">
-          <span><strong>Registrado em:</strong> ${escapeHtml(vistoria.dataFoto)} às ${escapeHtml(vistoria.horaFoto)}</span>
-          <span><strong>Responsável Técnico:</strong> ${escapeHtml(vistoria.responsavel || state.user?.nome || 'Responsável Técnico')}</span>
+          <span><strong>Data e hora:</strong> ${escapeHtml(vistoria.dataFoto)} às ${escapeHtml(vistoria.horaFoto)}</span>
+          <span><strong>Responsável:</strong> ${escapeHtml(vistoria.responsavel || state.user?.nome || 'Responsável Técnico')}</span>
           ${
             vistoria.hashSha256
-              ? `<span style="font-size: 11px; opacity: 0.85; font-family: monospace; word-break: break-all;">
+              ? `<span style="font-size: 11px; opacity: 0.88; font-family: ui-monospace, Consolas, monospace; word-break: break-all;">
                   <strong>SHA-256:</strong> ${escapeHtml(vistoria.hashSha256)}
                 </span>`
               : `<span style="font-size: 11px; opacity: 0.85;">
-                  <strong>SHA-256:</strong> Será consolidado no servidor após sincronização
+                  <strong>SHA-256:</strong> Consolidado após sincronização com o servidor
                 </span>`
           }
         </div>
       </div>
 
       <div class="bloqueado-status-rules-card">
-        <div class="rule-status-row ${isOfflineQueue ? 'locked-state' : 'clickable'}" id="btnAbrirVisualizacao" style="${isOfflineQueue ? 'opacity: 0.65;' : ''}">
+        <div style="display: flex; align-items: center; gap: 14px; padding: 4px 0 12px 0; border-bottom: 1px solid #F1F5F9;">
+          <img
+            src="${escapeHtml(fotoSrc)}"
+            alt="Foto capturada na vistoria"
+            style="width: 84px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #E2E8F0; flex-shrink: 0;"
+          />
+          <div style="min-width: 0; flex: 1;">
+            <strong style="display: block; font-size: 13px; color: #002D62;">Evidência fotográfica anexada</strong>
+            <span style="font-size: 12px; color: #64748B;">${escapeHtml(vistoria.motivoIA || 'Capturada ao vivo in-loco')}</span>
+          </div>
+        </div>
+
+        <div class="rule-status-row ${isOfflineQueue ? 'locked-state' : 'clickable'}" id="btnAbrirVisualizacao" style="${isOfflineQueue ? 'opacity: 0.6;' : ''}">
           <div class="rule-status-left">
-            <span class="rule-icon-box" style="display:inline-flex; align-items:center; justify-content:center; color:#002D62;">${Icons.pdfDocument(17)}</span>
-            <span class="rule-title-text">${
-              isOfflineQueue ? 'PDF Oficial (Disponível após sincronização)' : 'Visualizar PDF Oficial (Carimbo BB)'
+            <span style="display:inline-flex; align-items:center; color:#002D62;">${Icons.pdfDocument(18)}</span>
+            <span class="rule-title-text" style="font-weight: 700; color: #002D62;">${
+              isOfflineQueue ? 'PDF Oficial (disponível após sincronização)' : 'Visualizar PDF Oficial com Carimbo BB'
             }</span>
           </div>
           <div class="rule-arrow">
-            ${
-              isOfflineQueue
-                ? '<span style="font-size: 11px; color: #94A3B8;">Offline</span>'
-                : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>`
-            }
+            ${isOfflineQueue ? '<span style="font-size: 11px; color: #94A3B8;">Offline</span>' : Icons.chevronRight(16)}
           </div>
         </div>
+      </div>
 
-        <div class="rule-status-row locked-state" id="ruleEdicaoBloqueada">
-          <div class="rule-status-left">
-            <span class="rule-icon-box" style="display:inline-flex; align-items:center; justify-content:center; color:#64748B;">${Icons.lockInviolavel(17)}</span>
-            <span class="rule-title-text">Edição bloqueada (Inviolabilidade)</span>
-          </div>
-          <div class="rule-arrow">
-            <span style="font-size: 11px; color: #94A3B8;">Ativo</span>
-          </div>
-        </div>
-
-        <div class="rule-status-row locked-state" id="ruleReenvioBloqueado">
-          <div class="rule-status-left">
-            <span class="rule-icon-box" style="display:inline-flex; align-items:center; justify-content:center; color:#64748B;">${Icons.shieldFePublica(17)}</span>
-            <span class="rule-title-text">Reenvio vedado (Prevenção de duplicidade)</span>
-          </div>
-          <div class="rule-arrow">
-            <span style="font-size: 11px; color: #94A3B8;">Ativo</span>
-          </div>
-        </div>
+      <div class="bloqueado-security-strip locked-state" id="ruleEdicaoBloqueada" style="cursor: pointer;">
+        ${Icons.lockInviolavel(15, '#64748B')}
+        <span>Edição e reenvio bloqueados permanentemente por integridade criptográfica SHA-256.</span>
       </div>
 
       <div class="bloqueado-action-footer">
         ${
           !isOfflineQueue && vistoria.codigoUnico
-            ? `<button class="btn-secondary-white" id="btnValidarFePublicaDoc" style="margin-bottom: 8px;">
-                Validar Autenticidade (Fé Pública)
+            ? `<button type="button" class="btn-secondary-white" id="btnValidarFePublicaDoc">
+                Validar Autenticidade no Portal Público
               </button>`
             : ''
         }
         <button class="btn-primary-bb-yellow" id="btnVoltarDashboard">
-          Voltar para Minhas Obras
+          Ir para Minhas Obras
         </button>
       </div>
     </div>
@@ -159,11 +133,11 @@ export function renderRelatorioBloqueado() {
 
 export function bindRelatorioBloqueadoEvents() {
   document.getElementById('btnVoltarInicioBloqueado')?.addEventListener('click', () => {
-    state.navigate('inicio', 'inicio');
+    state.navigate('inicio', 'inicio', { clearHistory: true });
   });
 
   document.getElementById('btnVoltarDashboard')?.addEventListener('click', () => {
-    state.navigate('inicio', 'inicio');
+    state.navigate('obras', 'obras', { clearHistory: true });
   });
 
   document.getElementById('btnCopiarCodigoBloqueado')?.addEventListener('click', async () => {
@@ -198,7 +172,7 @@ export function bindRelatorioBloqueadoEvents() {
     state.navigate('validador-publico');
   });
 
-  document.querySelectorAll('.rule-status-row.locked-state').forEach(row => {
+  document.querySelectorAll('.locked-state').forEach(row => {
     if (row.id === 'btnAbrirVisualizacao') return;
     row.addEventListener('click', () => {
       toast.info(
