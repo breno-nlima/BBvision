@@ -57,6 +57,9 @@ Thumbs.db
 *.swp
 *.swo
 
+# Trae IDE
+.trae-html-share-packages/
+
 # Build outputs
 dist/
 build/
